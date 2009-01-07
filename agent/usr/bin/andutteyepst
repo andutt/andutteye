@@ -1,0 +1,131 @@
+#!/usr/bin/perl
+#
+#    Copyright Andreas Utterberg Thundera (c) All rights Reserved 2008
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#    $Id: andutteyepst 645 2008-04-23 18:18:14Z andutt $
+#
+my $version = "Andutteye alarm post utillity 3.0 (2008 www.thundera.se).";
+my $this_host=`uname -n`;
+chomp $this_host;
+our $debug="0";
+our @ARGV;
+our $use_ssl;
+use IO::Socket::INET;
+use warnings;
+use strict;
+
+if (!defined($ARGV[0])) {
+	program_info();
+}
+if ( $ARGV[0] eq "-send" ) {
+	if ( "$ARGV[1]" =~/^$/ ) {
+		print "ERROR No andutteyeserver specified, aborting \n";
+		exit 1;
+	}	
+	if ( "$ARGV[2]" =~/^$/ ) {
+		print "ERROR No andutteyeport specified, aborting \n";
+		exit 1;
+	}	
+	if ( "$ARGV[3]" =~/^$/ ) {
+		print "ERROR No Short information field are specified up to 30 letters enwrapped in \"text here\" \n";
+		exit 1;
+	}	
+	if ( "$ARGV[4]" =~/^$/ ) {
+		print "ERROR No Long information field are specified up to 255 letters enwrapped in \"text here\" \n";
+		exit 1;
+	}	
+	if ( "$ARGV[5]" =~/^$/ ) {
+		print "ERROR No severity specified, current availeble severitys are\n";
+		print "ERROR HARMLESS,WARNING,CRITICAL,FATAL\n";
+		exit 1;
+	}
+for(@ARGV) {
+        if ( $_ =~/-ssl/ ) {
+                if (!defined($use_ssl)){
+                        $use_ssl="1";
+                }
+        }
+        if ( $_ =~/-debug/ ) {
+		$debug="1";
+        }
+}
+if (!defined($use_ssl)){
+        $use_ssl="0";
+}
+if($debug) {
+	print "$version\n";
+	print "Sending alarm to Andutteye server:$ARGV[1] port:$ARGV[2] \n";
+	print "Values:$this_host\t:$ARGV[3]\t:$ARGV[4]\t:$ARGV[5]\n";
+}
+if ($use_ssl) {
+#
+# Loading ssl module.
+require IO::Socket::SSL;
+#
+# Bringing up SSL-socket connection to encrypt communication
+#
+print "Encrypting communication with ssl.\n";
+my $socket;
+$socket = IO::Socket::SSL->new(PeerHost => $ARGV[1], 
+PeerPort => $ARGV[2], 
+Reuse => '1',
+Proto => 'tcp') or die "ERROR Failed to prepare and load IO::Socket::SSL make sure you have it installed that it workes properly, and that you have enabled use IO::Socket:SSL in the top of this program\n";
+
+print $socket "$this_host#----###----#ALARM#----###----#$ARGV[3]#----###----#$ARGV[4]#----###----#$ARGV[5]#----###----#NONE#----###----#NONE\n";
+close($socket);
+print "Alarm has been sendt.\n";
+
+} else {
+
+print "Sending alarm over tcp.\n"; 
+socket(Server, PF_INET, SOCK_STREAM, getprotobyname('tcp')) or die "EYEPSTERR01:Failed to prepare socketconnection errormsg:$! \n";
+my $internet_addr = inet_aton($ARGV[1]) or die "EYEPSTERR02:Failed to make internet address erromsg:$! \n";
+my $paddr = sockaddr_in($ARGV[2], $internet_addr) or die "EYEPSTERR03:Failed to connect to socket errormsg:$! \n";
+
+# If we dont recieves any connection with andutteyeserver we die
+connect(Server, $paddr) or die "EYEPSTERR04:Failed to connect to Andutteyeserver, maybe listener is down or you have specified a nonvalid hostname or port: errormsg:$! \n";
+
+select((select(Server), $| = 1)[0]) or die "EYEPSTERR05:Failed to create command buffering errormsg:$! \n";
+
+print Server "$this_host#----###----#ALARM#----###----#$ARGV[3]#----###----#$ARGV[4]#----###----#$ARGV[5]#----###----#NONE#----###----#NONE\n";
+print "Alarm has been sendt.\n";
+close(Server);
+}
+}
+sub program_info {
+print "\n";
+print "$version\n";
+print "\n";
+print "Invalid input,Usage: \n";
+print "\n";
+print "$0 -send 129.1.1.233 32000 \"Testing to send alarms\" \"Andutt is testing to send alarms\" HARMLESS\n";
+print "$0 -send 129.1.1.233 32000 \"Testing to send alarms\" \"Andutt is testing to send alarms\" HARMLESS -ssl\n";
+print "\n";
+print "$0 { -send   } :Sends information to andutteye-server\n";
+print "$0 { -h      } :Shows this help information \n"; 
+print "$0 { -ssl    } :Post a andutteyemessage when running the server in ssl encryptionmode\n"; 
+print "$0 { -debug  } :Show data separation and variables to send.\n"; 
+print "\n";
+print "1 :Andutteye server \n";
+print "2 :Andutteye port \n";
+print "3 :Shortinformation (30  letters)\n";
+print "4 :Longinformation  (255 letters)\n";
+print "5 :Severity         (HARMLESS,WARNING,CRITICAL,FATAL)\n";
+print "6 :-ssl		    (If running the andutteye server in sslmode)\n";
+print "\n";
+print "\n";
+exit 1;
+}

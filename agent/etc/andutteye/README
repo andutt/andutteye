@@ -1,0 +1,32 @@
+
+Andutteye Copyright (c) All rights Reserved (2008) Andreas Utterberg Thundera AB
+Andutteye is a registered trademark of Andreas Utterberg Thundera AB
+
+Information:
+
+Andutteye is a centralized approach to systems management Its goal is to simplify effective systems administration, administration and overall process of a systems lifetime.
+All aspects of Andutteye have been designed with the single goal to help systemadministrators while staying out of the way and imposing as little as possible on a team's established process and culture.
+Andutteye targets a range of systemsadministration fields, the biggest is described below.
+
+Monitoring:
+
+Andutteye have a complete, extendeble and central systems monitoring solution with an extensive internal framework for the most useful tools of systems monitoring. Andutteye has also support Nagions plugins, your own programs and scripts.
+
+Management:
+
+Andutteye have a complete provisioning, management capabillity to control and create systems during their whole lifecycle. Central handling of all packages and files on your system.
+
+Assetmanagement and statistics:
+
+Andutteye provide a fully feature framework to gather central assetmanaegment information and statistics which is a part of the Andutteye framework.
+
+Subprojects Andutteye uses in the Central webinterface:
+
+Andutteye is released under GPL v3 or higher. Andutteye also uses code and utillitys from other opensource projects. Their code and sourcecode comply under their respective licenseterms.
+Please visit their sites and read there licenseterms for more information.
+
+* Open flash Chart. http://teethgrinder.co.uk/open-flash-chart/
+* Mootools. http://mootools.net/
+* Autobsn ajax search. http://www.brandspankingnew.net/archive/2006/08/ajax_auto-suggest_auto-complete.html
+* Zend framework. http://framework.zend.com/
+

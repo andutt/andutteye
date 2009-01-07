@@ -1,0 +1,223 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 2004-2010 Andreas Utterberg Thundera AB.
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# version 2 as published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# For the complete GPL v2 license, visit http://www.fsf.org/licenses
+#
+# Description: Andutteye Software Suite relay cache transfer engine
+#
+# $Id: andutteyedmo_cachecli 608 2008-03-11 19:24:42Z andutt $
+#
+# The version-parameter tells the current version and fixlevel of the program.
+my $version = "Andutteye Software Suite Cacherelayagent Version:1.2 LatestFix:2005-03-25 (andutt)";
+
+# Unchangeble parameters.
+our $andutteye_cache_server;
+our $andutteye_cache_port;
+our $andutteye_server;
+our $andutteye_port;
+our $debug=0;
+our $user;
+our $password;
+our $cachall;
+our $message;
+our @ARGV;
+our %cachall;
+our $use_ssl_communications;
+use IO::Socket::INET;
+use warnings;
+use strict;
+
+if (!defined($ARGV[0])) {
+	program_info();
+}
+
+if ( "$ARGV[1]" =~/^$/ ) {
+	program_info();
+}	
+if ( "$ARGV[2]" =~/^$/ ) {
+	program_info();
+}	
+if ( "$ARGV[3]" =~/^$/ ) {
+	program_info();
+}	
+if ( "$ARGV[4]" =~/^$/ ) {
+	program_info();
+}	
+for(@ARGV) {
+        if ( $_ =~/-ssl/ ) {
+                $use_ssl_communications=1;
+        }
+        if ( $_ =~/-debug/ ) {
+		$debug=1;
+        }
+        if ( $_ =~/-cacheserver=/ ) {
+		my @tmpcachserver=split("=", $_);
+		$andutteye_cache_server=$tmpcachserver[1];
+        }
+        if ( $_ =~/-cacheport=/ ) {
+		my @tmpcachport=split("=", $_);
+		$andutteye_cache_port=$tmpcachport[1];
+        }
+        if ( $_ =~/-andutteyeserver=/ ) {
+		my @tmpandutteyeserver=split("=", $_);
+		$andutteye_server=$tmpandutteyeserver[1];
+        }
+        if ( $_ =~/-andutteyeport=/ ) {
+		my @tmpandutteyeport=split("=", $_);
+		$andutteye_port=$tmpandutteyeport[1];
+        }
+        if ( $_ =~/-user=/ ) {
+		my @tmpuser=split("=", $_);
+		$user=$tmpuser[1];
+        }
+        if ( $_ =~/-password=/ ) {
+		my @tmppassword=split("=", $_);
+		$password=$tmppassword[1];
+        }
+}
+sub communicate_with_world {
+#
+# Communicate with world
+#
+my $server=$_[0];
+my $port=$_[1];
+my $action=$_[2];
+
+print "Establishing connection to Andutteye-server:$server port:$port action:$action\n";
+
+if($action eq "draincache") {
+	if (&load_hash_with_cached_messages == 0 ) {
+		print "Retrival from andutteye cachingserver:$server ended ok\n";
+		print "Relaying messages to andutteyeserver:$andutteye_server port:$andutteye_port\n";
+		communicate_with_world("$andutteye_server","$andutteye_port","notifyserver");
+	} else {
+		print "Something went wrong trying to retrive messages from cachingserver\n";
+		exit 1;
+	}
+}
+elsif($action eq "notifyserver") {
+my $count=0;
+for my $messages (sort keys %cachall) {
+	create_socket("$andutteye_server","$andutteye_port");
+	my $current = $cachall{$messages};
+	chomp $current->{aealarm};
+
+	print "Total Andutteyemessages relayed $count st.\n";
+    	print Server "$current->{aealarm}\n";
+    	delete $cachall{$messages};
+    	$count++;
+	close_socket();
+}
+print "Relay to andutteyeserver completed\n";
+print "Count:$count message(s) transfered. All transfered messages was deleted in cache\n";
+print "Total Andutteyemessages still cached ". keys( %cachall ) ." st.\n";
+close_socket();
+}
+
+# End of subfunction
+}
+sub create_socket {
+#
+# Create socket.
+#
+my $server=$_[0];
+my $port=$_[1];
+
+if ($use_ssl_communications) {
+# Loading ssl library
+require IO::Socket::SSL;
+#
+# Bringing up SSL-socket connection to encrypt communication
+#
+print "Encrypting communication with ssl-encryption \n";
+my $socket;
+$socket = IO::Socket::SSL->new(PeerHost => $server, 
+PeerPort => $port, 
+Reuse => '1',
+Proto => 'tcp') or die "ERROR Failed to create socket, errormessage:$!\n";
+
+} else {
+
+print "Using standard tcp INET communication\n"; 
+socket(Server, PF_INET, SOCK_STREAM, getprotobyname('tcp')) or die "ERROR Failed to prepare socketconnection errormsg:$! \n";
+my $internet_addr = inet_aton($server) or die "ERROR Failed to make internet address erromsg:$! \n";
+my $paddr = sockaddr_in($port, $internet_addr) or die "ERROR Failed to connect to socket errormsg:$! \n";
+
+connect(Server, $paddr) or die "ERROR Failed to connect to Andutteyeserver, maybe listener is down or you have specified a nonvalid hostname or port: errormsg:$! \n";
+
+select((select(Server), $| = 1)[0]) or die "EYEPSTERR05:Failed to create command buffering errormsg:$! \n";
+
+
+# End if statement
+}
+sub close_socket {
+#
+# Closing socket.
+#
+my $socket;
+if ($use_ssl_communications) {
+	close($socket);
+} else {
+	close(Server);
+}
+# End subfunction
+}
+# End of subbfunction
+}
+sub load_hash_with_cached_messages {
+#
+# Load hash with messages.
+#
+create_socket("$andutteye_cache_server","$andutteye_cache_port");
+print Server "givemeeverything#----###----#$user#----###----#$password\n";
+while(<Server>) {
+	 if ( $_ =~/QUIT/) {
+	        return 0;	
+	 } else {
+		  $cachall{$_} = { aealarm => $_};
+		  print "Total Andutteyemessages retrived ". keys( %cachall ) ." st.\n";
+	 }
+}
+
+# End of subfunction
+}
+sub program_info {
+#
+# Program information
+#
+print "\n";
+print "$version\n";
+print "\n";
+print "Invalid input,Usage: \n";
+print "\n";
+print "$0 -draincache -cacheserver=192.168.0.111 -cacheport=32001 -andutteyeserver=192.169.25.11 -andutteyeport=32001 -user=<username> -password=<password>\n";
+print "\n";
+print "-draincache		:Order the program to drain cache on andutteye cache server\n";
+print "-cacheserver		:Specify ipadress or dns name for the cachingserver\n";
+print "-cacheport		:Specify port where the caching server are accepting requests\n";
+print "-andutteyeserver	:Specify ipadress or dns name for the andutteyeserver to relay messages to\n";
+print "-andutteyeport		:Specify ipadress or dns name for the andutteyeserver to relay messages to\n";
+print "-user			:Specify user to authenticate as\n";
+print "-password		:Specify password to authenticate as\n";
+print "-ssl			:Use ssl to encrypt commmunication to servers\n";
+print "\n";
+print "\n";
+exit 1;
+}
+if($ARGV[0] eq "-draincache") {
+	print "$version\n\n";
+	print "Draining andutteye cache server:$andutteye_cache_server on port:$andutteye_cache_port\n";
+	communicate_with_world("$andutteye_cache_server","$andutteye_cache_port","draincache");
+} else {
+	program_info();
+}

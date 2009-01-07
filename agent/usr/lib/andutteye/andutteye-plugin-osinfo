@@ -1,0 +1,58 @@
+#!/bin/sh
+#
+#    Copyright Andreas Utterberg Thundera (c) All rights Reserved 2008
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+version="Anduteye Os-information plugin version 1.0 (2008 www.thundera.se)"
+
+
+case $1 in
+
+memtotal)
+value=`cat /proc/meminfo  | grep -i memtotal | awk '{print $2}'` 
+echo "$value Kb"
+;;
+disksize)
+value=`fdisk -l /dev/cciss/c0d0 | grep Disk |awk '{print $3}'`
+echo "$value Gb"
+;;
+redhat-release)
+head -1 /etc/redhat-release
+;;
+nrcpus)
+cat /proc/cpuinfo  | grep processor | wc -l
+;;
+cpumhz)
+value=`cat /proc/cpuinfo  | grep MHz | awk '{print $4}' | head -1`
+echo "$value MHz"
+;;
+corepercpu)
+value=`cat /proc/cpuinfo  | grep cores | awk '{print $4}' | head -1`
+echo "$value cores per cpu"
+;;
+*)
+echo
+echo "$version"
+echo
+echo "memtotal              :Extracts the systems serialnumber."
+echo "disksize              :Extracts the servertype."
+echo "redhat-release        :Extracts the the redhat release."
+echo "nrcpus                :Extracts the number cpus used."
+echo "cpumhz                :Extracts the cpu mhz."
+echo "corepercpu            :Extracts the number of cores per cpu" 
+echo
+;;
+esac

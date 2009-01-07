@@ -1,0 +1,739 @@
+#!/usr/bin/perl
+#
+#    Copyright Andreas Utterberg Thundera (c) All rights Reserved 2008
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+#    This file specifies which Andutteye modules that shall be enabled for this
+#    system. The Andutteye init program parses this configuration file to be
+#    able to know which modules to start. Note! The modules will be started in
+#    the order specified here, so the first to be started should be andutteyedsrv
+#    to be able to serve other components requests.
+#
+#    $Id: andutteyedmoapi_solaris 645 2008-04-23 18:18:14Z andutt $
+#
+#    Flow of interaction:
+#   --------------      -------------      ------------
+#   - Andutteyed - <--> -   API     - <--> -    OS    -
+#   -------------- .... ------------- .... ------------
+our $version="Andutteye Software Suite Monitoring Solaris backbone api Version:1.2 Lastfix:1.1 Latestfix:2007-08-10";
+use strict;
+use warnings;
+our @ARGV;
+our $debug=0;
+############################################################################
+#
+# Program starts.
+#
+############################################################################
+for(@ARGV) {
+	if (/-debug/) {
+		$debug=1;
+	}
+}
+if(!defined($ARGV[0])){
+	program_info();
+}
+if($ARGV[0] eq ""){
+	program_info();
+}
+if("$ARGV[0]" eq "-gethostname") {
+#
+# Description: Shall return the hostname of this running node.
+# Dataformat : hostname
+#
+my $hostname=`uname -n`;
+chomp $hostname;
+
+if(!defined($hostname)) {
+	return;
+}
+elsif($hostname eq "") {
+	return;
+}
+print "$hostname";
+
+# End ifstatement
+}
+elsif("$ARGV[0]" eq "-checkpermission") {
+#
+#
+#
+my $ecode;
+if(!defined($ARGV[1])){
+	print "1";
+	exit;
+}
+$ecode=system("cat $ARGV[1] > /dev/null 2>&1");
+print "$ecode";
+
+# End of ifstatement
+}
+elsif("$ARGV[0]" eq "-checkenv") {
+#
+#
+#
+my @checksetup=split(":", "$ENV{PATH}");
+my $file;
+my $found;
+my @needed=("pkginfo","cat","grep","ps","netstat","uname","sar","cut","who","uptime","ifconfig","df","ls");
+my @donthave;
+
+print "Performing andutteyed setupverification\n";
+for (@needed) {
+	chomp;
+	$file=$_;
+	$found=0;
+	for(@checksetup) {
+		if( -f "$_/$file") {
+			print "Needed binary:$file \tfound under \$PATH directory:$_\n";
+			$found=1;
+			last;
+		}
+	}
+	if(!$found) {
+		push(@donthave, $file);
+	}
+}
+for(@donthave) {
+	print "WARNING!! Needed binary:$_ wasnt found in the users \$PATH add a path otherwhise andutteye wont work correctly\n";
+}
+# End ifstatement
+}
+elsif("$ARGV[0]" eq "-getloadaverege") {
+#
+# Description: Shall return the loadaverege use for this node
+# Dataformat : loaddata loaddata loaddata
+#
+my $loadaverege1=`w | head -1 | cut -d " " -f16 | cut -d "," -f1`;
+my $loadaverege2=`w | head -1 | cut -d " " -f17 | cut -d "," -f1`;
+my $loadaverege3=`w | head -1 | cut -d " " -f18 | cut -d "," -f1`;
+chomp $loadaverege1;
+chomp $loadaverege2;
+chomp $loadaverege3;
+
+if(!defined($loadaverege1)) {
+	$loadaverege1="0";
+}
+if(!defined($loadaverege2)) {
+	$loadaverege2="0";
+}
+if(!defined($loadaverege3)) {
+	$loadaverege3="0";
+}
+print "$loadaverege1 $loadaverege2 $loadaverege3";
+
+# End ifstatement
+}
+elsif("$ARGV[0]" eq "-gettotalswap") {
+#
+# Description: Shall return the totalswap usage for this node
+# Dataformat : totalswap
+#
+my $total_swap;
+
+print "0";
+
+# End of ifstatement
+}
+elsif("$ARGV[0]" eq "-getfreeswap") {
+#
+# Description: Shall return the freeswap usage for this node
+# Dataformat : freeswap
+#
+my $free_swap;
+
+print "0";
+
+# End of ifstatement
+}
+elsif("$ARGV[0]" eq "-gettotalmemory") {
+#
+# Description: Shall return total memory of this node.
+# Dataformat : totalmemory
+#
+print "0";
+
+# End of ifstatement
+}
+elsif("$ARGV[0]" eq "-getfreememory") {
+#
+# Description: Shall return free memory of this node.
+# Dataformat : freememory
+#
+
+print "0";
+# End of ifstatement
+}
+elsif("$ARGV[0]" eq "-softwarepackagecount") {
+#
+# Description: Shall return number of packages.
+# Dataformat : numberofpackages
+#
+my $softwarecount=`pkginfo |wc -l`;
+chomp $softwarecount;
+
+if(!defined($softwarecount)) {
+	$softwarecount=0;
+}
+print "$softwarecount";
+
+# End of ifstatement
+}
+elsif("$ARGV[0]" eq "-softwarepackagelist") {
+#
+# Description: Shall return an array of packages that are installed for this node
+# Dataformat : package1name§package1version§package1release~package2name and so on
+#
+my $package;
+my $version;
+my $release;
+my @tmp;
+my @tmp1;
+my @tmp2;
+my @tmp3;
+my @softwarepackagelist=`pkginfo -l`;
+
+for(@softwarepackagelist) {
+	chomp;
+
+	if("$_" =~/PKGINST/) {
+		@tmp=split(":", $_);
+		$package="$tmp[1]";
+		$package =~ s/^\s*//; 
+		$package =~ s/\s*\n?$//; 
+	}
+	if("$_" =~/VERSION/) {
+		@tmp1=split(":", $_);
+		@tmp2=split(",", "$tmp1[1]");
+		$version="$tmp2[0]";
+		$version =~ s/^\s*//; 
+		$version =~ s/\s*\n?$//; 
+		
+		if(!defined($tmp2[1])) {
+			$tmp[3]="0";
+		} else {
+			@tmp3=split("=", "$tmp2[1]");
+		}
+
+		if(!defined($tmp[3])) {
+			$release="0";
+		} else {
+			$release="$tmp3[1]";
+			$release =~ s/^\s*//; 
+			$release =~ s/\s*\n?$//; 
+		}
+		if(!defined($version)) {
+			$version="0";
+		}
+		print "$packageÂ§$versionÂ§$release~";
+	}
+		 
+		
+}
+
+# End of ifstatement
+}
+elsif("$ARGV[0]" eq "-getprocesses") {
+#
+# Description: Shall return an array of current started processes
+# Dataformat : processline1 processline2
+#
+my @processlist=`ps -efl`;
+
+for(@processlist) {
+	print "$_";
+}
+
+# End of ifstatement
+}
+elsif("$ARGV[0]" eq "-getfilesystem") {
+#
+# Description: Shall return an array of current mounted filesystems
+# Dataformat : filesystemdata1 filesystemdata2
+#
+my @fslist=`df -h`;
+
+for(@fslist) {
+	print "$_";
+}
+
+# End of ifstatement
+}
+elsif("$ARGV[0]" eq "-getnetactivity") {
+#
+# Description: Shall return an array of current communication
+# Dataformat : netactivity1 netactivity2
+#
+my @netlist=`netstat -an`;
+
+for(@netlist) {
+	print "$_";
+}
+
+# End of ifstatement
+}
+elsif("$ARGV[0]" eq "-gethardware") {
+#
+# Description: Shall return an array of current connected hardware.
+# Dataformat : hardware1 hardware2
+#
+my @hardlist=`prtdiag`;
+
+for(@hardlist) {
+	if(/^$/) {
+		next;
+	}
+	if(!defined($_)) {
+		next;
+	}
+	print "$_";
+}
+
+# End of ifstatement
+}
+elsif("$ARGV[0]" eq "-getusers") {
+#
+# Description: Shall return an array of current logged on users.
+# Dataformat : user1 user2
+#
+my @userslist=`who`;
+
+for(@userslist) {
+	print "$_";
+}
+
+# End of ifstatement
+}
+elsif("$ARGV[0]" eq "-genprocesses") {
+#
+# Description: Shall return an array of current processes to add to andutteye config.
+# Dataformat : program1 program2 program3
+#
+# The SERVICE_DIR-parameter is telling which service directorys we includes when we searching for active processes.
+my @service_dir = ("/etc/init.d","/sbin/init.d","/etc/rc.d");
+my $addall;
+my $currentdir;
+my @files;
+my $status;
+
+for(@ARGV) {
+        if ( $_ =~/-addall/ ) {
+                $addall=1;
+        }
+}
+for(@service_dir) {
+	if(! -d $_) {
+		next;
+	} else {
+		$currentdir=$_;
+	}
+	@files=`ls $currentdir`;
+	for(@files) {
+		chomp;
+		if ( -d "$currentdir/$_" ) {
+			next;
+		}
+		print "$_\n";
+	}
+}
+
+# End of ifstatement
+}
+elsif("$ARGV[0]" eq "-genfilesystems") {
+#
+# Description: Shall return an array of current mounted filesystems.
+# Dataformat : filesystem1 filesystem2
+#
+my @fslist=`df | cut -c57-90 | grep -v "/dev/shm" | grep -v "Mounted"`;
+
+for(@fslist) {
+	if(/^$/) {
+		if($debug) {
+			print "Skipping empty filesystem string\n";
+		}
+		next;
+	}
+	if(/\//) {
+		if($debug) {
+			print "Found a hit ";
+		}
+		print "$_";
+	}
+}
+
+# End of ifstatement
+}
+elsif("$ARGV[0]" eq "-getprocessstatus") {
+#
+# Description: Shall return the process string of a asked process
+# Dataformat : processstring
+#
+if(!defined($ARGV[1])) {
+	exit;
+}
+my $procstatus=`ps -efl | grep "$ARGV[1]" | grep -v "grep" | grep -v "andutteye-api" | head -n 1`;
+chomp $procstatus;
+
+print "$procstatus";
+
+# End of istatement
+}
+elsif("$ARGV[0]" eq "-getfilesystemfillage") {
+#
+# Description: Shall return the filesystem used space of a asked filesystem.
+# Dataformat : filesystemfillage
+#
+my $fsfillage;
+
+if(!defined($ARGV[1])) {
+	exit;
+}
+# First try
+$fsfillage=`df | grep "$ARGV[1]" | cut -c52-54 | head -n 1`;
+chomp $fsfillage;
+
+if($fsfillage =~/^$/) {
+	# Second try
+	$fsfillage=`df -P | grep "$ARGV[1]" | head -n 1 | cut -c74-76`;
+	chomp $fsfillage;
+}
+
+print "$fsfillage";
+
+# End of istatement
+}
+elsif("$ARGV[0]" eq "-getfilesystemcheck") {
+#
+# Description: Shall return the filesystem string of a mounted filesystem, if its mounted.
+# Dataformat : filesystemstring
+#
+if(!defined($ARGV[1])) {
+	exit;
+}
+# First try
+my $fscheck=`df | grep "$ARGV[1]"`;
+chomp $fscheck;
+
+print "$fscheck";
+
+# End of istatement
+}
+elsif("$ARGV[0]" eq "-getversion") {
+#
+# Description: Shall return the current kernelversion.
+# Dataformat : kernelversion.
+#
+my $getversion=`uname -r`;
+chomp $getversion;
+
+print "$getversion";
+
+# End of istatement
+}
+elsif("$ARGV[0]" eq "-getnrprocs") {
+#
+# Description: Shall return the number of processes.
+# Dataformat : nrofprocesses
+#
+my $nrprocs=`ps -efl | wc -l`;
+chomp $nrprocs;
+
+print "$nrprocs";
+
+# End of istatement
+}
+elsif("$ARGV[0]" eq "-getnractiveusers") {
+#
+# Description: Shall return the number of active users.
+# Dataformat : nrofusers
+#
+my $nrusers=`who | wc -l`;
+chomp $nrusers;
+
+print "$nrusers";
+
+# End of istatement
+}
+elsif("$ARGV[0]" eq "-getnrmountedfs") {
+#
+#
+#
+my $nrmountedfs=`df | grep /dev/ |wc -l`;
+chomp $nrmountedfs;
+
+print "$nrmountedfs";
+
+# End of istatement
+}
+elsif("$ARGV[0]" eq "-getcpumhz") {
+#
+# Description: Shall return the processor speed in mhz.
+# Dataformat : cpuspeed
+#
+my $getcpumhz=0;
+chomp $getcpumhz;
+
+print "$getcpumhz";
+
+# End of istatement
+}
+elsif("$ARGV[0]" eq "-getnrcpus") {
+#
+# Description: Shall return the number of cpus showed to the system, the hyperthreaded also if used.
+# Dataformat : nrcpus
+#
+my $getnrcpus=0;
+chomp $getnrcpus;
+
+print "$getnrcpus";
+
+# End of istatement
+}
+elsif("$ARGV[0]" eq "-getcpuusage") {
+#
+# Description: Shall return 3 values of used cpu.
+# Dataformat : userusage systemusage idleusage
+#
+my $data=`w | head -1 | cut -d ":" -f4`;
+$data =~ s/\,//g;
+$data =~ s/^\s*//;
+$data =~ s/\s*\n?$//;
+$data =~ s/\s\s+/ /;
+
+if("$data" eq "") {
+	$data="0";
+}
+print "$data";
+
+# End of istatement
+}
+elsif("$ARGV[0]" eq "-getmemusage") {
+#
+# Description: Shall return the current used memory
+# Dataformat : memtotal memused memfree membuffered memcached
+#
+my $memtotal;
+my $memfree;
+my $membuffers;
+my $memcached;
+my $memused;
+my $mem_usage;
+my @check;
+
+	print "0 0 0 0 0";
+
+# End of istatement
+}
+elsif("$ARGV[0]" eq "-getswapusage") {
+#
+# Description: Shall return the current swapusage
+# Dataformat : swaptotal swapfree swapcached
+#
+my $swaptotal;
+my $swapfree;
+my $swapcached;
+my @check;
+my $swap_usage;
+
+	print "0 0 0";
+
+# End of istatement
+}
+elsif("$ARGV[0]" eq "-getcpumodel") {
+#
+# Description: Shall return the current cpumodel
+# Dataformat : cpumodel
+#
+my $getcpumodel=0;
+chomp $getcpumodel;
+
+print "$getcpumodel";
+
+# End of istatement
+}
+elsif("$ARGV[0]" eq "-getostype") {
+#
+# Description: Shall return the current ostype
+# Dataformat : ostype
+#
+my $getostype=`uname -s`;
+chomp $getostype;
+
+print "$getostype";
+
+# End of istatement
+}
+elsif("$ARGV[0]" eq "-getuptime") {
+#
+# Description: Shall return the current uptime of the system.
+# Dataformat : uptime
+#
+my $uptime=`uptime`;
+chomp $uptime;
+
+print "$uptime";
+
+# End of istatement
+}
+elsif("$ARGV[0]" eq "-getipadress") {
+#
+# Description: Shall return the current used ipadress
+# Dataformat : ipadress
+#
+my $ipadress=`/sbin/ifconfig -a | grep inet | tail -1 | cut -d " " -f2`;
+chomp $ipadress;
+
+if(!defined($ipadress)) {
+	$ipadress="Unknown";
+} else {
+	print "$ipadress";
+}
+
+# End of istatement
+}
+elsif("$ARGV[0]" eq "-getmacadress") {
+#
+# Description: Shall return the current used macadress
+# Dataformat : macadress
+#
+my $macadress="Unknown";
+chomp $macadress;
+
+print "$macadress";
+
+# End of istatement
+}
+elsif("$ARGV[0]" eq "-tellsyslog") {
+#
+# Description: Reports andutteye messages to syslog
+# Dataformat : datatosend
+#
+my $ecode;
+
+if (!defined($ARGV[1])) {
+	exit 1;
+}
+$ecode=system("logger -i -t Andutteye \"$ARGV[1]\"");
+
+print "$ecode";
+# End of istatement
+}
+elsif("$ARGV[0]" eq "-getdistribution") {
+#
+# Description: Shall return the current used distribution of the operatingsystem.
+# Dataformat : distribution
+#
+my $distfile;
+my $tmpdist;
+my $distribution;
+
+my @distfiles=("/etc/issue",
+	       "/etc/redhat-release",
+	       "/etc/fedora-release",
+	       "/etc/suse-release",
+	       "/etc/ubuntu-release",
+	       "/etc/slackware-version",
+	       "/etc/gentoo-release",
+	       "/etc/motd");
+my @dists=("Suse",
+           "Gentoo",
+	   "Slackware",
+	   "Debian",
+	   "Mandrake",
+	   "Turbolinux",
+	   "Red Hat",
+	   "CentOS",
+           "Mandriva",
+	   "Ubuntu",
+	   "SunOS",
+	   "Fedora");
+
+for(@distfiles) {
+	$distfile=$_;
+		if (-f "$_" ) {
+                	for(@dists) {
+              			$tmpdist=`cat $distfile | grep -i "$_"`;
+					if($tmpdist ne "") {
+				        	chomp $tmpdist;
+				                $distribution="$tmpdist";
+				        }
+		        }
+		}
+}
+if (!defined($distribution)) {
+	print "Unknown";
+} else {
+	chomp $distribution;
+	print "$distribution";
+}
+
+# End of istatement
+} else {
+	program_info();
+}
+sub program_info {
+#
+#
+#
+print "-" x 100;
+print "\n\n$version\n\n";
+print "-" x 100;
+print"\n";
+print"\n";
+print" Usage:$0 -checkenv\n";
+print" Usage:$0 -getdistribution\n";
+print"\n";
+print " -checkenv			:Verify setup for the user that executes andutteye\n";
+print " -checpermission			:Verify permission on file or directory\n";
+print " -genfilesystems		:Generate filesystems array of current mounted filsystem\n";
+print " -genprocesses			:Generate process array of current services\n";
+print " -getcpumhz			:Retrive cpu speed in mhz\n";
+print " -getcpumodel			:Retrive cpumodel\n";
+print " -getcpuusage			:Retrive current cpuusage\n";
+print " -getdistribution		:Retrive distribution\n";
+print " -getfilesystem			:Get filesystem array\n";
+print " -getfilesystemcheck		:Check if filsystem are mounted\n";
+print " -getfilesystemfillage		:Get filesystem usage\n";
+print " -getfreememory			:Get free memory\n";
+print " -getfreeswap			:Get free swap\n";
+print " -gethardware			:Get hardware array\n";
+print " -gethostname			:Get hostname of this node\n";
+print " -getipadress			:Get current ipadress\n";
+print " -getloadaverege		:Get loadaverege\n";
+print " -getmacadress			:Get current macadress\n";
+print " -getmemusage			:Get memoryusage\n";
+print " -getnractiveusers		:Get number of logged on and active users\n";
+print " -getnrcpus			:Get number of cpus.\n";
+print " -getnrmountedfs		:Get number of mounted filesystems\n";
+print " -getnrprocs			:Get number of processes\n";
+print " -getostype			:Get operatingsystem type\n";
+print " -getprocesses			:Get current active processes\n";
+print " -getprocessstatus		:Check processstatus\n";
+print " -getswapusage			:Get current swapusage\n";
+print " -gettotalmemory		:Get totalmemory\n";
+print " -gettotalswap			:Get totalswap\n";
+print " -getuptime			:Get uptime statistics\n";
+print " -getusers			:Get users\n";
+print " -getversion			:Get kernelversin\n";
+print " -getnetactivity		:Get array of netactivity\n";
+print " -softwarepackagecountportage	:Get number of portage packages installed Only Gentoo Linux\n";
+print " -softwarepackagecountrpm   	:Get number of rpm packages installed\n";
+print " -softwarepackagelistportage	:Get portage package list Only Gentoo Linux\n";
+print " -softwarepackagelistrpm   	:Get rpm package list\n";
+print " -tellsyslog		   	:Notify local systemlog\n";
+print"\n\n";
+exit 1;
+# End of subfunction
+}

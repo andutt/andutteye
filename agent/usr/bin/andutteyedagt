@@ -1,0 +1,3020 @@
+#!/usr/bin/perl
+#
+#    Copyright Andreas Utterberg Thundera (c) All rights Reserved 2008
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#    $Id: andutteyedagt 739 2008-10-28 21:15:29Z andutt $
+#
+our $version = "Andutteye Agent Version 3.0 (2008 www.thundera.se).";
+our $Server_listen_adress;
+our $Server_listen_port;
+our $Enable_software_inventory;
+our $Enable_package_update;
+our $Enable_config_update;
+our $Enable_ssl_encryption;
+our $Enable_syslog_notification;
+our $Enable_autoclose_alarms;
+our $Enable_daemon_mode;
+our $Use_api;
+our $Use_smtp_server;
+our $Use_mail_from_adress;
+our $Use_mail_subject;
+our $Use_mail_body;
+our $Use_debug_level;
+our $Use_hooks_directory;
+our $Use_ssl_server_key;
+our $Use_ssl_server_cert;
+our $Loop_interval;
+our $Log_dir_location;
+our $Cache_dir_location;
+our $Transfer_dir_location;
+our $Api_dir_location;
+our $Bin_dir_location;
+our $Run_time_system_key;
+our $This_Host;
+our $parameter;
+our $value;
+our $config;
+our $msg;
+our $severity;
+our $stopnumber;
+our $gathersoftwaredate="1";
+our $Loops="1";
+our %resuminghash;
+our %errorlimithash;
+our %alarmlimithash;
+our %monitorhash;
+our %monitorstatushash;
+our @monitors;
+our @base_configuration;
+our @install_packages;
+our @uninstall_packages;
+our @validate_files;
+our @verify_files;
+our $monitors;
+our %filemodhash;
+our %filetracehash;
+our $filetracehash;
+
+our ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+our $date=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+our $time=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+our $firstdate=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+our $firsttime=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+use IO::Socket::INET;
+use Digest::MD5;
+use File::Basename;
+use Net::SMTP;
+use strict;
+
+sub parse_and_load_configuration {
+my @tmp;
+my $params="0";
+
+print "$date $time Parsing and reading parameters from config $config.\n";
+
+      open("conf","<$config")
+                or die "ERROR Failed to open configuration file for reading config:$config error:$!\n";
+        for(<conf>) {
+                chomp;
+                if(/^#/) {
+                        next;
+                }
+                if(/^$/) {
+                        next;
+                }
+                if(/^Enable_software_inventory/) {
+                        @tmp=split("=","$_");
+                        $Enable_software_inventory="$tmp[1]";
+        		push(@base_configuration,"Enable_software_inventory=$Enable_software_inventory");
+                        $params++;
+                }
+                if(/^Enable_package_update/) {
+                        @tmp=split("=","$_");
+                        $Enable_package_update="$tmp[1]";
+        		push(@base_configuration,"Enable_package_update=$Enable_package_update");
+                        $params++;
+                }
+                if(/^Enable_config_update/) {
+                        @tmp=split("=","$_");
+                        $Enable_config_update="$tmp[1]";
+        		push(@base_configuration,"Enable_config_update=$Enable_config_update");
+                        $params++;
+                }
+                if(/^Enable_ssl_encryption/) {
+                        @tmp=split("=","$_");
+                        $Enable_ssl_encryption="$tmp[1]";
+        		push(@base_configuration,"Enable_ssl_encryption=$Enable_ssl_encryption");
+                        $params++;
+                }
+                if(/^Server_listen_adress/) {
+                        @tmp=split("=","$_");
+                        $Server_listen_adress="$tmp[1]";
+        		push(@base_configuration,"Server_listen_adress=$Server_listen_adress");
+                        $params++;
+                }
+                if(/^Server_listen_port/) {
+                        @tmp=split("=","$_");
+                        $Server_listen_port="$tmp[1]";
+        		push(@base_configuration,"Server_listen_port=$Server_listen_port");
+                        $params++;
+                }
+                if(/^Enable_syslog_notification/) {
+                        @tmp=split("=","$_");
+                        $Enable_syslog_notification="$tmp[1]";
+        		push(@base_configuration,"Enable_syslog_notification=$Enable_syslog_notification");
+                        $params++;
+                }
+                if(/^Enable_autoclose_alarms/) {
+                        @tmp=split("=","$_");
+                        $Enable_autoclose_alarms="$tmp[1]";
+        		push(@base_configuration,"Enable_autoclose_alarms=$Enable_autoclose_alarms");
+                        $params++;
+                }
+                if(/^Enable_daemon_mode/) {
+                        @tmp=split("=","$_");
+                        $Enable_daemon_mode="$tmp[1]";
+        		push(@base_configuration,"Enable_daemon_mode=$Enable_daemon_mode");
+                        $params++;
+                }
+                if(/^Use_api/) {
+                        @tmp=split("=","$_");
+                        $Use_api="$tmp[1]";
+        		push(@base_configuration,"Use_api=$Use_api");
+                        $params++;
+                }
+                if(/^Use_smtp_server/) {
+                        @tmp=split("=","$_");
+                        $Use_smtp_server="$tmp[1]";
+        		push(@base_configuration,"Use_smtp_server=$Use_smtp_server");
+                        $params++;
+                }
+                if(/^Use_mail_from_adress/) {
+                        @tmp=split("=","$_");
+                        $Use_mail_from_adress="$tmp[1]";
+        		push(@base_configuration,"Use_mail_from_adress=$Use_mail_from_adress");
+                        $params++;
+                }
+                if(/^Use_mail_subject/) {
+                        @tmp=split("=","$_");
+                        $Use_mail_subject="$tmp[1]";
+        		push(@base_configuration,"Use_mail_subject=$Use_mail_subject");
+                        $params++;
+                        $params++;
+                }
+                if(/^Use_mail_body/) {
+                        @tmp=split("=","$_");
+                        $Use_mail_body="$tmp[1]";
+        		push(@base_configuration,"Use_mail_body=$Use_mail_body");
+                        $params++;
+                }
+                if(/^Use_debug_level/) {
+                        @tmp=split("=","$_");
+                        $Use_debug_level="$tmp[1]";
+        		push(@base_configuration,"Use_debug_level=$Use_debug_level");
+                        $params++;
+                }
+                if(/^Use_hooks_directory/) {
+                        @tmp=split("=","$_");
+                        $Use_hooks_directory="$tmp[1]";
+        		push(@base_configuration,"Use_hooks_directory=$Use_hooks_directory");
+                        $params++;
+                }
+                if(/^Use_ssl_server_key/) {
+                        @tmp=split("=","$_");
+                        $Use_ssl_server_key="$tmp[1]";
+        		push(@base_configuration,"Use_ssl_server_key=$Use_ssl_server_key");
+                        $params++;
+                }
+                if(/^Use_ssl_server_cert/) {
+                        @tmp=split("=","$_");
+                        $Use_ssl_server_cert="$tmp[1]";
+        		push(@base_configuration,"Use_ssl_server_key=$Use_ssl_server_key");
+                        $params++;
+                }
+                if(/^Loop_interval/) {
+                        @tmp=split("=","$_");
+                        $Loop_interval="$tmp[1]";
+        		push(@base_configuration,"Loop_interval=$Loop_interval");
+                        $params++;
+                }
+                if(/^Log_dir_location/) {
+                        @tmp=split("=","$_");
+                        $Log_dir_location="$tmp[1]";
+        		push(@base_configuration,"Log_dir_location=$Log_dir_location");
+                        $params++;
+                }
+                if(/^Cache_dir_location/) {
+                        @tmp=split("=","$_");
+                        $Cache_dir_location="$tmp[1]";
+        		push(@base_configuration,"Cache_dir_location=$Cache_dir_location");
+                        $params++;
+                }
+                if(/^Transfer_dir_location/) {
+                        @tmp=split("=","$_");
+                        $Transfer_dir_location="$tmp[1]";
+        		push(@base_configuration,"Transfer_dir_location=$Transfer_dir_location");
+                        $params++;
+                }
+                if(/^Api_dir_location/) {
+                        @tmp=split("=","$_");
+                        $Api_dir_location="$tmp[1]";
+        		push(@base_configuration,"Api_dir_location=$Api_dir_location");
+                        $params++;
+                }
+                if(/^Bin_dir_location/) {
+                        @tmp=split("=","$_");
+                        $Bin_dir_location="$tmp[1]";
+        		push(@base_configuration,"Bin_dir_location=$Bin_dir_location");
+                        $params++;
+                }
+
+}
+close("conf");
+
+if($Use_debug_level > 1) {
+        print "$date $time Parsing of $config completed. $params parameters loaded.\n";
+}
+if($Use_debug_level > 2) {
+        print "Server_listen_adress\t:$Server_listen_adress\n";
+        print "Server_listen_port\t:$Server_listen_port\n";
+        print "Enable_software_inventory\t:$Enable_software_inventory\n";
+        print "Enable_ssl_encryption\t:$Enable_ssl_encryption\n";
+        print "Enable_syslog_notification\t:$Enable_syslog_notification\n";
+        print "Enable_autoclose_alarms\t:$Enable_autoclose_alarms\n";
+        print "Use_api\t\t:$Use_api\n";
+        print "Use_smtp_server\t:$Use_smtp_server\n";
+        print "Use_mail_subject\t:$Use_mail_subject\n";
+        print "Use_ssl_server_key\t:$Use_ssl_server_key\n";
+        print "Use_ssl_server_cert\t:$Use_ssl_server_cert\n";
+        print "Use_hooks_directory\t:$Use_hooks_directory\n";
+        print "Loop_interval\t\t:$Loop_interval\n";
+        print "Api_dir_location\t:$Api_dir_location\n";
+        print "Bin_dir_location\t:$Bin_dir_location\n";
+        print "Log_dir_location\t:$Log_dir_location\n";
+        print "Cache_dir_location\t:$Cache_dir_location\n";
+        print "Transfer_dir_location\t:$Transfer_dir_location\n";
+}
+
+# End of subfunction
+}
+sub parse_and_load_monitors {
+our $line_number="0";
+our $stop_number="0";
+our $token;
+our $monitor;
+our $monitortype;
+our $id="1";
+
+print "$date $time Clearing memory on previous monitors, if any.\n";
+%monitorhash = ();
+print "$date $time Clearing memory on previous monitors status, if any.\n";
+%monitorstatushash = ();
+print "$date $time Parsing and reading monitors from config $config.\n";
+
+      open("conf","<$config")
+                or die "ERROR Failed to open configuration file for reading config:$config error:$!\n";
+        for(<conf>) {
+                chomp;
+		$line_number++;
+                if(/^#/) {
+                        next;
+                }
+		if(/^$/) {
+			next;
+		}
+		# Current available monitor framework.
+		if(/^monitor:PS\:/) {
+			my @tmp=split(":","$_");
+			$stopnumber=($line_number + 8);
+			$monitortype="$tmp[1]";
+			$monitor="$tmp[2]";
+			
+			if($Use_debug_level > 3) {	
+				print "Found first line of a monitor Type:$monitortype Monitor:$monitor. Start line :$line_number Stop line:$stopnumber\n";
+				print "Next 8 lines should contain specifications for this monitor\n";
+			}
+			$token="1";
+			$id++;
+			next;
+		}
+		if(/^monitor:FS\:/) {
+			my @tmp=split(":","$_");
+			$stopnumber=($line_number + 11);
+			$monitortype="$tmp[1]";
+			$monitor="$tmp[2]";
+			
+			if($Use_debug_level > 3) {	
+				print "Found first line of a monitor Type:$monitortype Monitor:$monitor. Start line :$line_number Stop line:$stopnumber\n";
+				print "Next 11 lines should contain specifications for this monitor\n";
+				print "Total monitors loaded:". keys( %monitorhash ) .".\n";
+			}
+			$token="1";
+			$id++;
+			next;
+		}
+		if(/^monitor:FT\:/) {
+			my @tmp=split(":","$_");
+			$stopnumber=($line_number + 10);
+			$monitortype="$tmp[1]";
+			$monitor="$tmp[2]";
+			
+			if($Use_debug_level > 3) {	
+				print "Found first line of a monitor Type:$monitortype Monitor:$monitor. Start line :$line_number Stop line:$stopnumber\n";
+				print "Next 9 lines should contain specifications for this monitor\n";
+				print "Total monitors loaded:". keys( %monitorhash ) .".\n";
+			}
+			$token="1";
+			$id++;
+			next;
+		}
+		if(/^monitor:FM\:/) {
+			my @tmp=split(":","$_");
+			$stopnumber=($line_number + 7);
+			$monitortype="$tmp[1]";
+			$monitor="$tmp[2]";
+			
+			if($Use_debug_level > 3) {	
+				print "Found first line of a monitor Type:$monitortype Monitor:$monitor. Start line :$line_number Stop line:$stopnumber\n";
+				print "Next 7 lines should contain specifications for this monitor\n";
+				print "Total monitors loaded:". keys( %monitorhash ) .".\n";
+			}
+			$token="1";
+			$id++;
+			next;
+			
+		}
+		if(/^monitor:PH\:/) {
+			my @tmp=split(":","$_");
+			$stopnumber=($line_number + 8);
+			$monitortype="$tmp[1]";
+			$monitor="$tmp[2]";
+			
+			if($Use_debug_level > 3) {	
+				print "Found first line of a monitor Type:$monitortype Monitor:$monitor. Start line :$line_number Stop line:$stopnumber\n";
+				print "Next 8 lines should contain specifications for this monitor\n";
+				print "Total monitors loaded:". keys( %monitorhash ) .".\n";
+			}
+			$token="1";
+			$id++;
+			next;
+		}
+		if(/^monitor:EV\:/) {
+			my @tmp=split(":","$_");
+			$stopnumber=($line_number + 8);
+			$monitortype="$tmp[1]";
+			$monitor="$tmp[2]";
+			
+			if($Use_debug_level > 3) {	
+				print "Found first line of a monitor Type:$monitortype Monitor:$monitor. Start line :$line_number Stop line:$stopnumber\n";
+				print "Next 8 lines should contain specifications for this monitor\n";
+				print "Total monitors loaded:". keys( %monitorhash ) .".\n";
+			}
+			$token="1";
+			$id++;
+			next;
+		}
+		if(/^monitor:LA\:/) {
+			my @tmp=split(":","$_");
+			$stopnumber=($line_number + 7);
+			$monitortype="$tmp[1]";
+			$monitor="$tmp[2]";
+			
+			if($Use_debug_level > 3) {	
+				print "Found first line of a monitor Type:$monitortype Monitor:$monitor. Start line :$line_number Stop line:$stopnumber\n";
+				print "Next 7 lines should contain specifications for this monitor\n";
+				print "Total monitors loaded:". keys( %monitorhash ) .".\n";
+			}
+			$token="1";
+			$id++;
+			next;
+		}
+		if(/^monitor:SA\:/) {
+			my @tmp=split(":","$_");
+			$stopnumber=($line_number + 7);
+			$monitortype="$tmp[1]";
+			$monitor="$tmp[2]";
+			
+			if($Use_debug_level > 3) {	
+				print "Found first line of a monitor Type:$monitortype Monitor:$monitor. Start line :$line_number Stop line:$stopnumber\n";
+				print "Next 7 lines should contain specifications for this monitor\n";
+				print "Total monitors loaded:". keys( %monitorhash ) .".\n";
+			}
+			$token="1";
+			$id++;
+			next;
+		}
+		if(/^monitor:MA\:/) {
+			my @tmp=split(":","$_");
+			$stopnumber=($line_number + 7);
+			$monitortype="$tmp[1]";
+			$monitor="$tmp[2]";
+			
+			if($Use_debug_level > 3) {	
+				print "Found first line of a monitor Type:$monitortype Monitor:$monitor. Start line :$line_number Stop line:$stopnumber\n";
+				print "Next 7 lines should contain specifications for this monitor\n";
+				print "Total monitors loaded:". keys( %monitorhash ) .".\n";
+			}
+			$token="1";
+			$id++;
+			next;
+		}
+		if(/^monitor:ST\:/) {
+			my @tmp=split(":","$_");
+			$stopnumber=($line_number + 15);
+			$monitortype="$tmp[1]";
+			$monitor="$tmp[2]";
+		
+			if($Use_debug_level > 3) {	
+				print "Found first line of a monitor Type:$monitortype Monitor:$monitor. Start line :$line_number Stop line:$stopnumber\n";
+				print "Next 15 lines should contain specifications for this monitor\n";
+				print "Total monitors loaded:". keys( %monitorhash ) .".\n";
+			}
+			$token="1";
+			$id++;
+			next;
+		}
+		if(/^monitor:AM\:/) {
+			my @tmp=split(":","$_");
+			$stopnumber=($line_number + 3);
+			$monitortype="$tmp[1]";
+			$monitor="$tmp[2]";
+		
+			if($Use_debug_level > 3) {	
+				print "Found first line of a monitor Type:$monitortype Monitor:$monitor. Start line :$line_number Stop line:$stopnumber\n";
+				print "Next 3 lines should contain specifications for this monitor\n";
+				print "Total monitors loaded:". keys( %monitorhash ) .".\n";
+			}
+			$token="1";
+			$id++;
+			next;
+		}
+
+			if($token) {
+				if($line_number = $stopnumber) {
+					my @tmp=split("=",$_);
+					$parameter="$tmp[0]";
+					$value="$tmp[1]";
+					my $valid_monitor_arguments="0";
+					my @valid_monitor_arguments=( "status",
+								      "send_email",
+								      "severity",
+								      "schedule",
+								      "message",
+								      "alarmlimit",
+								      "execute_program",
+								      "arguments",
+								      "errorlimit",
+								      "warning_limit",
+        							      "critical_limit",
+        							      "searchpattern",
+								      "name",
+								      "program",
+								      "exitstatus",
+        							      "fatal_limit" );
+									
+
+					$parameter=~s/^\s+//;
+					$parameter=~s/\s+$//;
+					$parameter=~s/\t+$//;
+					$parameter=~s/^\t+$//;
+
+					for(@valid_monitor_arguments) {
+						chomp;
+						if($Use_debug_level > 4) {
+							print "\tChecking for valid monitor argument:$_ ($parameter)\n";
+						}
+						$_=~s/^\s+//;
+						$_=~s/\s+$//;
+						$_=~s/\t+$//;
+						$_=~s/^\t+$//;
+				
+						if("$parameter" eq "$_") {
+							if($Use_debug_level > 3) {
+								print "Found a valid monitor argument:$_ parameter:$parameter\n";
+							}
+							$valid_monitor_arguments="1";
+							$parameter="$_";
+
+							if(!defined("$value")) {
+								print "Value for parameter $parameter is unset. Setting it to no.\n";
+								$value="no";
+							}
+							last;
+						}
+
+					}
+					if($valid_monitor_arguments == 0) {
+						print "ERROR An monitor argument:was supplied for monitor $monitor which isnt supported Line:$line_number. Skipping this monitor.\n";
+						next;
+					} else {
+						$valid_monitor_arguments="0";
+					}
+
+					if($Use_debug_level > 4) {
+						print "Loading parameter:$parameter Value:$value for monitor $monitor\n";
+					}
+					$monitorhash{"$monitor"}{$parameter} = "$value";
+					$monitorhash{"$monitor"}{'type'}     = "$monitortype";
+					$monitorhash{"$monitor"}{'monitor'}  = "$monitor";
+				} else {
+					print "Line number:$line_number and stopnumber:$stopnumber is reached. Closing token\n";
+					$token="0";
+				}
+			}
+	}
+
+	close("conf");
+
+print "Total monitors loaded:". keys( %monitorhash ) .".\n";
+
+$token="0";
+$id="0";
+# End of subfunction
+}
+sub check_message {
+my $messagestring="$_[0]"; 
+my $defaultmessage="$_[1]";
+
+if($Use_debug_level) {
+	print "Entering subfunction check_message() \n";
+}
+
+if ("$messagestring" eq "no") {
+	if($Use_debug_level > 2) {
+		print "Using default message:$defaultmessage\n";
+	}
+	return "$defaultmessage";
+} else {
+	if(!defined($messagestring)) {
+		print "Recived a userdefinedmessage with bad syntax:$messagestring using default\n";
+		return $defaultmessage;
+	} else {
+		print "Will use userdefined message:$messagestring\n";
+		return "$messagestring";
+	}
+}
+if($Use_debug_level) {
+	print "Leaving subfunction check_message() \n";
+}
+
+# End of subfunction
+}
+sub check_severity {
+my $severity="$_[0]";
+
+if($Use_debug_level > 3) {
+	print "Entering subfunction check_severity() \n";
+}
+
+if("$severity" ne "HARMLESS" || "WARNING" || "CRITICAL" || "FATAL") {
+	print "\t[warn] Unsupported severity:$severity defined, setting it to->WARNING\n";
+	return "WARNING";
+} else {
+	print "Supported severity found->$severity\n";
+}
+
+if($Use_debug_level > 3) {
+	print "Leaving subfunction check_severity() \n";
+}
+# End of subfunction
+}
+sub send_message_to_server {
+my @andutteye_servers;
+my @andutteye_ports;
+my @post_value;
+my $post_value;
+my $socket;
+my $nr="0";
+my $ok_flag;
+
+if("$Server_listen_adress" eq "no" && "$Server_listen_port" eq "no") {
+	print "[info] Running in standalone mode, no server specific tasks needs to be executed.\n";
+	return
+}
+if($Use_debug_level) {
+	print "Entering subfunction send_message_to_server()\n";
+}
+if($Server_listen_adress eq "no" || $Server_listen_port eq "no") {
+        print "[warn] No Andutteye server or port specified, suppose to work in standalone mode.\n";
+        return;
+}
+for(@_) {
+	if($Use_debug_level > 4) {
+		print "[info] Parsing and pushing value $nr data string:$_\n";
+	}
+        push(@post_value,"$_");
+        $nr++;
+}
+$nr="0";
+while($nr < 30) {
+        if (!defined($post_value[$nr])) {
+        	$post_value[$nr]="notset";
+        }
+	if($Use_debug_level > 4) {
+		print "[info] Postvalue $nr->$post_value[$nr] Max->30.\n";
+	}
+$nr++;
+}
+@andutteye_servers=split(" ",$Server_listen_adress);
+for(@andutteye_servers) {
+        my $current_andutteyeserver="$_";
+
+		if ($Enable_ssl_encryption eq "yes") {
+			require IO::Socket::SSL;
+			if($Use_debug_level > 2) {
+				print "[info] Will try to send information to Andutteye servers.\n";
+				print "\tAndutteye server:$current_andutteyeserver\n";
+				print "\tAndutteye port  :$Server_listen_port\n";
+				print "\tSocket mode     :Ssl encryption enabled\n";
+			}
+			$socket = IO::Socket::SSL->new(	PeerHost => "$current_andutteyeserver",
+						PeerPort => "$Server_listen_port",
+						Reuse 	 => "1",
+						Proto => "tcp");
+
+				
+			if($Use_debug_level > 4) {
+				my ($subject_name, $issuer_name, $cipher);
+				if( ref($socket) eq "IO::Socket::SSL") {
+    					$subject_name = $socket->peer_certificate("subject");
+    					$issuer_name = $socket->peer_certificate("issuer");
+    					$cipher = $socket->get_cipher();
+					print "Ssl cert subject:$subject_name\n";
+					print "Issuer          :$issuer_name\n";
+					print "Cipher          :$cipher\n";
+				}
+			}
+			if(!$socket) {
+        			print "ERROR Andutteye server could not be reached:$current_andutteyeserver, the agent will continue to to manage your system [ssl]\n";
+        			print "ERROR and resolv configured actions. When connection is restored connectivity is re established [ssl]\n";
+        			print "ERROR Will try to send message to backup hosts if any are specified [ssl]\n";
+        			notify_syslog("Andutteyeserver could not be reached:$current_andutteyeserver on port $Server_listen_port [ssl enabled]");
+			} else {
+				if($Use_debug_level > 4) {
+					print "[info] Trying to send datastrem.\n";
+        			}
+			print $socket "$post_value[0]#----###----#$post_value[1]#----###----#$post_value[2]#----###----#$post_value[3]#----###----#$post_value[4]#----###----#$post_value[5]#----###----#$post_value[6]#----###----#$post_value[7]#----###----#$post_value[8]#----###----#$post_value[9]#----###----#$post_value[10]#----###----#$post_value[11]#----###----#$post_value[12]#----###----#$post_value[13]#----###----#$post_value[14]#----###----#$post_value[15]#----###----#$post_value[16]#----###----#$post_value[17]#----###----#$post_value[18]#----###----#$post_value[19]#----###----#$post_value[20]#----###----#$post_value[21]#----###----#$post_value[22]#----###----#$post_value[23]\n";
+        		$ok_flag="1";
+
+			if ("$post_value[1]" eq "INSTALLCONFIG") {
+				open("config",">>$config") or die ("Failed to open configurationfile:$config\n");
+
+					while(<$socket>) {
+  						if ( $_ =~/ANDUTTEYEQUIT/) {
+        						last;
+  						}
+  						if ( $_ =~/OPENCONFIG/ ) {
+        						unlink("$config") or die ("ERROR Failed to remove old configurationfile:$config \n");
+        						open("config",">>$config") or die ("Failed to open configurationfile:$config\n");
+        					next;
+  						}
+  						if ( $_ =~/CLOSECONFIG/) {
+        						close("$config");
+        						last;
+  						}
+  						print config $_;
+					}
+			}
+			if ("$post_value[1]" eq "ValidateManagement") {
+
+                                        while(<$socket>) {
+                                                if ( $_ =~/ANDUTTEYEQUIT/) {
+                                                        last;
+                                                }
+                                                if ( $_ =~/ANDUTTEYEOPENFILE/ ) {
+							if( -f "$Cache_dir_location/management/andutteyecontent.tar") {
+        							unlink("$Cache_dir_location/management/andutteyecontent.tar") 
+									or die ("ERROR Failed to remove $Cache_dir_location/management/andutteyecontent.tar\n");
+							}
+                                                        open("file",">>$Cache_dir_location/management/andutteyecontent.tar")
+                                                                or die ("Failed to open management content file:$Cache_dir_location/management/andutteyecontent.tar\n");
+							binmode("file");
+							
+                                                        next;
+                                                }
+                                                if ( $_ =~/ANDUTTEYECLOSECONFIG/) {
+                                                        close("file");
+                                                        last;
+                                                }
+                                                print file $_;
+                                        }
+                        }
+			close($socket);
+				if($ok_flag){
+					if($Use_debug_level > 3) {
+						print "[info] First send attempt was sendt ok, will not try to send data to backuphosts.\n";
+					}
+          			last;
+  				} else {
+					if($Use_debug_level > 3) {
+						print "[info] First send attempt was not sendt ok, will try to send data to backuphosts.\n";
+					}
+				}
+			}
+		} else {
+			if($Use_debug_level > 2) {
+				print "[info] Will try to send information to Andutteye servers.\n";
+				print "\tAndutteye server:$current_andutteyeserver\n";
+				print "\tAndutteye port  :$Server_listen_port\n";
+				print "\tSocket mode     :Tcp sockets only\n";
+			}
+	        	$socket = IO::Socket::INET->new(PeerAddr => "$current_andutteyeserver",
+                                 			PeerPort => "$Server_listen_port",
+                                 			Proto    => "tcp");
+			if(!$socket) {
+        			print "ERROR Andutteye server could not be reached:$current_andutteyeserver, the agent will continue to to manage your system [tcp]\n";
+        			print "ERROR and resolv configured actions. When connection is restored connectivity is re established [tcp]\n";
+        			print "ERROR Will try to send message to backup hosts if any are specified [tcp]\n";
+                                notify_syslog("ERROR Andutteye server could not be reached:$current_andutteyeserver, the agent will continue to to manage your system.");
+                        } else {
+                                if($Use_debug_level > 4) {
+                                        print "[info] Trying to send datastrem.\n";
+                        	}
+        		print $socket "$post_value[0]#----###----#$post_value[1]#----###----#$post_value[2]#----###----#$post_value[3]#----###----#$post_value[4]#----###----#$post_value[5]#----###----#$post_value[6]#----###----#$post_value[7]#----###----#$post_value[8]#----###----#$post_value[9]#----###----#$post_value[10]#----###----#$post_value[11]#----###----#$post_value[12]#----###----#$post_value[13]#----###----#$post_value[14]#----###----#$post_value[15]#----###----#$post_value[16]#----###----#$post_value[17]#----###----#$post_value[18]#----###----#$post_value[19]#----###----#$post_value[20]#----###----#$post_value[21]#----###----#$post_value[22]#----###----#$post_value[23]\n";
+                	$ok_flag="1";
+
+                        if ("$post_value[1]" eq "INSTALLCONFIG") {
+                                open("config",">>$config") or die ("Failed to open configurationfile:$config\n");
+
+                                        while(<$socket>) {
+                                                if ( $_ =~/ANDUTTEYEQUIT/) {
+                                                        last;
+                                                }
+                                                if ( $_ =~/OPENCONFIG/ ) {
+                                                        unlink("$config") or die ("ERROR Failed to remove old configurationfile:$config \n");
+                                                        open("config",">>$config") or die ("Failed to open configurationfile:$config\n");
+                                                next;
+                                                }
+                                                if ( $_ =~/CLOSECONFIG/) {
+                                                        close("$config");
+                                                        last;
+                                                }
+                                                print config $_;
+                                        }
+                        }
+                        if ("$post_value[1]" eq "ValidateManagement") {
+
+                                        while(<$socket>) {
+                                                if ( $_ =~/ANDUTTEYEQUIT/) {
+                                                        last;
+                                                }
+                                                if ( $_ =~/ANDUTTEYEOPENFILE/ ) {
+							if( -f "$Cache_dir_location/management/andutteyecontent.tar") {
+        							unlink("$Cache_dir_location/management/andutteyecontent.tar") 
+									or die ("ERROR Failed to remove $Cache_dir_location/management/andutteyecontent.tar\n");
+							}
+                                			open("file",">>$Cache_dir_location/management/andutteyecontent.tar") 
+								or die ("Failed to open management content file:$Cache_dir_location/management/andutteyecontent.tar\n");
+				
+							binmode("file");
+							
+                                                	next;
+                                                }
+                                                if ( $_ =~/ANDUTTEYECLOSECONFIG/) {
+                                                        close("file");
+                                                        last;
+                                                }
+                                                print file $_;
+                                        }
+                        }
+                	close($socket);
+                        	if($ok_flag){
+                                	if($Use_debug_level > 3) {
+                                        	print "[info] First send attempt was sendt ok, will not try to send data to backuphosts.\n";
+                                	}
+				last;
+                        	} else {
+                                	if($Use_debug_level > 3) {
+                                        	print "[info] First send attempt was not sendt ok, will try to send data to backuphosts.\n";
+                                	}
+                        	}
+
+		}
+	}
+
+# End of for loop port
+}
+
+if($Use_debug_level) {
+	print "Leaving subfunction send_message_to_server()\n";
+}
+
+# End of subfunction
+}
+sub check_processes {
+my $found="0";
+my $msg;
+
+if($Use_debug_level) {
+	print "Entering subfunction check_processes() \n";
+	print "Contacting operatingsystem api->$Api_dir_location/$Use_api -getprocesses\n";
+}
+my @current_processes=`$Api_dir_location/$Use_api -getprocesses`;
+
+foreach my $key (keys %monitorhash) {
+        my $value = $monitorhash{$key};
+
+	if($value->{'type'} eq "PS") {
+		# Found a process monitor
+			if($Use_debug_level > 4) {
+				print "Monitor key($key):$value->{'monitor'}\n";
+				print "\tStatus 		:$value->{'status'}\n";
+				print "\texecute_program	:$value->{'execute_program'}\n";
+				print "\tsend_email	:$value->{'send_email'}\n";
+				print "\tseverity	:$value->{'severity'}\n";
+				print "\tschedule	:$value->{'schedule'}\n";
+				print "\tmessage		:$value->{'message'}\n";
+				print "\talarmlimit	:$value->{'alarmlimit'}\n";
+				print "\terrorlimit	:$value->{'errorlimit'}\n";
+			}
+		for(@current_processes) {
+			chomp;
+				if(/^$/) {
+					if($Use_debug_level > 5) {
+						print "Skipping blank process line.\n";
+					}
+					next;
+				}
+				if(/$value->{'monitor'}/) {
+					print "Process line from api->$_\n";
+					print "Found a hit in active processes. Our process $value->{'monitor'} is running.\n";
+
+					if($value->{'status'} eq "up") {
+						print "Process $value->{'monitor'} status is up and config parameter says up. Everything is ok.\n";
+						resume_operation("PS","$value->{'monitor'}","check");
+						$monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "PS";
+						$monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Ok";
+						$monitorstatushash{"$value->{'monitor'}"}{'message'} = "Process is up, should be up";
+						$found="1";
+					}
+					elsif($value->{'status'} eq "down") {
+						if(check_schedule("$value->{'schedule'}") == 0) {
+							if(check_error_limit("$value->{'errorlimit'}","$value->{'monitor'}") == 0) {
+									if(check_alarm_limit("$value->{'alarmlimit'}","$value->{'monitor'}") == 0) {
+										print "!! Process $value->{'monitor'} status is up and config parameter says down. Executing recovery actions.\n";
+										$msg=check_message("$value->{'message'}","Process $value->{'monitor'} is up. Suppose to be down.");
+										$severity=check_severity("$value->{'severity'}");	
+										execute_program("$value->{'execute_program'}");
+										send_email("$value->{'send_email'}","$value->{'monitor'}","$msg");
+										notify_syslog("$msg");
+										resume_operation("PS","$value->{'monitor'}","add");
+										send_message_to_server("$This_Host","ALARM","$msg",
+										"Process $value->{'monitor'} is down. Recovery actions have been executed.",
+										"$severity","$value->{'monitor'}","PS");
+										$monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "PS";
+                                        					$monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Error";
+                                        					$monitorstatushash{"$value->{'monitor'}"}{'message'} = "Process is up, should be down";
+									} else {
+										print "!! Alarm limit has been reached for monitor $value->{'monitor'}. No recoveryactions will be executed.\n";
+									}
+							} else {
+								print "!! Errorlimit on monitor:$value->{'monitor'} has not been reached, will not execute recoveryactions.\n";
+							}
+						} else {
+							print "!! Arent allowed to verify monitor:$value->{'monitor'} since its not in range for specified schedule times.\n";
+						}
+					} else {
+						print "!! ERROR Got an unsupported process status state:$value->{'status'} only up or down are valid states.\n";
+					
+					}
+				   $found="1";
+				   last;
+				}
+		}
+		if($found == 0) {
+				if($value->{'status'} eq "down") {
+					print "Process $value->{'monitor'} status is down and config parameter says down. Everything is ok.\n";
+					resume_operation("PS","$value->{'monitor'}","check");
+					$monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "PS";
+                                        $monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Ok";
+                                        $monitorstatushash{"$value->{'monitor'}"}{'message'} = "Process is down, should be down";
+				}
+				elsif($value->{'status'} eq "up") {
+                                	if(check_schedule("$value->{'schedule'}") == 0) {
+                                        	if(check_error_limit("$value->{'errorlimit'}","$value->{'monitor'}") == 0) {
+                                                	if(check_alarm_limit("$value->{'alarmlimit'}","$value->{'monitor'}") == 0) {
+								print "!! Process $value->{'monitor'} status is down and config parameter says up. Executing recovery actions.\n";
+								$msg=check_message("$value->{'message'}","Process $value->{'monitor'} is down. Suppose to be up.");
+								$severity=check_severity("$value->{'severity'}");	
+								execute_program("$value->{'execute_program'}");
+								send_email("$value->{'send_email'}","$value->{'monitor'}","$msg");
+								notify_syslog("$msg");
+								resume_operation("PS","$value->{'monitor'}","add");
+								send_message_to_server("$This_Host","ALARM","$msg",
+								"Process $value->{'monitor'} is down. Recovery actions have been executed.",
+								"$severity","$value->{'monitor'}","PS");
+								$monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "PS";
+                                        			$monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Error";
+                                        			$monitorstatushash{"$value->{'monitor'}"}{'message'} = "Process is down, should be up";
+                                                        } else {
+								print "!! Alarm limit has been reached for monitor $value->{'monitor'}. No recoveryactions will be executed.\n";
+                                                        }
+                                        } else {
+						 print "!! Errorlimit on monitor:$value->{'monitor'}  has not been reached, will not execute recoveryactions.\n";
+                                        }
+				} else {
+					print "!! Arent allowed to verify monitor:$value->{'monitor'} since its not in range for specified schedule times.\n";
+				}
+			} else {
+				print "!! ERROR Got an unsupported process status state:$value->{'status'} only up or down are valid states.\n";
+			}
+		   $found="0";
+		}
+	}
+
+}
+
+# End of subfunction
+}
+sub check_filesystems {
+
+if($Use_debug_level) {
+        print "Entering subfunction check_filesystems() \n";
+}
+foreach my $key (keys %monitorhash) {
+        my $value = $monitorhash{$key};
+
+        if($value->{'type'} eq "FS") {
+                # Found a filesystem monitor
+                        if($Use_debug_level > 4) {
+                                print "Monitor key($key):$value->{'monitor'}\n";
+                                print "\texecute_program        :$value->{'execute_program'}\n";
+                                print "\tsend_email     :$value->{'send_email'}\n";
+                                print "\tseverity       :$value->{'severity'}\n";
+                                print "\tschedule       :$value->{'schedule'}\n";
+                                print "\tmessage                :$value->{'message'}\n";
+                                print "\talarmlimit     :$value->{'alarmlimit'}\n";
+                                print "\terrorlimit     :$value->{'errorlimit'}\n";
+                                print "\twarning_limit   :$value->{'warning_limit'}%\n";
+                                print "\tcritical_limit  :$value->{'critical_limit'}%\n";
+                                print "\tfatal_limit     :$value->{'fatal_limit'}%\n";
+                        }
+		# Contacting os api.
+		if($Use_debug_level > 2) {
+			print "Contacting operatingsystem api->$Api_dir_location/$Use_api -getfilesystemcheck $value->{'monitor'}\n";
+		}
+		my $fsfillage;
+		my $fscheck=`$Api_dir_location/$Use_api -getfilesystemcheck $value->{'monitor'}`;
+
+		if(!$fscheck) {
+			print "!! Error filesystem $value->{'monitor'} doesnt seem to be mounted.\n";
+			next;
+		} else {
+			print "Contacting operatingsystem api->$Api_dir_location/$Use_api -getfilesystemfillage $value->{'monitor'}\n";
+			$fsfillage=`$Api_dir_location/$Use_api -getfilesystemfillage $value->{'monitor'}`;
+		}
+
+		if ($Use_debug_level > 3) {
+			print "-> Filesystem:$value->{'monitor'} filled to:$fsfillage%\n";
+			print "\t-> Warning level:$value->{'warning_limit'}% Critical level:$value->{'critical_limit'}% Fatal level:$value->{'fatal_limit'}%\n";
+		}
+		if ( "$fsfillage" > "$value->{'warning_limit'}" && ("$fsfillage" <= "$value->{'critical_limit'}")) {
+                	if(check_schedule("$value->{'schedule'}") == 0) {
+                        	if(check_error_limit("$value->{'errorlimit'}","$value->{'monitor'}") == 0) {
+                                	if(check_alarm_limit("$value->{'alarmlimit'}","$value->{'monitor'}") == 0) {
+                                         	print "!! Filesystem $value->{'monitor'} is filled over Warning limit.\n";
+                                                                $msg=check_message("$value->{'message'}","Filesystem $value->{'monitor'} is filled over warning level -> $fsfillage%.");
+								$severity=check_severity("$value->{'severity'}");
+                                                                execute_program("$value->{'execute_program'}");
+                                                                send_email("$value->{'send_email'}","Filesystem $value->{'monitor'}","$msg");
+                                                                notify_syslog("$msg");
+                                                                resume_operation("FS","$value->{'monitor'}","add");
+                                                                send_message_to_server("$This_Host","ALARM","$msg",
+                                                                "Filesystem $value->{'monitor'} is filled over warning level. Recovery actions have been executed.",
+                                                                "$severity","$value->{'monitor'}","FS");
+								$monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "FS";
+                                                		$monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Error";
+                                                		$monitorstatushash{"$value->{'monitor'}"}{'message'} = "Filesystem has gone over warninglevel";
+                                                        } else {
+                                                                print "!! Alarm limit has been reached for monitor $value->{'monitor'}. No recoveryactions will be executed.\n";
+                                                        }
+                                        } else {
+                                                 print "!! Errorlimit on monitor:$value->{'monitor'}  has not been reached, will not execute recoveryactions.\n";
+                                        }
+                                } else {
+                                        print "!! Arent allowed to verify monitor:$value->{'monitor'} since its not in range for specified schedule times.\n";
+                                }
+                } else {
+                               print "\t [ok] Filesystem $value->{'monitor'} is ok on warning limit.\n";
+			       $monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "FS";
+                               $monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Ok";
+                               $monitorstatushash{"$value->{'monitor'}"}{'message'} = "Filesystem is ok on warninglevel";
+                }
+		if ( "$fsfillage" > "$value->{'critical_limit'}" && ("$fsfillage" <= "$value->{'fatal_limit'}")) {
+                        if(check_schedule("$value->{'schedule'}") == 0) {
+                                if(check_error_limit("$value->{'errorlimit'}","$value->{'monitor'}") == 0) {
+                                        if(check_alarm_limit("$value->{'alarmlimit'}","$value->{'monitor'}") == 0) {
+                                                print "!! Filesystem $value->{'monitor'} is filled over critical limit.\n";
+                                                                $msg=check_message("$value->{'message'}","Filesystem $value->{'monitor'} is filled over critical level -> $fsfillage%.");
+								$severity=check_severity("$value->{'severity'}");
+                                                                execute_program("$value->{'execute_program'}");
+                                                                send_email("$value->{'send_email'}","Filesystem $value->{'monitor'}","$msg");
+                                                                notify_syslog("$msg");
+                                                                resume_operation("FS","$value->{'monitor'}","add");
+                                                                send_message_to_server("$This_Host","ALARM","$msg",
+                                                                "Filesystem $value->{'monitor'} is filled over critical level. Recovery actions have been executed.",
+                                                                "$severity","$value->{'monitor'}","FS");
+								$monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "FS";
+                                                		$monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Error";
+                                                		$monitorstatushash{"$value->{'monitor'}"}{'message'} = "Filesystem has gone over criticallevel";
+                                                        } else {
+                                                                print "!! Alarm limit has been reached for monitor $value->{'monitor'}. No recoveryactions will be executed.\n";
+                                                        }
+                                        } else {
+                                                 print "!! Errorlimit on monitor:$value->{'monitor'}  has not been reached, will not execute recoveryactions.\n";
+                                        }
+                                } else {
+                                        print "!! Arent allowed to verify monitor:$value->{'monitor'} since its not in range for specified schedule times.\n";
+                                }
+                } else {
+                               print "\t [ok] Filesystem $value->{'monitor'} is ok on critical limit.\n";
+			       $monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "FS";
+                               $monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Ok";
+                               $monitorstatushash{"$value->{'monitor'}"}{'message'} = "Filesystem is ok on criticallevel";
+                }
+		if ("$fsfillage" >= "$value->{'fatal_limit'}") {
+                        if(check_schedule("$value->{'schedule'}") == 0) {
+                                if(check_error_limit("$value->{'errorlimit'}","$value->{'monitor'}") == 0) {
+                                        if(check_alarm_limit("$value->{'alarmlimit'}","$value->{'monitor'}") == 0) {
+                                                print "!! Filesystem $value->{'monitor'} is filled over fatal limit.\n";
+                                                                $msg=check_message("$value->{'message'}","Filesystem $value->{'monitor'} is filled over fatal level -> $fsfillage%.");
+								$severity=check_severity("$value->{'severity'}");
+                                                                execute_program("$value->{'execute_program'}");
+                                                                send_email("$value->{'send_email'}","Filesystem $value->{'monitor'}","$msg");
+                                                                notify_syslog("$msg");
+                                                                resume_operation("FS","$value->{'monitor'}","add");
+                                                                send_message_to_server("$This_Host","ALARM","$msg",
+                                                                "Filesystem $value->{'monitor'} is filled over fatal level. Recovery actions have been executed.",
+                                                                "$severity","$value->{'monitor'}","FS");
+								$monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "FS";
+                                                		$monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Error";
+                                                		$monitorstatushash{"$value->{'monitor'}"}{'message'} = "Filesystem has gone over fatallevel";
+                                                        } else {
+                                                                print "!! Alarm limit has been reached for monitor $value->{'monitor'}. No recoveryactions will be executed.\n";
+                                                        }
+                                        } else {
+                                                 print "!! Errorlimit on monitor:$value->{'monitor'}  has not been reached, will not execute recoveryactions.\n";
+                                        }
+                                } else {
+                                        print "!! Arent allowed to verify monitor:$value->{'monitor'} since its not in range for specified schedule times.\n";
+                                }
+                } else {
+                               print "\t [ok] Filesystem $value->{'monitor'} is ok on fatal limit.\n";
+			       $monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "FS";
+                               $monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Ok";
+                               $monitorstatushash{"$value->{'monitor'}"}{'message'} = "Filesystem is ok on fatallevel";
+                }
+	}
+}
+
+# End of subfunctions.
+}
+sub execute_every_programs {
+my $ev_output;
+my $prog_exit;
+
+if ($Use_debug_level > 3) {
+	print "Entering subfunction execute_every_programs()\n";
+}
+foreach my $key (keys %monitorhash) {
+        my $value = $monitorhash{$key};
+
+	 if($value->{'type'} eq "EV") {
+               # Found a execute every pogram monitor
+                        if($Use_debug_level > 4) {
+                                print "Monitor key($key):$value->{'monitor'}\n";
+                                print "\tStatus                 :$value->{'status'}\n";
+                                print "\tExitstatus             :$value->{'exitstatus'}\n";
+                                print "\texecute_program        :$value->{'execute_program'}\n";
+                                print "\tsend_email            :$value->{'send_email'}\n";
+                                print "\tseverity              :$value->{'severity'}\n";
+                                print "\tschedule              :$value->{'schedule'}\n";
+                                print "\tmessage                :$value->{'message'}\n";
+                                print "\talarmlimit            :$value->{'alarmlimit'}\n";
+                                print "\terrorlimit            :$value->{'errorlimit'}\n";
+                                print "\targuments                     :$value->{'arguments'}\n";
+                        }
+               if(-f $value->{'monitor'}) {
+                       print "\t[ok] Program $value->{'monitor'} exists.\n";
+
+               if($Use_debug_level > 4) {
+                       print "Monitor key($key):$value->{'monitor'}\n";
+                       print "\tStatus                 :$value->{'status'}\n";
+                       print "\tExitstatus             :$value->{'exitstatus'}\n";
+                       print "\texecute_program        :$value->{'execute_program'}\n";
+                       print "\tsend_email             :$value->{'send_email'}\n";
+                       print "\tseverity               :$value->{'severity'}\n";
+                       print "\tschedule               :$value->{'schedule'}\n";
+                       print "\tmessage                :$value->{'message'}\n";
+                       print "\talarmlimit             :$value->{'alarmlimit'}\n";
+                       print "\terrorlimit             :$value->{'errorlimit'}\n";
+                       print "\targuments              :$value->{'arguments'}\n";
+                }
+               if(check_schedule("$value->{'schedule'}") == 0) {
+
+                      if(-x $value->{'monitor'}) {
+                              print "\t[ok] Program $value->{'monitor'} is executeble\n";
+                              print "\t[te] Trying to execute $value->{'monitor'} with arguments->$value->{'arguments'}\n";
+
+				# Slurp one line of output.
+                               system("$value->{'monitor'} $value->{'arguments'} >/dev/null 2>&1");
+                               open (EV_PROC, "$value->{'monitor'} $value->{'arguments'} 2>&1 |" );
+                               $ev_output=<EV_PROC>;
+                               close (EV_PROC);
+                               $prog_exit = $? >> 8;
+                               chomp($ev_output);
+                               $ev_output =~ s/[\'|\"|\\]//g;
+
+                               if($prog_exit == "$value->{'exitstatus'}") {
+                                       print "\t[ok] Program $value->{'monitor'} ended with exit->$prog_exit exitstatus set to->$value->{'exitstatus'}\n";
+			       	       $monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "EV";
+                                       $monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Ok";
+                                       $monitorstatushash{"$value->{'monitor'}"}{'message'} = "$ev_output";
+                               } else {
+                                       if(check_error_limit("$value->{'errorlimit'}","$value->{'monitor'}") == 0) {
+                                               if(check_alarm_limit("$value->{'alarmlimit'}","$value->{'monitor'}") == 0) {
+                                                       print "\t[ok] Program $value->{'monitor'}: $ev_output\n";
+                                                       $msg=check_message("$value->{'message'}","Program $value->{'monitor'} ended with exit->$prog_exit exitstatus set to->$value->{'exitstatus'}");
+                                                       execute_program("$value->{'execute_program'}");
+                                                       send_email("$value->{'send_email'}","Every executionprogram $value->{'monitor'}","$msg");
+                                                       notify_syslog("$msg");
+                                                       resume_operation("EV","$value->{'monitor'}","add");
+                                                       send_message_to_server("$This_Host","ALARM","$msg",
+                                                       "$ev_output","$value->{'severity'}","$value->{'monitor'}","EV");
+			       	       		       $monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "EV";
+                                       		       $monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Error";
+                                       		       $monitorstatushash{"$value->{'monitor'}"}{'message'} = "$ev_output";
+                                               } else {
+                                                       print "!! Alarm limit has been reached for monitor $value->{'monitor'}. No recoveryactions will be executed.\n";
+                                               }
+                                      } else {
+                                              print "!! Errorlimit on monitor:$value->{'monitor'}  has not been reached, will not execute recoveryactions.\n";
+                                      }
+				}
+			} else {
+				print "!! Error program $value->{'monitor'} is not executeble.\n";
+			}
+                } else {
+                       print "!! Arent allowed to verify monitor:$value->{'monitor'} since its not in range for specified schedule times.\n";
+		}
+	   } else {
+		print "!! Error program $value->{'monitor'} doesnt exist.\n";
+	  }
+     }
+}
+if ($Use_debug_level) {
+      print "Leaving subfunction execute_every_program()\n";
+}
+
+# End of subfunction
+}
+sub send_assetmanagement_information {
+my $result;
+
+if($Use_debug_level) {
+        print "Entering subfunction send_assetmanagement_information() \n";
+}
+foreach my $key (keys %monitorhash) {
+        my $value = $monitorhash{$key};
+
+        if($value->{'type'} eq "AM") {
+                # Found a assetmanagement monitor
+                        if($Use_debug_level > 4) {
+                                print "Monitor key($key):$value->{'monitor'}\n";
+                                print "\tStatus                 :$value->{'status'}\n";
+                                print "\tProgram                 :$value->{'program'}\n";
+                                print "\targuments        	:$value->{'arguments'}\n";
+                        }
+                        if(defined($value->{'monitor'})) {
+				print "Found a assetmanagement monitor. Executing->$value->{'program'} with arguments->$value->{'arguments'} to find out:$value->{'monitor'}\n";
+			}
+			if ( -f "$value->{'program'}") {
+				if( -x "$value->{'program'}") {
+					$result=`$value->{'program'} $value->{'arguments'}`;
+				} else {
+					if($Use_debug_level) {
+						print "\tError program or command->$value->{'program'} is not executeble.\n";
+					}
+				}
+			} else {
+				if($Use_debug_level) {
+                                	print "\tError program or command->$value->{'program'} doesnt exist.\n";
+                                }
+			}
+		if(defined($result)) {	
+			if($Use_debug_level > 3) {
+				print "\t[ok] Assetmanagement result to report is $value->{'monitor'} == $result.\n";
+			}
+	      		send_message_to_server("$This_Host","AssetManagement","$value->{'monitor'}","$result","$value->{'program'}","$value->{'arguments'}");
+		}		
+	}
+}
+
+if($Use_debug_level) {
+        print "Leaving subfunction send_assetmanagement_information() \n";
+}
+# End of subfunction
+}
+sub send_statistics_information {
+my $result;
+
+if($Use_debug_level) {
+        print "Entering subfunction send_statistics_information() \n";
+}
+foreach my $key (keys %monitorhash) {
+        my $value = $monitorhash{$key};
+
+        if($value->{'type'} eq "ST") {
+                # Found a statistics monitor
+                        if($Use_debug_level > 4) {
+                                print "Monitor key($key):$value->{'monitor'}\n";
+                                print "\tStatus                 :$value->{'status'}\n";
+                                print "\tProgram                 :$value->{'program'}\n";
+                                print "\targuments              :$value->{'arguments'}\n";
+                        }
+                        if(defined($value->{'monitor'})) {
+                                print "Found a statistic monitor. Executing->$value->{'program'} with arguments->$value->{'arguments'} to find out:$value->{'monitor'}\n";
+                        }
+                        if ( -f "$value->{'program'}") {
+                                if( -x "$value->{'program'}") {
+                                        $result=`$value->{'program'} $value->{'arguments'}`;
+                                } else {
+                                        if($Use_debug_level) {
+                                                print "\tError program or command->$value->{'program'} is not executeble.\n";
+                                        }
+                                }
+                        } else {
+                                if($Use_debug_level) {
+                                        print "\tError program or command->$value->{'program'} doesnt exist.\n";
+                                }
+                        }
+                if(defined($result)) {
+                        if($Use_debug_level > 3) {
+                                print "\t[ok] Statistics result to report is $value->{'monitor'} == $result.\n";
+                        }
+			send_message_to_server("$This_Host","SystemStatistics","$value->{'monitor'}","$result","$value->{'program'}","$value->{'arguments'}");
+                }
+        }
+}
+if($Use_debug_level) {
+        print "Leaving subfunction send_statistics_information() \n";
+}
+# End of subfunction
+}
+sub send_email {
+
+my $email_address="$_[0]";
+my @email_addresses=split("~",$email_address);
+my $monitor="$_[1]";
+my $message="$_[2]";
+my $body;
+my @body;
+
+if($Use_debug_level > 2) {
+	print "Entering subfunction send_email()\n";
+}
+if(defined($email_address)) {
+	if("$email_address" eq "no") {
+		if($Use_debug_level > 2) {
+			print "Will not send any email notifications since email is set to:$email_address\n";
+		}
+	return 0;
+	}
+}
+if(!defined($email_address)) {
+	if($Use_debug_level > 2) {
+		print "!! No email reciptients defined, will not send any notification emails.\n";
+	}
+} else {
+	if("$email_address" eq "no" ) {
+		if($Use_debug_level > 2) {
+			print "No notification email will be sendt since send_email is set to:$email_address.\n";
+		}
+	} else {
+		push(@body,"Andutteye alarm regarding monitor $monitor.");
+		push(@body,"$Use_mail_body");
+		push(@body,"Defined message:$message");
+	}
+	if($Use_debug_level > 2) {
+		print "Sending email notification to:$email_address.\n";
+	}
+	for (@email_addresses) {
+		if($Use_debug_level > 2) {
+			print "Sending notification email to reciptient:$_ passed by smtpserver:$Use_smtp_server, timeout is set to 5 seconds\n";
+		}
+		$body=join("\n",@body);
+	
+			if ( $Use_debug_level > 4 ) {
+				print "Email body is:$body\n";
+			}
+			# Connect to the server
+			my $smtp = Net::SMTP->new($Use_smtp_server);
+		
+			if(!$smtp) {
+				print "!! ERROR Could not connect and interact with smtp server:$Use_smtp_server\n";
+			} else {
+				$smtp->mail( "$_" ); 
+				$smtp->to( "$_" );
+				$smtp->data();
+
+				# Send the header.
+				$smtp->datasend("To: $_\n");
+				$smtp->datasend("From: $Use_mail_from_adress\n");
+				$smtp->datasend("Subject: $Use_mail_subject\n");
+				$smtp->datasend("\n");
+			
+			 	# Send the body.
+			 	$smtp->datasend("$body");
+			 	$smtp->dataend();
+			 	$smtp->quit;
+			}	
+			if($Use_debug_level > 2) {
+				print "Mailing to reciptient:$_ [done].\n";
+			}
+	}
+}
+if($Use_debug_level > 2) {
+	print "Leaving subfunction send_email()\n";
+}
+
+# End of subfunction
+}
+sub execute_program {
+
+if($Use_debug_level > 2) {
+	print "Entering subfunction execute_program() \n";
+}
+my $recovery_program=$_[0];
+if(!defined($recovery_program)) {
+	if($Use_debug_level > 5) {
+		print "!! No defined recovery program.\n";
+	}
+} else {
+	if("$recovery_program" eq "no" ) {
+		if($Use_debug_level > 4) {
+			print "Will no execute any recovery program since recovery program is set to:$recovery_program\n";
+		}
+	} else {
+		if ( -f $recovery_program ) {
+			if ( -x $recovery_program ) {
+				if($Use_debug_level > 2) {
+					print "Executing recovery program, it exists and is executeble -> $recovery_program\n";
+				}
+					my $ecode = system("$recovery_program > /dev/null 2>&1");
+						if($ecode == 0) {
+							if($Use_debug_level > 2) {
+								print "Recovery program:$recovery_program ended with exitcode 0 == Ok.\n";
+							}
+						} else {
+							if($Use_debug_level) {
+								print "!! Recovery program:$recovery_program ended with nonzero exitcode $ecode == Not ok.\n";
+							}
+						   # Notify server.
+						}
+						
+			} else {
+				print "!! Error recovery program:$recovery_program is not executeble.\n";
+				# Notify server.
+			}
+		} else {
+			print "!! Recovery program:$recovery_program is not a file or doesnt exist.\n";
+			# Notify server.
+		}
+	}
+}
+if($Use_debug_level > 2) {
+	print "Leaving subfunction execute_program()\n";
+}
+
+# End of subfunction
+}
+sub verify_filetrace {
+
+if ($Use_debug_level > 3) {
+	print "Entering subfunction verify_filetrace()\n";
+}
+foreach my $key (keys %monitorhash) {
+        my $value = $monitorhash{$key};
+	my $monitor = $value->{'monitor'};
+
+        if($value->{'type'} eq "FT") {
+                # Found a filetrace monitor.
+                        if($Use_debug_level > 4) {
+                                print "Monitor key($key):$value->{'monitor'}\n";
+                                print "\tStatus                 :$value->{'status'}\n";
+                                print "\texecute_program        :$value->{'execute_program'}\n";
+                                print "\tsearchpattern        :$value->{'searchpattern'}\n";
+                                print "\tsend_email     :$value->{'send_email'}\n";
+                                print "\tseverity       :$value->{'severity'}\n";
+                                print "\tschedule       :$value->{'schedule'}\n";
+                                print "\tmessage                :$value->{'message'}\n";
+                                print "\talarmlimit     :$value->{'alarmlimit'}\n";
+                                print "\terrorlimit     :$value->{'errorlimit'}\n";
+                        }
+		open("file","<$value->{'monitor'}")
+			or warn "[err] Unable to open $value->{'monitor'} for reading.\n";
+		
+			my $count="0";
+			my $found_searchpattern="0";
+			my $monitor=$value->{'monitor'};
+			for(<file>) {
+			
+			if(exists ($filetracehash{$value->{'monitor'}})) {
+				if($count < $filetracehash{$value->{'monitor'}}->{'checkpoint'}) {
+					if($Use_debug_level > 4 ) {
+						print "Spooling file to last checkpoint->$filetracehash{$value->{'monitor'}}->{'checkpoint'} now->$count\n";
+					}
+					$count++;
+					next;
+				}
+			}
+				if("$_" =~/$value->{'searchpattern'}/) {
+					if($Use_debug_level > 4) {
+						print "[warn] Found a searchpattern hit, $found_searchpattern pattern hits found.\n";
+					}
+					$found_searchpattern++;
+				}
+				$count++;
+			}
+			print "$count lines processed and verified on file->$value->{'monitor'}.\n";
+
+			if($found_searchpattern > "0") {
+				 if(check_schedule("$value->{'schedule'}") == 0) {
+                                                if(check_error_limit("$value->{'errorlimit'}","$value->{'monitor'}") == 0) {
+                                                        if(check_alarm_limit("$value->{'alarmlimit'}","$value->{'monitor'}") == 0) {
+                                                                print "Found a hit on searchpattern for file->$value->{'monitor'}\n";
+                                                                print "\tSearchpattern:$value->{'searchpattern'}\n";
+                                                                print "\tOn line      :$count\n";
+                                                                print "\tLine         :$_\n";
+                                                                $msg=check_message("$value->{'message'}","Found defined pattern in file $value->{'monitor'}");
+                                                                $severity=check_severity("$value->{'severity'}");
+                                                                execute_program("$value->{'execute_program'}");
+                                                                send_email("$value->{'send_email'}","Filetrace patternmatching","$msg");
+                                                                notify_syslog("$msg");
+                                                                resume_operation("FT","$value->{'monitor'}","add");
+                                                                send_message_to_server("$This_Host","ALARM","$msg",
+                                                                "Found defined pattern $value->{'searchpattern'} in file $value->{'monitor'}, executing recoveryactions.",
+                                                                "$severity","$value->{'monitor'}","FT");
+								$monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "FT";
+                                                		$monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Error";
+                                                		$monitorstatushash{"$value->{'monitor'}"}{'message'} = "Pattern $value->{'searchpattern'} found $found_searchpattern.";
+                                                         } else {
+                                                                print "!! Alarm limit has been reached for monitor $value->{'monitor'}. No recoveryactions will be executed.\n";
+                                                         }
+                                                 } else {
+                                                        print "!! Errorlimit on monitor:$value->{'monitor'} has not been reached, will not execute recoveryactions.\n";
+                                                 }
+                                   } else {
+                                          print "!! Arent allowed to verify monitor:$value->{'monitor'} since its not in range for specified schedule times.\n";
+                                   }
+			} else {
+				$monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "FT";
+                               	$monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Ok";
+                               	$monitorstatushash{"$value->{'monitor'}"}{'message'} = "Pattern $value->{'searchpattern'} $found_searchpattern found.";
+			}
+			if("$count" lt "$filetracehash{$monitor}->{'checkpoint'}") {
+				print "[warn] Number of lines processed is fewer then saved checkpoint.\n";
+				print "\tLines processed  :$count\n";
+				print "\tCheckpoints saved:$filetracehash{$monitor}->{'checkpoint'}\n";
+				print "\tDeleting checkpoint.\n";
+				delete $filetracehash{$monitor};
+			} else {
+				print "Saving checkpoint $count as start for next verification.\n";
+                		$filetracehash{$monitor} = { monitor => $monitor, checkpoint => $count};
+			}
+
+			if($Use_debug_level > 3) {
+         			print "[info] Number of filetrace checkpoints saved in memory ". keys( %filetracehash ) ." .\n";
+			}
+	}
+}
+
+# End of subfunction
+}
+sub verify_filemodification {
+my $current_key;
+my $key_before;
+
+if ($Use_debug_level > 3) {
+	print "Entering subfunction verify_filemodification()\n";
+}
+foreach my $key (keys %monitorhash) {
+        my $value = $monitorhash{$key};
+	my $monitor = $value->{'monitor'};
+
+        if($value->{'type'} eq "FM") {
+                # Found a execute every pogram monitor
+                        if($Use_debug_level > 4) {
+                                print "Monitor key($key):$value->{'monitor'}\n";
+                                print "\tStatus                 :$value->{'status'}\n";
+                                print "\texecute_program        :$value->{'execute_program'}\n";
+                                print "\tsend_email     :$value->{'send_email'}\n";
+                                print "\tseverity       :$value->{'severity'}\n";
+                                print "\tschedule       :$value->{'schedule'}\n";
+                                print "\tmessage                :$value->{'message'}\n";
+                                print "\talarmlimit     :$value->{'alarmlimit'}\n";
+                                print "\terrorlimit     :$value->{'errorlimit'}\n";
+                        }
+
+		if( -f "$value->{'monitor'}" ) {
+			unless(exists ($filemodhash{$value->{'monitor'}})) {
+
+				open("file","<$monitor") or warn "\t[err] Failed to open $monitor to retrive checksum.";
+		        		$current_key=Digest::MD5->new->addfile(*file)->hexdigest;
+						close("$monitor");
+
+        					print "\tSaving checksum->$current_key for file->$value->{'monitor'} in memory.\n";
+                					$filemodhash{$monitor} = { monitor => $monitor, current_key => $current_key};
+                        				
+					if($Use_debug_level > 3) {
+               					print "[info] Number of checksums in memory ". keys( %filemodhash ) ." .\n";
+					}
+			} else {
+				open("file","<$monitor") or warn "\t[err] Failed to open $monitor to retrive checksum.";
+		        		$current_key=Digest::MD5->new->addfile(*file)->hexdigest;
+						close("$monitor");
+
+				print "Comparing checksums for object->$monitor\n";
+				print "\tSaved->$filemodhash{$monitor}->{current_key} Current->$current_key\n";
+
+				if("$filemodhash{$monitor}->{current_key}" eq "$current_key") {
+					print "\t[ok] Object->$monitor is unchanged.\n";
+					$monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "FM";
+                                       	$monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Ok";
+                                       	$monitorstatushash{"$value->{'monitor'}"}{'message'} = "File $value->{'monitor'} is unchanged";
+				} else {
+					if(check_schedule("$value->{'schedule'}") == 0) {
+                                        	if(check_error_limit("$value->{'errorlimit'}","$value->{'monitor'}") == 0) {
+                                                	if(check_alarm_limit("$value->{'alarmlimit'}","$value->{'monitor'}") == 0) {
+								print "\t!! [err] Object->$monitor has changed. Checksum missmatch. Executing recoveryactions.\n";
+                                                                $msg=check_message("$value->{'message'}","$monitor has changed, Checksum missmatch.");
+								$severity=check_severity("$value->{'severity'}");
+                                                                execute_program("$value->{'execute_program'}");
+                                                                send_email("$value->{'send_email'}","Filemodification","$msg");
+                                                                notify_syslog("$msg");
+                                                                resume_operation("FM","$value->{'monitor'}","add");
+                                                                send_message_to_server("$This_Host","ALARM","$msg",
+                                                                "File $monitor has changed. Checksum missmatch, Executing recovery actions.",
+                                                                "$severity","$value->{'monitor'}","FM");
+								$monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "FM";
+                                                		$monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Error";
+                                                		$monitorstatushash{"$value->{'monitor'}"}{'message'} = "File $value->{'monitor'} changed. Checksum missmatch";
+                                                         } else {
+                                                         	print "!! Alarm limit has been reached for monitor $value->{'monitor'}. No recoveryactions will be executed.\n";
+                                                         }
+                                                 } else {
+                                                 	print "!! Errorlimit on monitor:$value->{'monitor'} has not been reached, will not execute recoveryactions.\n";
+                                                 }
+                                	} else {
+                                        	print "!! Arent allowed to verify monitor:$value->{'monitor'} since its not in range for specified schedule times.\n";
+                                        }
+				}
+			}
+		}
+		elsif( -d "$value->{'monitor'}" ) {
+			my $dir="$value->{'monitor'}";
+			chdir("$dir")
+				or warn $!;
+				for(<*>) {
+					chomp;
+					my $complete="$dir/$_";
+                        		unless(exists ($filemodhash{$complete})) {
+						if( -d "$_") {
+							if($Use_debug_level > 4) {
+               							print "[info] Skipping directory->$_ Complete->$complete\n";
+							}
+						next;
+						} else {
+							open("file","<$dir/$_") or warn "\t[err] Failed to open $dir/$_ to retrive checksum.";
+                                       				$current_key=Digest::MD5->new->addfile(*file)->hexdigest or warn $!;
+                                       					close("file");
+
+                                       				print "\tSaving checksum->$current_key for file->$dir/$_ in memory.\n";
+                                               			$filemodhash{"$dir/$_"} = { monitor => "$dir/$_", current_key => $current_key};
+                                       			
+								if($Use_debug_level > 3) {
+                                              					print "[info] Number of checksums in memory ". keys( %filemodhash ) ." .\n";
+                                       				}
+						}
+					# End of unless.
+					} else {
+						open("file","<$dir/$_") or warn "\t[err] Failed to open $dir/$_ to retrive checksum.";
+                                       			$current_key=Digest::MD5->new->addfile(*file)->hexdigest or warn $!;
+                                       				close("file");
+						print "Comparing checksums for object->$complete\n";
+						print "\tSaved->$filemodhash{$complete}->{current_key} Current->$current_key\n";
+				
+						if("$filemodhash{$complete}->{current_key}" eq "$current_key") {
+							print "\t[ok] Object->$monitor is unchanged.\n";
+							$monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "FM";
+                                                	$monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Ok";
+                                                	$monitorstatushash{"$value->{'monitor'}"}{'message'} = "File $value->{'monitor'} is unchanged.";
+						} else {
+							if(check_schedule("$value->{'schedule'}") == 0) {
+                                        			if(check_error_limit("$value->{'errorlimit'}","$value->{'monitor'}") == 0) {
+                                                			if(check_alarm_limit("$value->{'alarmlimit'}","$value->{'monitor'}") == 0) {
+										print "\t!! [err] Object->$complete has changed. Checksum missmatch. Executing recoveryactions.\n";
+                                                                		$msg=check_message("$value->{'message'}","$complete has changed, Checksum missmatch.");
+										$severity=check_severity("$value->{'severity'}");
+                                                                		execute_program("$value->{'execute_program'}");
+                                                                		send_email("$value->{'send_email'}","Filemodification","$msg");
+                                                                		notify_syslog("$msg");
+                                                                		resume_operation("FM","$value->{'monitor'}","add");
+                                                                		send_message_to_server("$This_Host","ALARM","$msg",
+                                                                		"File $complete has changed. Checksum missmatch, Executing recovery actions.",
+                                                                		"$severity","$value->{'monitor'}","FM");
+										$monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "FM";
+                                                				$monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Error";
+                                                				$monitorstatushash{"$value->{'monitor'}"}{'message'} = "File $value->{'monitor'} is changed, checksum missmatch.";
+                                                         		} else {
+                                                         			print "!! Alarm limit has been reached for monitor $value->{'monitor'}. No recoveryactions will be executed.\n";
+                                                         		}
+                                                 		} else {
+                                                 			print "!! Errorlimit on monitor:$value->{'monitor'} has not been reached, will not execute recoveryactions.\n";
+                                                 		}
+                                			} else {
+                                        			print "!! Arent allowed to verify monitor:$value->{'monitor'} since its not in range for specified schedule times.\n";
+                                        		}
+						}
+					}
+				# End of for.
+				}
+		} else {
+			if($Use_debug_level > 3) {
+                        	print "[err] Only files and/or directories can be used for filemodification.\n";
+                        }
+		# End elsif.
+		}
+	}
+}
+
+# End of subfunction
+}
+sub ping_host {
+
+if ($Use_debug_level > 3) {
+        print "Entering subfunction ping_host().\n";
+}
+foreach my $key (keys %monitorhash) {
+        my $value = $monitorhash{$key};
+
+        if($value->{'type'} eq "PH") {
+                # Found a ping communication monitor.
+
+                        if($Use_debug_level > 4) {
+                                print "Monitor key($key):$value->{'monitor'}\n";
+                                print "\tStatus                 :$value->{'status'}\n";
+                                print "\texecute_program        :$value->{'execute_program'}\n";
+                                print "\tsend_email     :$value->{'send_email'}\n";
+                                print "\tseverity       :$value->{'severity'}\n";
+                                print "\tschedule       :$value->{'schedule'}\n";
+                                print "\tmessage                :$value->{'message'}\n";
+                                print "\talarmlimit     :$value->{'alarmlimit'}\n";
+                                print "\terrorlimit     :$value->{'errorlimit'}\n";
+                        }
+
+			if($Use_debug_level > 1) {
+				print "Verifying communications with address:$value->{'monitor'}.\n";
+			}
+			my $ecode = system("ping -c 2 $value->{'monitor'} > /dev/null 2>&1");
+
+			if($Use_debug_level > 3) {
+				print "Ping exitcode:$ecode.\n";
+			}
+
+	if ( "$ecode" == "0" ) {
+			if ("$value->{'status'}" eq "up") { 
+				if($Use_debug_level > 1) {
+					print "\t [ok] Pingstatus ecode was $ecode. Service is suppose to be == up.\n";
+				}
+				$monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "PH";
+                                $monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Ok";
+                                $monitorstatushash{"$value->{'monitor'}"}{'message'} = "Ping to $value->{'monitor'} ok. Set to be up";
+			} else {
+				if($Use_debug_level > 1) {
+					print "\t[err] Pingstatus ecode was $ecode. Service is suppose to be == up.\n";
+				}
+				if(check_schedule("$value->{'schedule'}") == 0) {
+                                                if(check_error_limit("$value->{'errorlimit'}","$value->{'monitor'}") == 0) {
+                                                        if(check_alarm_limit("$value->{'alarmlimit'}","$value->{'monitor'}") == 0) {
+				
+								if($Use_debug_level > 1) {
+									print "\t[err] Pingstatus ecode was $ecode. Service is suppose to be up.\n";
+								}
+
+                                                                $msg=check_message("$value->{'message'}","Connectivity to address $value->{'monitor'} failed.");
+								$severity=check_severity("$value->{'severity'}");
+                                                                execute_program("$value->{'execute_program'}");
+                                                                send_email("$value->{'send_email'}","Network connectivity","$msg");
+                                                                notify_syslog("$msg");
+                                                                resume_operation("PS","$value->{'monitor'}","add");
+                                                                send_message_to_server("$This_Host","ALARM","$msg",
+                                                                "Connectivity to address $value->{'monitor'} failed. Service is suppose to be up. Recovery actions have been executed.",
+                                                                "$severity","$value->{'monitor'}","PH");
+								$monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "PH";
+                                				$monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Error";
+                                				$monitorstatushash{"$value->{'monitor'}"}{'message'} = "Ping to $value->{'monitor'} failed.";
+                                                        } else {
+                                                                print "!! Alarm limit has been reached for monitor $value->{'monitor'}. No recoveryactions will be executed.\n";
+                                                        }
+                                        } else {
+                                                 print "!! Errorlimit on monitor:$value->{'monitor'}  has not been reached, will not execute recoveryactions.\n";
+                                        }
+                                } else {
+                                        print "!! Arent allowed to verify monitor:$value->{'monitor'} since its not in range for specified schedule times.\n";
+                                }
+			}
+	} else {
+			if ("$value->{'status'}" eq "down") { 
+				if($Use_debug_level > 1) {
+					print "\t [ok] Pingstatus ecode was $ecode. Service is suppose to be == down.\n";
+				}
+				$monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "PH";
+                                $monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Ok";
+                                $monitorstatushash{"$value->{'monitor'}"}{'message'} = "Ping to $value->{'monitor'} failed. Set to be down";
+			} else {
+				if(check_schedule("$value->{'schedule'}") == 0) {
+                                                if(check_error_limit("$value->{'errorlimit'}","$value->{'monitor'}") == 0) {
+                                                        if(check_alarm_limit("$value->{'alarmlimit'}","$value->{'monitor'}") == 0) {
+
+                                                                if($Use_debug_level > 1) {
+                                                                        print "\t[err] Pingstatus ecode was $ecode. Service is suppose to be down.\n";
+                                                                }
+
+                                                                $msg=check_message("$value->{'message'}","Connectivity to address $value->{'monitor'} failed.");
+								$severity=check_severity("$value->{'severity'}");
+                                                                execute_program("$value->{'execute_program'}");
+                                                                send_email("$value->{'send_email'}","Network connectivity","$msg");
+                                                                notify_syslog("$msg");
+                                                                resume_operation("PS","$value->{'monitor'}","add");
+                                                                send_message_to_server("$This_Host","ALARM","$msg",
+                                                                "Connectivity to address $value->{'monitor'} failed. Service is suppose to be down. Recovery actions have been executed.",
+                                                                "$severity","$value->{'monitor'}","PH");
+								$monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "PH";
+                                				$monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Error";
+                                				$monitorstatushash{"$value->{'monitor'}"}{'message'} = "Ping to $value->{'monitor'} ok. Set to be down";
+                                                        } else {
+                                                                print "!! Alarm limit has been reached for monitor $value->{'monitor'}. No recoveryactions will be executed.\n";
+                                                        }
+                                        } else {
+                                                 print "!! Errorlimit on monitor:$value->{'monitor'}  has not been reached, will not execute recoveryactions.\n";
+                                        }
+                                } else {
+                                        print "!! Arent allowed to verify monitor:$value->{'monitor'} since its not in range for specified schedule times.\n";
+                                }
+
+			}
+	}
+	
+
+    }
+}
+if ($Use_debug_level > 3) {
+        print "Leaving subfunction ping_host().\n";
+}
+
+# End of subfunction
+}
+sub check_alarm_limit {
+my $limit="$_[0]";
+my $monitor="$_[1]";
+my $currentlimit;
+my $newlimit;
+
+if ($Use_debug_level > 2) {
+        print "Entering subfunction check_alarm_limit().\n";
+}
+if(defined($limit)) {
+	if($limit eq "no") {
+		if ($Use_debug_level > 2) {
+        		print "No limit defined for monitor:$monitor, limit is set to:$limit.\n";
+		}
+	  return 0;
+	}
+}
+unless(exists ($alarmlimithash{$monitor})) {
+	print "Adding triggerd monitor in alarmlimithash Monitor:$monitor limitnow:1 of $limit\n";
+		$alarmlimithash{$monitor} = { monitor => $monitor, limit => 1};
+			if($Use_debug_level > 3) {
+     				print "Size of alarmlimithash ". keys( %alarmlimithash ) ." .\n";
+			}
+		$newlimit="1";
+} else {
+	$currentlimit = $alarmlimithash{$monitor}->{limit};
+		$newlimit=($currentlimit + 1);
+			if($Use_debug_level > 1) {
+				print "Triggerd monitor is already loaded in alarmlimithash Monitor:$monitor limitnow:$newlimit";
+				print " of $limit\n";
+				$alarmlimithash{$monitor} = { monitor => $monitor, limit => $newlimit};
+					if($Use_debug_level > 3) {
+     						print "Size of alarmlimithash ". keys( %alarmlimithash ) .".\n";
+					}
+			}		
+}
+if("$newlimit" > "$limit") {
+	if ($Use_debug_level) {
+		print "Alarmlimit:$limit has been reached:$newlimit on monitor:$monitor. No recovery actions will be executed\n";
+	}
+	return 1;
+} else {
+	if ($Use_debug_level) {
+		print "Alarmlimit:$limit has not been reached:$newlimit on monitor:$monitor. its ok to trigger recovery actions.\n";
+	}
+	return 0;
+}
+if ($Use_debug_level > 2) {
+        print "Leaving subfunction check_alarm_limit().\n";
+}
+
+# End of subfunction
+}
+sub check_error_limit {
+my $errorlimit="$_[0]";
+my $monitor="$_[1]";
+my $currentlimit;
+my $newlimit;
+
+if ($Use_debug_level > 2) {
+        print "Entering subfunction check_error_limit().\n";
+}
+if(defined($errorlimit)) {
+        if($errorlimit eq "no") {
+                if ($Use_debug_level > 2) {
+                        print "No errorlimit defined for monitor:$monitor, limit is set to:$errorlimit.\n";
+                }
+          return 0;
+        }
+}
+unless(exists ($errorlimithash{$monitor})) {
+        print "Adding triggerd monitor in errorlimit hash Monitor:$monitor limitnow:1 of $errorlimit\n";
+                $errorlimithash{$monitor} = { monitor => $monitor, errorlimit => 1};
+                        if($Use_debug_level > 3) {
+                                print "Size of errorlimithash ". keys( %errorlimithash ) ." .\n";
+                        }
+                $newlimit="1";
+} else {
+        $currentlimit = $errorlimithash{$monitor}->{errorlimit};
+                $newlimit=($currentlimit + 1);
+                        if($Use_debug_level > 1) {
+                                print "Triggerd monitor is already loaded in errorlimithash Monitor:$monitor limitnow:$newlimit";
+                                print " of $errorlimit\n";
+                                $errorlimithash{$monitor} = { monitor => $monitor, errorlimit => $newlimit};
+                                        if($Use_debug_level > 3) {
+                                                print "Size of errorlimithash ". keys( %errorlimithash ) .".\n";
+                                        }
+                        }
+}
+if("$newlimit" > "$errorlimit") {
+        if ($Use_debug_level) {
+                print "Errorlimit:$errorlimit has been reached:$newlimit on monitor:$monitor. Trigger recovery actions.\n";
+        }
+        return 0;
+} else {
+        if ($Use_debug_level) {
+                print "Errorlimit:$errorlimit is not reached:$newlimit for monitor:$monitor. Will not trigger actions.\n";
+        }
+        return 1;
+}
+if ($Use_debug_level > 2) {
+        print "Entering subfunction check_error_limit().\n";
+}
+
+# End of subfunction
+}
+sub install_new_config {
+
+if($Use_debug_level) {
+        print "Entering subfunction install_new_config() \n";
+}
+send_message_to_server("$This_Host","INSTALLCONFIG");
+
+if($Use_debug_level) {
+        print "Leaving subfunction install_new_config() \n";
+}
+# End of subfunction.
+}
+sub notify_syslog {
+my $ecode;
+my $message="$_[0]";
+
+if($Use_debug_level) {
+        print "Entering subfunction notify_syslog()\n";
+}
+if($Enable_syslog_notification eq "yes") {
+	if($Use_debug_level > 2) {
+		print "Notifying local syslog becasue parameter is set to:$Enable_syslog_notification\n";
+		print "Message will be:$message\n";
+	}
+	$ecode=`$Api_dir_location/$Use_api -tellsyslog "$message"`;
+	if($Use_debug_level > 2) {
+		print "Reporting to local syslog ended with exitcode:$ecode\n";
+	}
+} else {
+	if($Use_debug_level > 3) {
+        	print "Will not notify local syslog since Enable_syslog_notification is set to:$Enable_syslog_notification.\n";
+	}
+}
+if($Use_debug_level) {
+        print "Leaving subfunction notify_syslog() \n";
+}
+# End of subfunction
+}
+sub verify_swap {
+
+if($Use_debug_level > 2) {
+        print "Entering subfunction verify_swap().\n";
+}
+foreach my $key (keys %monitorhash) {
+        my $value = $monitorhash{$key};
+
+        if($value->{'type'} eq "SA") {
+                # Found a swap monitor.
+
+               if($Use_debug_level > 4) {
+                                print "Monitor key($key):$value->{'monitor'}\n";
+                                print "\texecute_program        :$value->{'execute_program'}\n";
+                                print "\tsend_email     :$value->{'send_email'}\n";
+                                print "\tseverity       :$value->{'severity'}\n";
+                                print "\tschedule       :$value->{'schedule'}\n";
+                                print "\tmessage                :$value->{'message'}\n";
+                                print "\talarmlimit     :$value->{'alarmlimit'}\n";
+                                print "\terrorlimit     :$value->{'errorlimit'}\n";
+                }
+
+                if($Use_debug_level > 3) {
+                        print "Contacting operatingsystem api->$Api_dir_location/$Use_api -gettotalswap\n";
+                        print "Contacting operatingsystem api->$Api_dir_location/$Use_api -getfreeswap\n";
+                }
+                my $total_swap=`$Api_dir_location/$Use_api -gettotalswap`;
+                my $free_swap=`$Api_dir_location/$Use_api -getfreeswap`;
+                chomp $total_swap;
+                chomp $free_swap;
+		my $used_swap=($free_swap / $total_swap);
+
+                if($Use_debug_level > 4) {
+			print "Swapdebug info->Tot:$total_swap free:$free_swap used:$used_swap\n";
+		}
+		if("$used_swap" >= "$value->{'monitor'}") {
+			print "\t[warn] System swapiness, Used swap->$used_swap Swap limit->$value->{'monitor'}\n";
+			if(check_schedule("$value->{'schedule'}") == 0) {
+                        	if(check_error_limit("$value->{'errorlimit'}","$value->{'monitor'}") == 0) {
+                                	if(check_alarm_limit("$value->{'alarmlimit'}","$value->{'monitor'}") == 0) {
+						print "\t!! [warn] System swapiness, Used swap->$used_swap Swap limit->$value->{'monitor'}. Executing recovery actions.\n";
+                                                $msg=check_message("$value->{'message'}","System swapiness, Used swap->$used_swap Swap limit->$value->{'monitor'}");
+						$severity=check_severity("$value->{'severity'}");
+                                                execute_program("$value->{'execute_program'}");
+                                                send_email("$value->{'send_email'}","Swap usage","$msg");
+                                                notify_syslog("$msg");
+                                                resume_operation("SA","$value->{'monitor'}","add");
+                                                send_message_to_server("$This_Host","ALARM","$msg",
+                                                "System swapiness, Used swap->$used_swap Swap limit->$value->{'monitor'}",
+                                                "$severity","$value->{'monitor'}","SA");
+						$monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "SA";
+                                                $monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Error";
+                                                $monitorstatushash{"$value->{'monitor'}"}{'message'} = "Swaping Swap->$used_swap Swap limit->$value->{'monitor'}";
+                                         } else {
+                                         	print "!! Alarm limit has been reached for monitor $value->{'monitor'}. No recoveryactions will be executed.\n";
+                                         }
+                                } else {
+                                	print "!! Errorlimit on monitor:$value->{'monitor'} has not been reached, will not execute recoveryactions.\n";
+                                }
+                        } else {
+                        	print "!! Arent allowed to verify monitor:$value->{'monitor'} since its not in range for specified schedule times.\n";
+                        }
+
+		} else {
+			$monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "SA";
+                        $monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Ok";
+                        $monitorstatushash{"$value->{'monitor'}"}{'message'} = "Swap ok, Swap now:($used_swap)";
+		}
+	}
+}
+
+# End of subfunction
+}
+sub resume_operation {
+my $type="$_[0]";
+my $monitor="$_[1]";
+my $check="$_[2]";
+
+if($Use_debug_level > 4) {
+        print "Entering subfunction resume_operation().\n";
+}
+if($Enable_autoclose_alarms ne "yes") {
+	if($Use_debug_level > 2) {
+		print "Will not autoclose any alarms since Enable_autoclose_alarms:$Enable_autoclose_alarms\n";
+	}
+return;
+}
+if($check eq "add") {
+	unless(exists ($resuminghash{$monitor})) {
+		print "Adding triggered monitor in resumehash:Montype:$type Monitor:$monitor\n";
+		$resuminghash{$monitor} = { type => $type};
+		if($Use_debug_level > 3) {
+     			print "Size of resumehash ". keys( %resuminghash ) ." st.\n";
+		}
+	} else {
+		if($Use_debug_level > 4) {
+			print "Triggered monitor is already loaded in resumehash:Montype:$type Monitor:$monitor\n";
+     			print "Size of resumehash ". keys( %resuminghash ) ." st.\n";
+		}
+	}
+}
+elsif($check eq "check") {
+	unless(exists ($resuminghash{$monitor})) {
+		if($Use_debug_level > 4) {
+      			print "Found no hit in resume hash for Montype:$type Monitor:$monitor\n";
+      			print "Size of resumehash ". keys( %resuminghash ) ." st.\n";
+		}
+	} else {
+	   	if($Use_debug_level > 2) {	
+			print "Found a monitor that have resumed operation. Montype:$type Monitor:$monitor.\n";
+			print "Closing any active alarms on andutteye server. And deleting monitor entries in memory.\n";
+		}
+		delete $resuminghash{$monitor};
+		if($Use_debug_level) {
+			print "Deleting limit queue for monitor:$monitor\n";
+		}
+		delete $errorlimithash{$monitor};
+	   	if($Use_debug_level) {	
+     			print "Size of resumehash ". keys( %resuminghash ) ." st.\n";
+			print "Notifying server to close any open alarm for Monitor:$monitor type:$type\n";
+		}
+	        send_message_to_server("$This_Host","RESUMEOPERATION","$monitor","$type");
+	}
+} else {
+	print "ERROR Recived an invalid resumeoperation type:Montype:$type Monitor:$monitor check:$check\n";
+	return;
+}
+if($Use_debug_level > 4) {
+        print "Leaving subfunction resume_operation().\n";
+}
+# End of subfunction
+}
+sub verify_memory {
+
+if($Use_debug_level > 2) {
+        print "Entering subfunction verify_memory().\n";
+}
+
+foreach my $key (keys %monitorhash) {
+        my $value = $monitorhash{$key};
+
+        if($value->{'type'} eq "MA") {
+                # Found a memory monitor.
+
+               if($Use_debug_level > 4) {
+                                print "Monitor key($key):$value->{'monitor'}\n";
+                                print "\texecute_program        :$value->{'execute_program'}\n";
+                                print "\tsend_email     :$value->{'send_email'}\n";
+                                print "\tseverity       :$value->{'severity'}\n";
+                                print "\tschedule       :$value->{'schedule'}\n";
+                                print "\tmessage                :$value->{'message'}\n";
+                                print "\talarmlimit     :$value->{'alarmlimit'}\n";
+                                print "\terrorlimit     :$value->{'errorlimit'}\n";
+                }
+
+		if($Use_debug_level > 3) {
+			print "Contacting operatingsystem api->$Api_dir_location/$Use_api -gettotalmemory\n";
+			print "Contacting operatingsystem api->$Api_dir_location/$Use_api -getfreememory\n";
+		}
+		my $total_memory=`$Api_dir_location/$Use_api -gettotalmemory`;
+		my $free_memory=`$Api_dir_location/$Use_api -getfreememory`;
+		chomp $total_memory;
+		chomp $free_memory;
+
+			if($free_memory == 0 && $total_memory == 0) {
+				print "!! WARNING An empty or 0 result in free_memory and total_memory. Will not verify or calculate on empty variables.\n";
+			} else {
+				my $calculate_mem=($total_memory / $free_memory);
+				my $used_memory=($calculate_mem * 100);
+
+				if ( "$used_memory" < "$value->{'monitor'}" ) {
+					if(check_schedule("$value->{'schedule'}") == 0) {
+                                                        if(check_error_limit("$value->{'errorlimit'}","$value->{'monitor'}") == 0) {
+                                                                        if(check_alarm_limit("$value->{'alarmlimit'}","$value->{'monitor'}") == 0) {
+										print "!! Less then $value->{'monitor'}% memory left, used:$used_memory. Executing recovery actions\n";
+                                                                                $msg=check_message("$value->{'message'}","Less then $value->{'monitor'}% memory left, used:$used_memory");
+										$severity=check_severity("$value->{'severity'}");
+                                                                                execute_program("$value->{'execute_program'}");
+                                                                                send_email("$value->{'send_email'}","Memory usage","$msg");
+                                                                                notify_syslog("$msg");
+                                                                                resume_operation("MA","$value->{'monitor'}","add");
+                                                                                send_message_to_server("$This_Host","ALARM","$msg",
+                                                                                "Less then $value->{'monitor'}% memory left, used:$used_memory. Executing recovery actions.",
+                                                                                "$severity","$value->{'monitor'}","MA");
+										$monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "MA";
+                                                				$monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Error";
+                                                				$monitorstatushash{"$value->{'monitor'}"}{'message'} = "Less then $value->{'monitor'}% memory left, used:$used_memory";
+                                                                        } else {
+                                                                                print "!! Alarm limit has been reached for monitor $value->{'monitor'}. No recoveryactions will be executed.\n";
+                                                                        }
+                                                        } else {
+                                                                print "!! Errorlimit on monitor:$value->{'monitor'} has not been reached, will not execute recoveryactions.\n";
+                                                        }
+                                	} else {
+                                        	print "!! Arent allowed to verify monitor:$value->{'monitor'} since its not in range for specified schedule times.\n";
+                                        }
+
+				} else {
+					if($Use_debug_level > 2) {
+						print "More then $value->{'monitor'}% memory left($used_memory)\n";
+					}
+					$monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "MA";
+                                        $monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Ok";
+                                        $monitorstatushash{"$value->{'monitor'}"}{'message'} = "More then $value->{'monitor'}% memory left($used_memory)";
+				}
+			}
+	}
+}
+if($Use_debug_level > 2) {
+        print "Leaving subfunction verify_memory()\n";
+}
+# End of subfunction
+}
+sub verify_loadaverege {
+
+if($Use_debug_level > 2) {
+        print "Entering subfunction verify_loadaverege().\n";
+}
+foreach my $key (keys %monitorhash) {
+        my $value = $monitorhash{$key};
+
+        if($value->{'type'} eq "LA") {
+                # Found a loadaverege monitor.
+
+               if($Use_debug_level > 4) {
+                                print "Monitor key($key):$value->{'monitor'}\n";
+                                print "\texecute_program        :$value->{'execute_program'}\n";
+                                print "\tsend_email     :$value->{'send_email'}\n";
+                                print "\tseverity       :$value->{'severity'}\n";
+                                print "\tschedule       :$value->{'schedule'}\n";
+                                print "\tmessage                :$value->{'message'}\n";
+                                print "\talarmlimit     :$value->{'alarmlimit'}\n";
+                                print "\terrorlimit     :$value->{'errorlimit'}\n";
+                }
+                if($Use_debug_level > 3) {
+                        print "Contacting operatingsystem api->$Api_dir_location/$Use_api -getloadaverege\n";
+                }
+                my $load_averege=`$Api_dir_location/$Use_api -getloadaverege`;
+		my @load_averege=split(" ", $load_averege);
+		for(@load_averege) {
+			chomp;
+			if(/^$/) {
+				next;
+			}
+			if("$_" >= "$value->{'monitor'}") {
+				if(check_schedule("$value->{'schedule'}") == 0) {
+                                	if(check_error_limit("$value->{'errorlimit'}","$value->{'monitor'}") == 0) {
+                                        	if(check_alarm_limit("$value->{'alarmlimit'}","$value->{'monitor'}") == 0) {
+							print "\t[warn] Load of the system is equal or over limit->$value->{'monitor'} Load->$_\n";
+                                                        print "!!  Load of the system is equal or over limit->$value->{'monitor'} Load->$_. Executing recovery actions\n";
+                                                        $msg=check_message("$value->{'message'}","Load of the system is equal or over limit->$value->{'monitor'} Load->$_");
+							$severity=check_severity("$value->{'severity'}");
+                                                        execute_program("$value->{'execute_program'}");
+                                                        send_email("$value->{'send_email'}","System load","$msg");
+                                                        notify_syslog("$msg");
+                                                        resume_operation("LA","$value->{'monitor'}","add");
+                                                        send_message_to_server("$This_Host","ALARM","$msg",
+                                                        "Load of the system is equal or over limit->$value->{'monitor'} Load->$_. Executing recovery actions.",
+                                                        "$severity","$value->{'monitor'}","LA");
+							$monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "LA";
+                                                	$monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Error";
+                                                	$monitorstatushash{"$value->{'monitor'}"}{'message'} = "Load over limit limit->$value->{'monitor'} Now:($_)";
+                                                 } else {
+                                                 	print "!! Alarm limit has been reached for monitor $value->{'monitor'}. No recoveryactions will be executed.\n";
+						 }
+                                         } else {
+                                         	print "!! Errorlimit on monitor:$value->{'monitor'} has not been reached, will not execute recoveryactions.\n";
+                                         } 
+                                  } else {
+                                  	print "!! Arent allowed to verify monitor:$value->{'monitor'} since its not in range for specified schedule times.\n";
+                                  }
+			} else {
+				$monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "LA";
+                                $monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Ok";
+                                $monitorstatushash{"$value->{'monitor'}"}{'message'} = "Load ok, Now:($_)";
+			}
+		}
+	}
+}
+
+# End of subfunction
+}
+sub check_schedule {
+
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+my $schedule="$_[0]";
+my @hours_between;
+$hour=sprintf("%02d",$hour);
+
+if($Use_debug_level > 4) {
+        print "Entering subfunction check_schedule()\n";
+}
+if("$schedule" eq "no") {
+	if($Use_debug_level > 4) {
+ 		print "Schedule disabled for this monitor.\n";
+	}
+  return("0");
+}
+if(!defined($schedule)) {
+	$schedule="no";
+} else {
+	@hours_between=split("-","$schedule");
+}
+if("$hour" >= "$hours_between[0]" && "$hour" <= "$hours_between[1]") {
+	if($Use_debug_level > 4) {
+	   print "if $hour >= $hours_between[0] && $hour <= $hours_between[1]\n";
+ 	   print "Monitoring permitted on scheduled monitor.\n";
+	}
+   return("0");
+} else {
+	if($Use_debug_level > 4) {
+	   print "if $hour >= $hours_between[0] && $hour <= $hours_between[1]\n";
+	   print "!! Monitoring not permitted on scheduled monitor.\n";
+	}
+   return("1");
+}
+if($Use_debug_level) {
+        print "Leaving subfunction check_schedule() \n";
+}
+
+# End of subfunction
+}
+sub run_as_daemon {
+if($Use_debug_level) {
+        print "Entering subfunction run_as_daemon().\n";
+}
+chdir '/' or die "Can't chdir to /: $!";
+open (STDIN,"/dev/null") or die "Can't read /dev/null as standard input: $!";
+open (STDOUT, ">>$Log_dir_location/andutteyedagt.log") or die "Can't write standard out messages to $Log_dir_location/andutteyedagt.log: $!";
+open (STDERR, ">>$Log_dir_location/andutteyedagt.log") or die "Can't write standard error messages to $Log_dir_location/andutteyedagt.log: $!";
+defined(my $pid = fork) or die "Can't fork andutteyedmo. Try to execute andutteyedmo without daemon mode enabled.: $!";
+exit if $pid;
+umask 0;
+
+if($Use_debug_level) {
+        print "Leaving subfunction run_as_daemon().\n";
+}
+# End of subfunction
+}
+sub software_inventory {
+my @tmplist;
+my @tmplist2;
+my @packagelist;
+my $packagelist;
+my $packagetype="rpm";
+my $nr=0;
+
+if($Use_debug_level > 2) {
+        print "Entering subfunction software_inventory()\n";
+}
+my $softwarecount=`$Api_dir_location/$Use_api -getsoftwarepackagecount`;
+chomp $softwarecount;
+
+my @softwarelist=`$Api_dir_location/$Use_api -getsoftwarepackagelist`;
+	for(@softwarelist) {
+		@tmplist = split("~",$_);	
+			for(@tmplist) {
+				@tmplist2=split("#",$_);
+					if($Use_debug_level > 3) {
+		    				print "Package:$tmplist2[0] version:$tmplist2[1] release:$tmplist2[2] arch:$tmplist2[3]\n";
+					}
+				push(@packagelist,"$tmplist2[0]~$tmplist2[1]~$tmplist2[2]~$tmplist2[3]");
+			    $nr++;
+			}
+	}
+if($Use_debug_level > 3) {
+	print "Count from before:$softwarecount loopcount:$nr\n";
+}
+$packagelist=join(" ",@packagelist);
+send_message_to_server("$This_Host","CHECKINSOFTWARE","$nr","$packagelist","$packagetype");
+
+if($Use_debug_level > 3) {
+        print "Leaving subfunction software_inventory()\n";
+}
+# End of subfunction gathersoftware
+}
+sub system_snapshot() {
+if($Use_debug_level > 3) {
+        print "Entering subfunction system_snapshot()\n";
+}
+my @pslist=`$Api_dir_location/$Use_api -getprocesses`;
+	for (@pslist) {
+		chomp;
+			if($Use_debug_level > 4) {
+				print "Process line->:$_\n";
+			}
+	}
+	my $pslist=join(";;;;",@pslist);
+if($Use_debug_level > 4) {
+	print "Process line joined->$pslist\n";
+}
+my @dflist=`$Api_dir_location/$Use_api -getfilesystem`;
+	for (@dflist) {
+		chomp;
+		if($Use_debug_level > 4) {
+			print "Filesystem line->:$_\n";
+		}
+	}
+	my $dflist=join(";;;;",@dflist);
+if($Use_debug_level > 4) {
+	print "Filesystem line joined->$dflist\n";
+}
+my @netlist=`$Api_dir_location/$Use_api -getnetactivity`;
+	for (@netlist) {
+		chomp;
+		if($Use_debug_level > 4) {
+			print "Network line->$_\n";
+		}
+	}
+	my $netlist=join(";;;;",@netlist);
+if($Use_debug_level > 4) {
+	print "Network line joined->$netlist\n";
+}
+my @hardware=`$Api_dir_location/$Use_api -gethardware`;
+	for (@hardware) {
+		chomp;
+		if($Use_debug_level > 4) {
+			print "Hardware line->$_\n";
+		}
+	}
+	my $hardware=join(";;;;",@hardware);
+if($Use_debug_level > 4) {
+	print "Hardware line joined->$hardware\n";
+}
+my @users=`$Api_dir_location/$Use_api -getusers`;
+	for (@users) {
+		chomp;
+		if($Use_debug_level > 4) {
+			print "Users line->$_\n";
+		}
+	}
+	my $users=join(";;;;",@users);
+if($Use_debug_level > 4) {
+	print "User line joined->$users\n";
+}
+send_message_to_server("$This_Host","SNAPSHOT","$pslist","$dflist","$netlist","$hardware","$users");
+
+if($Use_debug_level) {
+        print "Leaving subfunction system_snapshot()\n";
+}
+# End of subfunction
+}
+sub program_info {
+#
+print "\n";
+print "$version\n";
+print"\n";
+print "Example:$0 -config=/etc/andutteye/andutteyedagt.conf\n";
+print "\n";
+print "-config\t\t:Specifies monitoring configuration to use.\n";
+print "-genconfig\t:Generates a monitoring configuration based on your system.\n";
+print "\n";
+exit 1;
+
+# End of subfunction
+}
+sub update_agent_status {
+
+send_message_to_server("$This_Host","CHECK","","Version","4","2","2","3","4","$version","test", "12.2", "121.","0","0","0 0 0");
+
+# End of subfunction
+}
+sub parse_and_send_transfer_directory_items {
+my @file_data;
+my $tmp;
+my $filename;
+my $file_data;
+my $file_data_lines="0";
+
+if( -d "$Transfer_dir_location") {
+	if($Use_debug_level) {
+		print "[info] Transfer directory $Transfer_dir_location exists, parsing for items.\n";
+	}
+	chdir("$Transfer_dir_location")
+		or warn "[err] Failed to change to transfer directory. err:$!\n";
+		for(<*>) {
+			chomp;
+			if( -f "$_") {
+				$filename="$_";
+				print "Found a file to send:$_\n";
+				open("file","<$filename")
+					or warn "[err] Failed to open file:$filename for reading\n";
+					for(<file>) {
+						chop;
+						#send_message_to_server("$This_Host","TransferItem","$filename","$_");
+						push(@file_data,"$_");
+						$file_data_lines++;
+					}
+				print "[info] $file_data_lines lines in file saved.\n";
+				close("file");
+
+			   print "[info] Removing file->$filename\n";
+			   unlink("$filename") or warn "[err] Failed to remove file:$filename after transfer to server.\n";
+			
+			# Send file data to andutteye server
+			$file_data=join(";;;;",@file_data);
+			send_message_to_server("$This_Host","TransferItem","$filename","$file_data");
+			@file_data=();
+			}
+		}
+	chdir("/");
+}
+
+# End of subfunction
+}
+sub parse_and_validate_package_profile {
+
+if($Use_debug_level > 3) {
+	print "Entering subfunction parse_and_validate_package_profile()\n";
+}
+if ( ! -d "$Cache_dir_location/management") {
+        mkdir("$Cache_dir_location/management");
+}
+send_message_to_server("$This_Host","ValidateManagement");
+
+if($Use_debug_level > 3) {
+	print "Leaving subfunction parse_and_validate_package_profile()\n";
+}
+
+# End of subfunction
+}
+sub send_base_configuration_to_andutteye_server {
+
+my $baseconfig=join(";;;;",@base_configuration);
+send_message_to_server("$This_Host","SaveBaseConfig","$baseconfig");
+
+@base_configuration = ();
+
+# End of subfunction
+}
+sub send_local_configuration_to_andutteye_server {
+my $count;
+
+foreach my $key (keys %monitorhash) {
+        my $value = $monitorhash{$key};
+
+	if($value->{'type'} eq "LA") {
+		print "[info] Found a LA monitor to save on server.\n";
+        	push(@monitors,"$value->{'type'},$value->{'monitor'},$value->{'execute_program'},$value->{'send_email'},$value->{'severity'},$value->{'schedule'},$value->{'message'},$value->{'alarmlimit'},$value->{'errorlimit'}");
+	}
+	elsif($value->{'type'} eq "MA") {
+		print "[info] Found a MA monitor to save on server.\n";
+        	push(@monitors,"$value->{'type'},$value->{'monitor'},$value->{'execute_program'},$value->{'send_email'},$value->{'severity'},$value->{'schedule'},$value->{'message'},$value->{'alarmlimit'},$value->{'errorlimit'}");
+	}
+	elsif($value->{'type'} eq "SA") {
+		print "[info] Found a SA monitor to save on server.\n";
+        	push(@monitors,"$value->{'type'},$value->{'monitor'},$value->{'execute_program'},$value->{'send_email'},$value->{'severity'},$value->{'schedule'},$value->{'message'},$value->{'alarmlimit'},$value->{'errorlimit'}");
+	}
+	elsif($value->{'type'} eq "FS") {
+		print "[info] Found a FS monitor to save on server.\n";
+        	push(@monitors,"$value->{'type'},$value->{'monitor'},$value->{'execute_program'},$value->{'send_email'},$value->{'severity'},$value->{'schedule'},$value->{'message'},$value->{'alarmlimit'},$value->{'errorlimit'},$value->{'warning_limit'},$value->{'critical_limit'},$value->{'fatal_limit'}");
+	}
+	elsif($value->{'type'} eq "PS") {
+		print "[info] Found a PS monitor to save on server.\n";
+        	push(@monitors,"$value->{'type'},$value->{'monitor'},$value->{'status'},$value->{'execute_program'},$value->{'send_email'},$value->{'severity'},$value->{'schedule'},$value->{'message'},$value->{'alarmlimit'},$value->{'errorlimit'}");
+	}
+	elsif($value->{'type'} eq "FT") {
+		print "[info] Found a FT monitor to save on server.\n";
+        	push(@monitors,"$value->{'type'},$value->{'monitor'},$value->{'execute_program'},$value->{'send_email'},$value->{'severity'},$value->{'schedule'},$value->{'message'},$value->{'alarmlimit'},$value->{'errorlimit'},$value->{'searchpattern'}");
+	}
+	elsif($value->{'type'} eq "EV") {
+		print "[info] Found a EV monitor to save on server.\n";
+        	push(@monitors,"$value->{'type'},$value->{'monitor'},$value->{'status'},$value->{'execute_program'},$value->{'send_email'},$value->{'severity'},$value->{'schedule'},$value->{'message'},$value->{'alarmlimit'},$value->{'errorlimit'},$value->{'exitstatus'},$value->{'arguments'}");
+	}
+	elsif($value->{'type'} eq "PH") {
+		print "[info] Found a PH monitor to save on server.\n";
+        	push(@monitors,"$value->{'type'},$value->{'monitor'},$value->{'execute_program'},$value->{'send_email'},$value->{'severity'},$value->{'schedule'},$value->{'message'},$value->{'alarmlimit'},$value->{'errorlimit'}");
+	}
+	elsif($value->{'type'} eq "ST") {
+		print "[info] Found a ST monitor to save on server.\n";
+        	push(@monitors,"$value->{'type'},$value->{'monitor'},$value->{'status'},$value->{'program'},$value->{'arguments'}");
+	}
+	elsif($value->{'type'} eq "AM") {
+		print "[info] Found a AM monitor to save on server.\n";
+        	push(@monitors,"$value->{'type'},$value->{'monitor'},$value->{'status'},$value->{'program'},$value->{'arguments'}");
+	}
+	elsif($value->{'type'} eq "FM") {
+		print "[info] Found a FM monitor to save on server.\n";
+        	push(@monitors,"$value->{'type'},$value->{'monitor'},$value->{'execute_program'},$value->{'send_email'},$value->{'severity'},$value->{'schedule'},$value->{'message'},$value->{'alarmlimit'},$value->{'errorlimit'}");
+	} else {
+		print "[info] Found a unspecified supported parameter.\n";
+	}
+}
+$count = @monitors;
+print "[info] $count monitors found.\n";
+
+my $monitors=join(";;;;",@monitors);
+send_message_to_server("$This_Host","SaveConfig","$monitors");
+
+# End of subfunction
+}
+sub unpack_and_parse_management_content {
+my $ecode;
+
+if ( -f "$Cache_dir_location/management/andutteyecontent.tar" ) {
+
+	if( ! -z "$Cache_dir_location/management/andutteyecontent.tar") {
+	
+		chdir("$Cache_dir_location/management")
+			or warn "[error] Failed to move to directory:$Cache_dir_location/management\n";
+	
+		print "[info] Unpacking management content:$Cache_dir_location/management/andutteyecontent.tar\n";
+		$ecode=system("tar xvf andutteyecontent.tar > /dev/null 2>&1");
+
+		if($ecode == 0 ) {
+			print "[info] Management content unpacked ok.\n";
+			return(0);
+		} else {
+			print "[error] Failed to unpack management content, exitcode:$ecode\n";
+			return(1);
+		}
+
+	} else {
+		print "[info] Management content package is empty.\n";
+		return(2);
+	}
+
+} else {
+	print "[info] No management content found.\n";
+	return(2);
+}
+
+# End of subfunction
+}
+sub parse_action_list_and_load_arrays {
+my @tmp;
+
+if( -f "$Cache_dir_location/management/actionlist.dat") {
+
+	if( ! -z "$Cache_dir_location/management/actionlist.dat" ) {
+		open("actionlist","<$Cache_dir_location/management/actionlist.dat")
+			or die "[error] Failed to open actionlist:$Cache_dir_location/management/actionlist.dat\n";
+			for(<actionlist>) {
+				chomp;
+				if(/^Package/) {
+					print "[info] Found a package entry.\n";
+					@tmp=split("#", $_);
+					
+					if("$tmp[1]" eq "Install") {
+						print "Package:$tmp[2] version:$tmp[3] release:$tmp[4] arch:$tmp[5] (Install)\n";
+						push(@install_packages, "$tmp[6]");
+					}
+					if("$tmp[1]" eq "Upgrade") {
+						print "Package:$tmp[2] version:$tmp[3] release:$tmp[4] arch:$tmp[5] (Install)\n";
+						push(@install_packages, "$tmp[6]");
+					}
+					elsif("$tmp[1]" eq "Uninstall") {
+						print "Package:$tmp[2] version:$tmp[3] release:$tmp[4] arch:$tmp[5] (Uninstall)\n";
+						push(@uninstall_packages, "$tmp[2].$tmp[5]");
+					}
+				}
+				if(/^File/) {
+					print "[info] Found a file entry, loading file array.\n";
+					push(@validate_files,"$_");
+				}
+			}
+		close("actionlist");
+	} else {
+		print "[info] Management actionlist is empty.\n";
+	}
+} else {
+	print "[info] Found no actionlist, nothing needs to be done.\n";
+}
+
+# End of subfunction
+}
+sub uninstall_packages {
+my $packages;
+my $ecode;
+
+$packages=join(" ",@uninstall_packages);
+@uninstall_packages=();
+
+open("result",">>$Cache_dir_location/management/result.log");
+
+if($packages eq "") {
+	print "[info] No packages marked for uninstallation.\n";
+	print result "No packages marked for uninstallation\n";
+} else {
+
+	print "[info] Uninstalling package(s), please wait...\n";
+
+	$ecode=system("rpm -e $packages >> $Cache_dir_location/management/result.log  2>&1");
+	if($ecode == 0) {
+		print "[info] Packages successfully uninstalled\n";
+		print result "Packages successfully uninstalled\n";
+	} else {
+		print "[info] Uninstallation of packages failed! errorcode:$ecode\n";
+		print result "Uninstallation of packages failed! errorcode:$ecode\n";
+	}
+}
+
+close("result");
+
+# End of subfunction
+}
+sub install_packages {
+my $packages;
+my $ecode;
+
+$packages=join(" ",@install_packages);
+@install_packages=();
+
+open("result",">>$Cache_dir_location/management/result.log");
+
+if($packages eq "") {
+	print "[info] No packages marked for installation.\n";
+	print result "No packages marked for installation.\n";
+} else {
+	print "[info] Installing package(s), please wait...\n";
+	print result "Installing package(s), please wait...\n";
+
+	chdir("$Cache_dir_location/management");
+	$ecode=system("rpm -Uvh $packages >> $Cache_dir_location/management/result.log  2>&1");
+	if($ecode == 0) {
+        	print "[info] Packages successfully installed or upgraded\n";
+		print result "Packages successfully installed or upgraded\n";
+	} else {
+        	print "[info] Installation or upgrade of packages failed! errorcode:$ecode\n";
+		print result "Installation or upgrade of packages failed! errorcode:$ecode\n";
+	}
+}
+
+close("result");
+
+# End of subfunction
+}
+sub validate_files {
+my @values;
+my $dir;
+my $file;
+my $perms;
+my $perm_group;
+my $perm_owner;
+my $prestep;
+my $poststep;
+my $fileindex;
+my $diff;
+my $current_fileindex;
+my $ecode;
+my $Active;
+
+open("result",">>$Cache_dir_location/management/result.log");
+
+for(1..10) {
+	my $current_fileindex=$_;
+	print "Implementing files with fileindex $current_fileindex of 10(worst)\n";
+
+	for(@validate_files) {
+		chomp;
+		@values=split("#", $_);
+		$file="$values[1]";
+		$dir="$values[2]";
+		$fileindex="$values[3]";
+		$perms="$values[4]";
+		$perm_owner="$values[5]";
+		$perm_group="$values[6]";
+		$prestep="$values[7]";
+		$poststep="$values[8]";
+		$Active="$values[9]";
+
+		if($fileindex == $current_fileindex) {
+			print "[info] Found file $dir/$file for fileindex->$fileindex($current_fileindex)\n";
+			
+			if(! -f "$Cache_dir_location/management/$dir/$file") {
+				print "[error] File that should be compared is not included to this system, file:$dir/$file\n";
+				print result "## Notice! ## File that should be compared is not included to this system, file:$dir/$file\n";
+			} else {
+				
+				if(! -f "$dir/$file") {
+					print "\t[info] Notice! Installing new file on the system->$dir/$file\n";
+					print result "## Notice! ## Installing new file on the system->$dir/$file\n";
+					if($Active eq "Active") {
+
+						if ("$prestep" ne "") {
+							print "\t[info] Executing prestep->$prestep\n";
+							print result "## Info! ## Executing prestep->$prestep for file $dir/$file.\n";
+							$ecode=system("$prestep >> $Cache_dir_location/management/result.log");
+					
+							if($ecode == 0) {
+								print "\t[info] Prestep executed ok, ended with exitcode:$ecode\n";
+								print result "## Info! ##  Prestep executed ok, ended with exitcode:$ecode\n";
+							} else {
+								print "\t[error] Prestep failed with exitcode:$ecode\n";
+								print result "## Info! ##  Prestep failed with exitcode:$ecode\n";
+							}
+						}
+
+						print "\t[info] Installing correct file->$dir/file\n";
+						$ecode=system("mv -f $Cache_dir_location/management/$dir/$file $dir/$file");
+						
+						if($ecode == 0) {
+							print "\t[info] File->$dir/$file installed succesfully\n";
+							print result "## Info! ##  File->$dir/$file installed succesfully\n";
+						} else {
+							print "\t[error] Failed to install file->$dir/$file! errorcode:$ecode\n";
+							print result "## ERROR! ## Failed to install file->$dir/$file! errorcode:$ecode\n";
+						}
+						# set file permissions on installed file
+						print "\t[info] Setting correct permissions\n";
+						$ecode=system("chown $perm_owner:$perm_group $dir/$file && chmod ${perms} $dir/$file");
+						if($ecode == 0) {
+							print "\t[info] File->$dir/$file permission, owner, group are now set\n";
+							print result "## Info! ## File->$dir/$file permission, owner, group are now set\n";
+						} else {
+							print "\t[error] Failed to set permissions for file->$dir/$file! errorcode:$ecode\n";
+							print result "## ERROR! ## Failed to set permissions for file->$dir/$file! errorcode:$ecode\n";
+						}
+
+						if ("$poststep" ne "") {
+							print "\t[info] Executing poststep->$poststep\n";
+							print result "## Info! ## Executing poststep->$poststep for file $dir/$file.\n";
+							$ecode=system("$poststep >> $Cache_dir_location/management/result.log");
+					
+							if($ecode == 0) {
+								print "\t[info] Poststep executed ok, ended with exitcode:$ecode\n";
+								print result "## Info! ##  Poststep executed ok, ended with exitcode:$ecode\n";
+							} else {
+								print "\t[error] Poststep failed with exitcode:$ecode\n";
+								print result "## Info! ##  Poststep failed with exitcode:$ecode\n";
+							}
+						}
+					} else {
+						print "\t[info] Filemanagement is disabled, will only save resultlog.\n";
+						print result "## Info! ## Filemanagement is disabled, will only save resultlog.\n";
+					}
+					
+					
+				} else {
+					print "\t[info] Comparing $dir/$file against systems file.\n";
+					$diff=`diff $Cache_dir_location/management/$dir/$file $dir/$file`;
+
+					if ("$diff" eq "") {
+						print "\t[info] File $dir/$file is ok.\n";
+						print "\t[info] Checking file permissions and ownership\n";
+						my @permissions=`$Api_dir_location/$Use_api -checkpermission $dir/$file`;
+						my $perms = sprintf("%04d", $perms);
+						if ( "$permissions[0]" != "$perms" ) {
+						 	$ecode=system("chown $perm_owner:$perm_group $dir/$file && chmod ${perms} $dir/$file");
+							if ($ecode == 0) { 
+								print "\t[info] New permissions for $dir/$file: $perms\n";
+							} else {
+								print "\t[error] Failed to set new permissions for $dir/$file: $perms\n";
+							} 
+						}
+					} else {
+						print "\t[info] File $dir/$file differs, notok.\n";
+						print result "## Notice! ## File $dir/$file differs, differences below.\n";
+						print result "$diff\n";
+
+						if($Active eq "Active") {
+
+							if ("$prestep" ne "") {
+								print "\t[info] Executing prestep->$prestep\n";
+								print result "## Info! ## Executing prestep->$prestep for file $dir/$file.\n";
+								$ecode=system("$prestep >> $Cache_dir_location/management/result.log");
+						
+								if($ecode == 0) {
+									print "\t[info] Prestep executed ok, ended with exitcode:$ecode\n";
+									print result "## Info! ##  Prestep executed ok, ended with exitcode:$ecode\n";
+								} else {
+									print "\t[error] Prestep failed with exitcode:$ecode\n";
+									print result "## Info! ##  Prestep failed with exitcode:$ecode\n";
+								}
+							}
+
+							print "\t[info] Installing correct file->$dir/file\n";
+							$ecode=system("mv -f $Cache_dir_location/management/$dir/$file $dir/$file");
+						
+							if($ecode == 0) {
+								print "\t[info] File->$dir/$file installed succesfully\n";
+								print result "## Info! ##  File->$dir/$file installed succesfully\n";
+							} else {
+								print "\t[error] Failed to install file->$dir/$file! errorcode:$ecode\n";
+								print result "## ERROR! ## Failed to install file->$dir/$file! errorcode:$ecode\n";
+							}
+							# set file permissions on installed file
+							print "\t[info] Setting correct permissions\n";
+							$ecode=system("chown $perm_owner:$perm_group $dir/$file && chmod ${perms} $dir/$file");
+							if($ecode == 0) {
+								print "\t[info] File->$dir/$file permission: $perms, owner: $perm_owner, group: $perm_group are now set\n";
+								print result "## Info! ## File->$dir/$file permission, owner, group are now set\n";
+							} else {
+								print "\t[error] Failed to set permissions for file->$dir/$file! errorcode:$ecode\n";
+								print result "## ERROR! ## Failed to set permissions for file->$dir/$file! errorcode:$ecode\n";
+							}
+
+							if ("$poststep" ne "") {
+								print "\t[info] Executing poststep->$poststep\n";
+								print result "## Info! ## Executing poststep->$poststep for file $dir/$file.\n";
+								$ecode=system("$poststep >> $Cache_dir_location/management/result.log");
+						
+								if($ecode == 0) {
+									print "\t[info] Poststep executed ok, ended with exitcode:$ecode\n";
+									print result "## Info! ##  Poststep executed ok, ended with exitcode:$ecode\n";
+								} else {
+									print "\t[error] Poststep failed with exitcode:$ecode\n";
+									print result "## Info! ##  Poststep failed with exitcode:$ecode\n";
+								}
+							}
+						} else {
+							print "\t[info] Filemanagement is disabled, will only save resultlog.\n";
+							print result "## Info! ## Filemanagement is disabled, will only save resultlog.\n";
+						}
+							
+				       	# End diff	
+					}
+				# End filecheck
+				}
+			
+			}
+		}
+	}
+}
+
+close("result");
+# End of subfunction
+}
+sub clean_management_files {
+my $ecode;
+
+print "[info] Cleaning management files and content under ->$Cache_dir_location/management\n";
+$ecode=system("rm -rf $Cache_dir_location/management/*");
+
+if($ecode == 0) {
+	print "[info] Management cache directory $Cache_dir_location/management cleaned ok.\n";
+} else {
+	print "[error] Clean of management cache directory $Cache_dir_location/management failed with exitcode:$ecode.\n";
+}
+
+# End of subfunction
+}
+sub read_and_send_managment_resultlog {
+my @result;
+my $result;
+my $count="0";
+
+open("result","<$Cache_dir_location/management/result.log")
+	or die "[error] Failed to open $Cache_dir_location/management/result.log for reading.\n";
+	for(<result>) {
+		chomp;
+		push(@result, "$_");
+		$count++;
+	}
+
+$result=join(";;;;",@result);
+print "[info] $count management result log sendt to server.\n";
+
+send_message_to_server("$This_Host","SaveManagementResult","$result");
+
+# End of subfunction
+}
+sub send_monitor_status_check {
+my $value;
+my @monitor_status_result;
+my $monitor_status_result;
+
+foreach my $key (keys %monitorstatushash) {
+        $value = $monitorstatushash{$key};
+	print "Monitor:$key Type:$value->{'monitortype'} Status:$value->{'monitorstatus'} Message:$value->{'message'}\n";
+	push(@monitor_status_result,"$key~$value->{'monitortype'}~$value->{'monitorstatus'}~$value->{'message'}");
+}
+$monitor_status_result=join(";;;;",@monitor_status_result);
+
+send_message_to_server("$This_Host","SaveMonitorStatus","$monitor_status_result");
+
+# End of subfunction
+}
+# Parse of commandline arguments.
+for(@ARGV) {
+        if ( $_ =~/-config/ ) {
+                my @tmp=split("=","$_");
+                $config="$tmp[1]";
+        }
+}
+if(!defined($ARGV[0])) {
+        program_info();
+}
+
+# Execute main loop.
+for(;;) {
+	($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+	$date=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+	$time=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+	# Parse configuration and load systems name.
+	parse_and_load_configuration();
+	$This_Host=`$Api_dir_location/$Use_api -gethostname`;
+	
+	if ("$Enable_daemon_mode" eq "yes") {
+		if($Loops == 1) {
+			run_as_daemon();
+		}
+	}
+	if("$Server_listen_adress" ne "no" && "$Server_listen_port" ne "no") {
+		install_new_config();
+	}
+	parse_and_load_monitors();
+	verify_memory();
+	verify_loadaverege();
+	verify_swap();
+	check_processes();
+	check_filesystems();
+	verify_filemodification();
+	verify_filetrace();
+	ping_host();
+	execute_every_programs();
+
+	if("$Server_listen_adress" eq "no" && "$Server_listen_port" eq "no") {
+		print "[info] Running in standalone mode, no server specific tasks needs to be executed.\n";
+	} else {
+		system_snapshot();
+		send_assetmanagement_information();
+		send_statistics_information();
+		update_agent_status();
+		parse_and_send_transfer_directory_items();
+		send_base_configuration_to_andutteye_server();
+		send_local_configuration_to_andutteye_server();
+		send_monitor_status_check();
+
+		if($Enable_package_update eq "yes") {
+			software_inventory();
+			sleep(4);
+		} else {
+			if("$date" != "$gathersoftwaredate") {
+				if("$Enable_software_inventory" eq "yes") {
+					software_inventory();
+					$gathersoftwaredate=$date;
+				}
+			}
+		}
+		# Management
+		
+		if($Enable_package_update ne "yes" && $Enable_config_update ne "yes") {
+			print "[info] Management functionality is disabled.\n";
+		} else {	
+			parse_and_validate_package_profile();
+			
+			if(unpack_and_parse_management_content() == 0) {
+				parse_action_list_and_load_arrays();
+		
+				if($Enable_package_update eq "yes") {
+					uninstall_packages();
+					install_packages();
+				} else {
+					print "[info] Management package update is disabled.\n";
+				}
+				if($Enable_config_update eq "yes") {
+					validate_files();
+				} else {
+					print "[info] Management files/config update is disabled.\n";
+				}
+				
+				read_and_send_managment_resultlog();
+			}
+			elsif(unpack_and_parse_management_content() == 1) {
+				print "[error] Unpacking of management content failed! aborting management control.\n";
+			}
+			elsif(unpack_and_parse_management_content() == 2) {
+				print "[info] No management content found, suppose there is nothing to do.\n";
+			} else {
+				print "[error] A invalid return state found from unpack_and_parse_management_content function.\n";
+			}
+			clean_management_files();
+		}
+	}
+
+if ($Use_debug_level) {
+	print "\nStart timestamp:$firstdate $firsttime Current timestamp:$date $time\n";
+	print "Verification loops:$Loops Pid:$$ Arguments:@ARGV. Loopinterval $Loop_interval seconds until next run.\n";
+}
+
+my $left="$Loop_interval";
+#for(1..$Loop_interval) {
+#
+#	print "[info] Polling for andutteye actions. $left s to complete run.\n";
+#	#send_message_to_server("$This_Host","CheckForActions");
+#	sleep(5);
+#	$left=($left - 5);
+#}
+sleep($Loop_interval);
+$Loops++;
+
+# End of for loop.
+}

@@ -1,0 +1,56 @@
+#!/bin/sh
+#
+#    Copyright Andreas Utterberg Thundera (c) All rights Reserved 2008
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+version="Anduteye dmidecode plugin version 1.0 (2008 www.thundera.se)"
+
+case $1 in
+
+serialnumber)
+        dmidecode |grep "Serial Number:" | head -1 | cut -d ":" -f2 | cut -c2-
+;;
+servertype)
+        vendor=`dmidecode |grep "Vendor:" | head -1 | cut -d ":" -f2 | cut -c2-`
+        type=`dmidecode |grep "Product Name:" | head -1 | cut -d ":" -f2 | cut -c2-`
+        echo "$vendor $type"
+;;
+version)
+        dmidecode |grep "Version:" | head -1 | cut -d ":" -f2 | cut -c2-
+;;
+uuid)
+        dmidecode |grep "UUID:" | head -1 | cut -d ":" -f2 | cut -c2-
+;;
+cpuinfo)
+        cputype=`dmidecode |grep "Family:" | head -1 | cut -d ":" -f2 | cut -c2-`
+        manufacturer=`dmidecode |grep "Manufacturer:" |tail -1| cut -d ":" -f2 | cut -c2-`
+        number=`dmidecode |grep "Processor Information" | cut -d ":" -f2 | cut -c2- | wc -l`
+        speed=`dmidecode |grep "Current Speed:" | cut -d ":" -f2 | cut -c2- | head -1`
+        echo "$manufacturer $cputype with $number cpus speed $speed"
+;;
+*)
+echo
+echo "$version"
+echo
+echo "serialnumber              :Extracts the systems serialnumber."
+echo "servertype                :Extracts the servertype."
+echo "version                   :Extracts the version."
+echo "uuid                      :Extracts the systems uuid."
+echo "cpuinfo                   :Extracts the cpuinformation."
+echo
+;;
+esac
+

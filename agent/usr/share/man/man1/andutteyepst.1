@@ -1,0 +1,46 @@
+.\" Process this file with
+.\" groff -man -Tascii foo.1
+.\"
+.TH ANDUTTEYEPST 30 "DEC 2008" Linux "User Manuals"
+.SH NAME
+andutteyepst \- andutteye alarm sending utillity
+.SH SYNOPSIS
+.B andutteyepst [ -send ] [ ipadress/hostname ] [ andutteyeport ] [ "shortinformation" ] [ "longinformation" ][ alarmseverity ]
+.B ...
+.SH DESCRIPTION
+.B andutteyepst
+is a program you can use in your own programs and software to be able to send in alarm to andutteye server and the webbconsole. 
+.SH OPTIONS
+.IP -send
+Post-andutteye will try to send in your alarm to the specified andutteye server.
+.IP "-help"
+Shows a brief help sections
+.IP "-debug"
+Shows more verbose output
+.IP "-ssl"
+Executes the program with ssl encryption enabled. Must be used togheter with andutteye servers that are using
+ssl encryption enabled.
+.IP ipadress/hostname
+Here you shall specify the hostname or ipadress to your andutteyeserver.
+.IP andutteyeport 
+Here you shall specify the andutteye port on the andutteye server.
+.IP shortinformation
+Here you shall specify your short alarm information. Contain your shortinformation between ", like "Test alarm".
+.IP longinformation
+Specify your long alarm information here. It will appear in the show detailed information on alarm section. Contain your message between ", like "My longinformation".
+.IP severity
+Specify your alarm severity next. Which means how critical this alarm is for your systems or applications allover performance. Valid andutteye severity are HARMLESS,WARNING,CRITICAL,FATAL.
+
+.SH FILES
+.I None
+.RS
+No file dependency for this program.
+.RE
+.SH BUGS
+Report found bugs or suggestions at <www dot andutteye dot com>
+.SH AUTHOR
+Andreas Utterberg (andutt) <info at thundera dot se>
+.SH "SEE ALSO"
+.BR andutteyedagt (1)
+.BR andutteyeadm (1)
+.BR andutteyedsrv (1)

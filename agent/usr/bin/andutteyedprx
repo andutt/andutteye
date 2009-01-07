@@ -1,0 +1,667 @@
+#!/usr/bin/perl
+#
+#    Copyright Andreas Utterberg Thundera (c) All rights Reserved 2008
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#    $Id: andutteyedprx 645 2008-04-23 18:18:14Z andutt $
+#
+our $version="Andutteye Proxy 3.0 (2008 www.thundera.se)";
+our $config;
+our $client;
+our $socket;
+our $Local_listen_address;
+our $Local_listen_port;
+our $Remote_listen_address;
+our $Remote_listen_port;
+our $Enable_ssl_encryption;
+our $Enable_message_caching;
+our $Enable_syslog_notification;
+our $Enable_daemon_mode;
+our $Use_smtp_server;
+our $Use_mail_from_adress;
+our $Use_mail_subject;
+our $Use_ssl_server_key;
+our $Use_ssl_server_cert;
+our $Use_hooks_directory;
+our $Use_debug_level;
+our $Use_replication_method;
+our $Use_cache_burst_limit;
+our $Use_max_cache_limit;
+our $Log_dir_location;
+our $Cache_dir_location;
+our $System_identification_name;
+our $System_identification_key;
+our %Cached_messages;
+
+our ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+our $date=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+our $time=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+use strict;
+use Sys::Hostname;
+use Digest::MD5;
+use IO::Socket::INET;
+
+for(@ARGV) {
+	if ( $_ =~/-config/ ) {
+		my @tmp=split("=","$_");
+	        $config="$tmp[1]";
+
+        }
+}
+if(!defined($ARGV[0])) {
+	program_info();
+}
+sub program_info {
+	print "\n";
+	print "$version\n";
+	print "\n";
+	print "Invalid input, usage:\n";
+	print "\n";
+	print "$0 -config=/etc/andutteye/andutteye.conf\n";
+	print "\n";
+	print "$0  -config\t:Specify which configuration file to use.\n";
+	print "\n";
+	print "\n";
+	exit 1;
+}
+sub parse_and_load_configuration {
+my @tmp;
+my $params="0";
+
+print "$date $time Parsing and reading parameters from config $config.\n";
+
+      open("conf","<$config")
+		or die "ERROR Failed to open configuration file for reading config:$config error:$!\n";
+	for(<conf>) {
+		chomp;
+		if(/^#/) {
+			next;
+		}
+		if(/^$/) {
+			next;
+		}
+		if(/^Local_listen_address/) {
+			@tmp=split("=","$_");
+			$Local_listen_address="$tmp[1]";
+			$params++;
+		}
+		if(/^Local_listen_port/) {
+			@tmp=split("=","$_");
+			$Local_listen_port="$tmp[1]";
+			$params++;
+		}
+		if(/^Remote_listen_address/) {
+			@tmp=split("=","$_");
+			$Remote_listen_address="$tmp[1]";
+			$params++;
+		}
+		if(/^Remote_listen_port/) {
+			@tmp=split("=","$_");
+			$Remote_listen_port="$tmp[1]";
+			$params++;
+		}
+		if(/^Enable_ssl_encryption/) {
+			@tmp=split("=","$_");
+			$Enable_ssl_encryption="$tmp[1]";
+			$params++;
+		}
+		if(/^Enable_message_caching/) {
+			@tmp=split("=","$_");
+			$Enable_message_caching="$tmp[1]";
+			$params++;
+		}
+		if(/^Enable_syslog_notification/) {
+			@tmp=split("=","$_");
+			$Enable_syslog_notification="$tmp[1]";
+			$params++;
+		}
+		if(/^Enable_daemon_mode/) {
+			@tmp=split("=","$_");
+			$Enable_daemon_mode="$tmp[1]";
+			$params++;
+		}
+		if(/^Use_smtp_server/) {
+			@tmp=split("=","$_");
+			$Use_smtp_server="$tmp[1]";
+			$params++;
+		}
+		if(/^Use_mail_from_adress/) {
+			@tmp=split("=","$_");
+			$Use_mail_from_adress="$tmp[1]";
+			$params++;
+		}
+		if(/^Use_mail_subject/) {
+			@tmp=split("=","$_");
+			$Use_mail_subject="$tmp[1]";
+			$params++;
+		}
+		if(/^Use_ssl_server_key/) {
+			@tmp=split("=","$_");
+			$Use_ssl_server_key="$tmp[1]";
+			$params++;
+		}
+		if(/^Use_ssl_server_cert/) {
+			@tmp=split("=","$_");
+			$Use_ssl_server_cert="$tmp[1]";
+			$params++;
+		}
+		if(/^Use_hooks_directory/) {
+			@tmp=split("=","$_");
+			$Use_hooks_directory="$tmp[1]";
+			$params++;
+		}
+		if(/^Use_debug_level/) {
+			@tmp=split("=","$_");
+			$Use_debug_level="$tmp[1]";
+			chomp $Use_debug_level;
+			$params++;
+		}
+		if(/^Use_replication_method/) {
+			@tmp=split("=","$_");
+			$Use_replication_method="$tmp[1]";
+			chomp $Use_replication_method;
+			$params++;
+		}
+		if(/^Use_cache_burst_limit/) {
+			@tmp=split("=","$_");
+			$Use_cache_burst_limit="$tmp[1]";
+			chomp $Use_cache_burst_limit;
+			$params++;
+		}
+		if(/^Use_max_cache_limit/) {
+			@tmp=split("=","$_");
+			$Use_max_cache_limit="$tmp[1]";
+			chomp $Use_max_cache_limit;
+			$params++;
+		}
+		if(/^Log_dir_location/) {
+			@tmp=split("=","$_");
+			$Log_dir_location="$tmp[1]";
+			$params++;
+		}
+		if(/^Cache_dir_location/) {
+			@tmp=split("=","$_");
+			$Cache_dir_location="$tmp[1]";
+			$params++;
+		}
+	}
+close("conf");
+
+if($Use_debug_level > 1) {
+	print "$date $time Parsing of $config completed. $params parameters loaded.\n";
+}
+if($Use_debug_level > 2) {
+	print "Local_listen_address\t		:$Local_listen_address\n";
+	print "Local_listen_port\t			:$Local_listen_port\n";
+	print "Remote_listen_address\t		:$Remote_listen_address\n";
+	print "Remote_listen_port\t			:$Remote_listen_port\n";
+	print "Enable_ssl_encryption\t		:$Enable_ssl_encryption\n";
+	print "Enable_message_caching\t		:$Enable_message_caching\n";
+	print "Enable_syslog_notification\t	:$Enable_syslog_notification\n";
+	print "Use_smtp_server\t\t			:$Use_smtp_server\n";
+	print "Use_mail_from_adress\t		:$Use_mail_from_adress\n";
+	print "Use_mail_subject\t			:$Use_mail_subject\n";
+	print "Use_ssl_server_key\t			:$Use_ssl_server_key\n";
+	print "Use_ssl_server_cert\t		:$Use_ssl_server_cert\n";
+	print "Use_hooks_directory\t		:$Use_hooks_directory\n";
+	print "Use_debug_level\t\t			:$Use_debug_level\n";
+	print "Use_replication_method\t		:$Use_replication_method\n";
+	print "Use_cache_burst_limit\t		:$Use_cache_burst_limit\n";
+	print "Use_max_cache_limit\t		:$Use_max_cache_limit\n";
+	print "Log_dir_location\t			:$Log_dir_location\n";
+	print "Cache_dir_location\t			:$Cache_dir_location\n";
+}
+		
+# End of subfunction
+}
+sub create_local_socket {
+
+($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+$date=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+$time=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+	if($Use_debug_level > 3) {
+        	print "$date $time Trying to establish socket connection.\n";
+	}
+	if ( $Enable_ssl_encryption eq "yes" ) {
+		require IO::Socket::SSL;
+        		if($Use_debug_level > 2) {
+               			 print "$date $time Enable_ssl_encryption is set to yes, will try to setup ssl encryption.\n";
+        		}
+        
+			$socket = IO::Socket::SSL->new(
+				LocalHost	=> $Local_listen_address,
+                        	LocalPort 	=> $Local_listen_port,
+                        	Proto 		=> 'tcp',
+                        	Type 		=> SOCK_STREAM,
+                        	Reuse 		=> 1,
+                        	Listen 		=> 5,
+                        	SSL_key_file 	=> "$Use_ssl_server_key",
+                		SSL_cert_file 	=> "$Use_ssl_server_cert"
+        		) or die $!;
+
+        		print "$date $time Ssl encrypted socket connection established on local address:$Local_listen_address and port:$Local_listen_port.\n";
+			print "$date $time SSL_key_file  :$Use_ssl_server_key\n";
+			print "$date $time SSL_cert_file:$Use_ssl_server_cert\n";
+	} else {
+        		if($Use_debug_level > 2) {
+                		print "$date $time Enable_ssl_encryption is set to $Enable_ssl_encryption, will try to setup tcp connection.\n";
+        		}
+        
+			$socket = IO::Socket::INET->new(
+				LocalHost	=> $Local_listen_address,
+				LocalPort 	=> $Local_listen_port,
+                        	Type   		=> SOCK_STREAM,
+                        	Reuse  		=> 1,
+                        	Listen => 10
+			)  or die $!;
+        		
+			print "$date $time Tcp socket connection established on local address:$Local_listen_address and port:$Local_listen_port.\n";
+			print "$date $time Waiting for client connections.\n";
+	}
+
+# End of subfunction
+}
+sub send_message_to_server {
+
+($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+$date=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+$time=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+my $message=$_[0];
+my $already_cached=$_[1];
+my @Remote_listen_address=split(" ", "$Remote_listen_address");
+my @Remote_listen_port=split(" ", "$Remote_listen_port");
+my $transmission_ok;
+my $nrmessages=keys(%Cached_messages);
+my $Try_server;
+my $Try_port;
+
+	if($Use_debug_level > 3) {
+    		 print "$date $time Will try to send message to Andutteye server:$Remote_listen_address on port:$Remote_listen_port\n";
+	}
+
+	if ( $Enable_ssl_encryption eq "yes" ) {
+
+		for(@Remote_listen_address) {
+			chomp;
+			 $Try_server=$_;
+			
+			for(@Remote_listen_port) {
+				chomp;
+				$Try_port=$_;
+        
+				if($Use_debug_level > 2) {
+                			print "$date $time Trying to send message to server:$Try_server on port:$Try_port.\n";
+        			}
+
+				$socket = IO::Socket::SSL->new(
+					PeerHost 	=> $Try_server,
+					PeerPort 	=> $Try_port,
+					Reuse 		=> '1',
+					Proto 		=> 'tcp'
+				);
+
+				if(!$socket) {
+
+					if($Enable_message_caching eq "yes") {
+        					print "$date $time ERROR Was unable to send ssl message to server:$Try_server on port:$Try_port.\n";
+						
+						if(!$already_cached) {
+		
+							if ($nrmessages >= $Use_max_cache_limit) {
+								print "$date $time ERROR is unable to cache more messages, limit $Use_max_cache_limit is reached. Messages $nrmessages.\n";
+							} else {
+								print "$date $time Caching message for later transmission when connectivity is restored. Cached_messages id $nrmessages\n";
+								$Cached_messages{$nrmessages} = { message => $message, id => $nrmessages};
+							}
+						} else {
+							print "$date $time Message is already cached. No action. Messages cached $nrmessages\n";
+						}
+					} else {
+        					print "$date $time ERROR Was unable to send ssl message to server:$Try_server on port:$Try_port.\n";
+					}
+				} else {
+					if($Use_debug_level > 2) {
+						print "$date $time Sending message to server..\n";
+					}
+			
+					# Sending message.
+					print $socket "$message\n";
+					$transmission_ok="yes";
+				}
+
+		if($transmission_ok){
+
+			if($Use_replication_method eq "backup") {
+
+				if($Use_debug_level > 4) {
+                			print "$date $time First send attempt was successful, will not send anything to backupservers since Use_replication_method is set to backup.\n";
+				}
+          			return("0");
+			}
+		
+	 	} else {
+        		if($Use_debug_level > 2) {
+               			print "$date $time First send attempt was unsuccessful, trying to send to backup hosts\n";
+        		}	
+		}
+
+	   # End of for loop port
+	   }
+	  # End for loop server
+	 }
+
+	} else {
+	
+	  if($Use_debug_level > 3) {
+    		 print "$date $time Will try to send message by normal tcp communication.\n";
+	   }
+	   for(@Remote_listen_address) {
+           	chomp;
+                my $Try_server=$_;
+
+		for(@Remote_listen_port) {
+                	chomp;
+			my $Try_port=$_;
+
+
+			if($Use_debug_level > 2) {
+               			print "$date $time Trying to send message to server:$Try_server on port:$Try_port.\n";
+       			}
+
+			socket(Server, PF_INET, SOCK_STREAM, getprotobyname('tcp')) or die "Failed to prepare socketconnection errormsg:$!\n";
+			my $internet_addr = inet_aton($Try_server) or die "Failed to make internet address erromsg:$! \n";
+			my $paddr = sockaddr_in($Try_port, $internet_addr) or die "Failed to connect to socket errormsg:$! \n";
+
+
+			if(!connect(Server, $paddr)) {
+					
+				if($Enable_message_caching eq "yes") {
+        				print "$date $time ERROR Was unable to send tcp message to server:$Try_server on port:$Try_port.\n";
+				
+					if(!$already_cached) {
+
+						if ($nrmessages >= $Use_max_cache_limit) {
+                                                	print "$date $time ERROR is unable to cache more messages, limit $Use_max_cache_limit is reached. Messages $nrmessages.\n";
+                                                } else {
+                                                       print "$date $time Caching message for later transmission when connectivity is restored. Cached_messages id $nrmessages\n";
+                                                       $Cached_messages{$nrmessages} = { message => $message, id => $nrmessages};
+                                                }
+
+					} else {
+						print "$date $time Message was already cached. No action.\n";
+					}
+				} else {
+        				print "$date $time ERROR Was unable to send tcp message to server:$Try_server on port:$Try_port.\n";
+				}
+        
+        		  connect(Server, $paddr) or next;
+			
+			} else {
+        			$transmission_ok="yes";
+			}
+
+			select((select(Server), $| = 1)[0]) or die "Failed to create command buffering errormsg:$! \n";
+			print Server "$message";
+
+		 close(Server);
+	
+		if($transmission_ok){
+          
+			if($Use_replication_method eq "backup") {
+
+                                if($Use_debug_level > 4) {
+                                        print "$date $time First send attempt was successful, will not send anything to backupservers since Use_replication_method is set to backup.\n";
+                                }
+                                return("0");
+                        }
+
+	 	} else {
+        		if($Use_debug_level > 2) {
+               			print "$date $time First send attempt was unsuccessful, trying to send to backup hosts\n";
+        	}
+
+	   #End of for loop port
+	  }
+	# End of for loop server
+	}
+    }
+}
+# End of subfunction
+}
+sub try_to_send_cached_messages {
+my $data;
+my $this_data;
+my $status;
+my $processed="0";
+my $nrmessages;
+
+for my $data (sort keys %Cached_messages) {
+	$this_data = $Cached_messages{$data};
+	$nrmessages=keys(%Cached_messages);
+	
+	print "$date $time Will try to resend cached message id $this_data->{id}\n";
+	$status=send_message_to_server("$this_data->{message}","yes");
+
+	if($status ne "") {
+		if($Use_debug_level > 2) {
+                          print "$date $time Cached message sendt to server status $status. Id $this_data->{id} deleted. $nrmessages still cached.\n";
+                }
+	delete $Cached_messages{$data};
+	}
+	
+	if ("$Use_cache_burst_limit" == "$processed") {
+		if($Use_debug_level > 1) {
+			print "$date $time Use_cache_burst_limit reached. Processed $processed Use_cache_burst_limit $Use_cache_burst_limit.\n";
+		}
+	last;
+	}
+
+$processed++;
+}
+
+# End of subfunctions
+}
+sub daemonize {
+
+if ("$Enable_daemon_mode" eq "yes") {
+	
+	if ($Use_debug_level > 2) {
+		print "$date $time Daemon mode is set to $Enable_daemon_mode. Will runas a daemon.\n";
+	}
+	chdir "/" 
+		or die "$date $time ERROR Cant change directory to / errormsg: $!";
+	open (STDIN,"/dev/null") 
+		or die "$date $time ERROR Can't read /dev/null as standard input: $!";
+	open (STDOUT, ">>$Log_dir_location/andutteyed_proxy.log") 
+		or die "$date $time ERROR Can't write standard out messages to $Log_dir_location/andutteyed_proxy.log errormsg: $!";
+	open (STDERR, ">>$Log_dir_location/andutteyed_proxy.log") 
+		or die "$date $time ERROR Can't write standard error messages to $Log_dir_location/andutteyed_proxy.log errormsg: $!";
+
+		defined(my $pid = fork) 
+			or die "$date $time Can't fork $0, try to execute $0 without daemon option errormsg: $!";
+		exit if $pid;
+		umask 0;
+} else {
+	if ($Use_debug_level > 2) {
+		print "$date $time Daemon mode is set to $Enable_daemon_mode. Will run in foreground.\n";
+	}
+}
+
+# End of subfunction
+}
+sub execute_proxy_hooks {
+my $hooks_type=$_[0];
+my $message=$_[1];
+
+if (! -d "$Use_hooks_directory") {
+
+	if ($Use_debug_level > 4) {
+                print "$date $time Use_hooks_directory doesnt exist. Will not perform hooks check.\n";
+	}
+
+		if( -f "$Use_hooks_directory/$0-$hooks_type") {
+
+			if( -x "$Use_hooks_directory/$0-$hooks_type") {
+				
+				if ($Use_debug_level > 4) {
+					print "$date $time Executing hooks, prestep $Use_hooks_directory/$0-$hooks_type.\n";
+					system("$Use_hooks_directory/$0-$hooks_type $message");
+				}
+			} else {
+				print "$date $time Prehook $Use_hooks_directory/$0-$hooks_type is defined but isnt executeble.\n";
+			}
+		} else {
+			if ($Use_debug_level > 4) {
+			 	print "$date $time Prehook $Use_hooks_directory/$0-$hooks_type isnt defined.\n";
+			}
+		}
+}
+
+# End of subfunction
+}
+sub parse_and_generate_init {
+my @tmp;
+my $params="0";
+my $system;
+my $systemkey;
+my $found="0";
+($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+$date=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+$time=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+
+      open("conf","<$config")
+                or die "ERROR Failed to open configuration file for reading config:$config error:$!\n";
+        for(<conf>) {
+                chomp;
+                if(/^#/) {
+                        next;
+                }
+                if(/^$/) {
+                        next;
+                }
+                if(/^System_identification_name/) {
+			$found="1";
+		}
+	}
+   close("conf");
+
+	if($found == 0) {
+        	print "$date $time System_identification_name and System_identification_key isnt set. Performing init configurations.\n";
+                $system = hostname;
+		$systemkey  = Digest::MD5->new;
+ 		$systemkey->add("$system$date$time");
+ 		$systemkey  = $systemkey->hexdigest;
+
+		
+
+                	open("conf",">>$config")
+                        	or die "ERROR Failed to open configuration file for writing config:$config error:$!\n";
+
+                                print conf "#\n";
+                                print conf "# System name. This is automaticly generated by the proxy.\n";
+                                print conf "System_identification_name      =$system\n";
+                                print conf "\n\n";
+                                print conf "#\n";
+
+                               print conf "# System key is used for authentication with the andutteye server.\n";
+                               print conf "# Its generated automaticly when the proxy is started for the first\n";
+                               print conf "# time.\n";
+                               print conf "System_identification_key       =$systemkey\n\n";
+
+                               close("conf");
+	}
+
+
+# End of subfunction
+}
+#########################################################
+# STARTING MAIN EXECUTING OF THE PROGRAM
+#########################################################
+parse_and_generate_init();
+parse_and_load_configuration();
+daemonize();
+create_local_socket();
+
+our $messages="1";
+while ($client = $socket->accept()) {
+	($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+	$date=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+	$time=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+	my $childpid;
+	my $message = <$client>;
+	$SIG{CHLD} = 'IGNORE';
+	my @data = split("#----###----#","$message");
+
+
+		if ($data[1] eq "CHECK") {
+			execute_proxy_hooks("pre","$message");
+			try_to_send_cached_messages();
+			print "$date $time Message $messages from system $data[0] id $data[1]\n";
+			send_message_to_server("$message");
+			execute_proxy_hooks("post","$message");
+		}
+		elsif ($data[1] eq "CHECKINSOFTWARE") {
+			execute_proxy_hooks("pre","$message");
+			try_to_send_cached_messages();
+			print "$date $time Message $messages from system $data[0] id $data[1]\n";
+			send_message_to_server("$message");
+			execute_proxy_hooks("post","$message");
+		}
+		elsif ($data[1] eq "CONFIG") {
+			execute_proxy_hooks("pre","$message");
+			try_to_send_cached_messages();
+			print "$date $time Message $messages from system $data[0] id $data[1]\n";
+			send_message_to_server("$message");
+			execute_proxy_hooks("post","$message");
+		}
+		elsif ($data[1] eq "SNAPSHOT") {
+			execute_proxy_hooks("pre","$message");
+			try_to_send_cached_messages();
+			print "$date $time Message $messages from system $data[0] id $data[1]\n";
+			send_message_to_server("$message");
+			execute_proxy_hooks("post","$message");
+		}
+		elsif ($data[1] eq "ALARM") {
+			execute_proxy_hooks("pre","$message");
+			try_to_send_cached_messages();
+			print "$date $time Message $messages from system $data[0] id $data[1]\n";
+			send_message_to_server("$message");
+			execute_proxy_hooks("post","$message");
+		}
+		elsif ($data[1] eq "RESUMEOPERATION") {
+			execute_proxy_hooks("pre","$message");
+			try_to_send_cached_messages();
+			print "$date $time Message $messages from system $data[0] id $data[1]\n";
+			send_message_to_server("$message");
+			execute_proxy_hooks("post","$message");
+		}
+		elsif ($data[1] eq "INSTALLCONFIG") {
+			execute_proxy_hooks("pre","$message");
+			try_to_send_cached_messages();
+			print "$date $time Message $messages from system $data[0] id $data[1]\n";
+			send_message_to_server("$message");
+			execute_proxy_hooks("post","$message");
+		} else {
+			print "$date $time TRACE ERROR Invalid andutteye message recived.\n";
+			print "$date $time TRACE ERROR Complete packets->$message\n";
+			print "$date $time TRACE ERROR Packet dropped.\n";
+			exit;
+		}
+# End of while
+$messages++;
+}
