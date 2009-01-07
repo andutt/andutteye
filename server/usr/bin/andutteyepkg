@@ -1,0 +1,1051 @@
+#!/usr/bin/perl
+#
+#    Copyright Andreas Utterberg Thundera (c) All rights Reserved 2008
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# $Id: andutteyepkg 739 2008-10-28 21:15:29Z andutt $
+#
+our $Use_database_type;
+our $Use_database_name;
+our $Use_database_user;
+our $Use_database_password;
+our $Use_dbi_database_extra_string;
+our $Cache_dir_location;
+our $config;
+our $system;
+our @row;
+our @result;
+our $verify="0";
+our $version="Andutteye Package Validator Version 3.0. (2008 www.thundera.se)";
+our $pkgrepo;
+our $pkgdist;
+our $plevel;
+our $debug="0";
+our $id="0";
+our $sql;
+our $subsql;
+our $dbh;
+our $sth;
+our $substh;
+our $query_handle;
+our $bundle;
+our $domain;
+our $aepackage;
+our $aeversion;
+our $aerelease;
+our $aeaction;
+our $orgversion;
+our $orgrelease;
+our $Active;
+our $patchlevel;
+our $specification_revision;
+our $aearch;
+our $aearchtype;
+our $distribution;
+our $nrdependencies;
+our %fixed_packages;
+our %auto_packages;
+our %perform_packages;
+our %dependencies;
+our $install="0";
+our $uninstall="0";
+our $update="0";
+our $perform_count="0";
+our $runid;
+
+
+our @ARGV;
+our ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+our $date=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+our $time=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+use File::Basename;
+use strict;
+
+sub parse_and_load_configuration {
+my @tmp;
+my $params="0";
+
+if($debug) {
+	print "[info] Parsing and reading parameters from config $config. (This can be overrided by specifying -config=<another config>)\n";
+}
+
+      open("conf","<$config")
+                or die "ERROR Failed to open configuration file for reading config:$config error:$!\n";
+        for(<conf>) {
+                chomp;
+                if(/^#/) {
+                        next;
+                }
+                if(/^$/) {
+                        next;
+                }
+                if(/^Use_database_type/) {
+                        @tmp=split("=","$_");
+                        $Use_database_type="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_database_name/) {
+                        @tmp=split("=","$_");
+                        $Use_database_name="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_database_user/) {
+                        @tmp=split("=","$_");
+                        $Use_database_user="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_database_password/) {
+                        @tmp=split("=","$_");
+                        $Use_database_password="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_dbi_database_extra_string/) {
+                        @tmp=split("=","$_");
+                        $Use_dbi_database_extra_string="$tmp[1]";
+                        $params++;
+                }
+                if(/^Cache_dir_location/) {
+                        @tmp=split("=","$_");
+                        $Cache_dir_location="$tmp[1]";
+                        $params++;
+                }
+        }
+
+if($debug) {
+	print "[info] $params configuration parameters loaded.\n";
+}
+
+# End of subfunction
+}
+sub program_info {
+print "\n";
+print "$version\n";
+print "\n";
+exit(1);
+
+#End of subfunction
+}
+sub connect_to_database {
+require DBI;
+$dbh = DBI->connect("dbi:$Use_dbi_database_extra_string$Use_database_type:$Use_database_name", $Use_database_user, $Use_database_password)
+        or die("Failed to connect to database:$Use_database_name err:$!");
+
+# End of subfunction
+}
+sub load_choosen_bundles_and_packages_info {
+my $revision;
+
+connect_to_database();
+
+$sql="select distinct bundle, revision from andutteye_choosenbundles where system_name = '$system' and specid = '$specification_revision' and specaction = 'N' order by bundle asc";
+$sth = $dbh->prepare("$sql");
+$sth->execute or die "Failed :$!\n";
+
+$sth->bind_columns(undef, \$bundle, \$revision);
+
+while($sth->fetch()) {
+	if($debug) {
+		print "[info] Choosen bundle->$bundle revision->$revision\n";
+	}
+	
+	$sql="select aepackage,aeversion,aerelease,aearch from andutteye_bundles where bundle = '$bundle' and revision = '$revision' and domain_name = '$domain'";
+	$substh = $dbh->prepare("$sql");
+	$substh->execute or die "Failed :$!\n";
+
+	$substh->bind_columns(undef, \$aepackage, \$aeversion, \$aerelease, \$aearch);
+
+	while($substh->fetch()) {
+		if($debug) {
+			print "\t Bundle:$bundle Package:$aepackage version:$aeversion release:$aerelease arch:$aearch\n";
+		}
+
+		if(defined($aeversion) && $aeversion != "0") {
+			if($debug) {
+				print "\t[info] Package:$aepackage has a fixed version. Loading it to fixed hash.\n";
+			}
+			$id++;
+			$fixed_packages{$id} = { name => $aepackage, version => $aeversion, release => $aerelease, arch => $aearch };
+			$id++;
+		}
+		elsif(defined($aerelease) && $aerelease != "0") {
+			if($debug) {
+				print "\t[info] Package:$aepackage has a fixed release. Loading it to fixed hash.\n";
+			}
+			$id++;
+			$fixed_packages{$id} = { name => $aepackage, version => $aeversion, release => $aerelease, arch => $aearch };
+			$id++;
+		} else {
+			if($debug) {
+				print "\t[info] Package:$aepackage has auto version and release set. Loading it to auto hash.\n";
+			}
+			$id++;
+			$auto_packages{$id} = { name => $aepackage, version => $aeversion, release => $aerelease, arch => $aearch };
+			$id++;
+		}
+	}
+
+if($debug) {
+	print "Package with autoversion and release: ". keys( %auto_packages ) ."\n";
+	print "Package with fixedversion and/or release: ". keys( %fixed_packages ) ."\n";
+}
+	
+} 
+
+# End of subfunction
+}
+sub load_choosen_package_from_packages_field {
+
+connect_to_database();
+
+$sql="select aepackage,aeversion,aerelease,aearchtype,aeaction from andutteye_choosenpackages where system_name = '$system' and aeaction = 'add'";
+$sql.=" and specid = '$specification_revision' and specaction = 'N'";
+$sth = $dbh->prepare("$sql");
+$sth->execute or die "Failed :$!\n";
+
+$sth->bind_columns(undef, \$aepackage, \$aeversion, \$aerelease, \$aearchtype, \$aeaction);
+
+while($sth->fetch()) {
+	if($debug) {
+        	print "[info] Choosen package->$aepackage aeaction:$aeaction arch:$aearchtype\n";
+	}
+
+	if("$aeaction" eq "add") {
+
+	 	for my $control (sort keys %fixed_packages) {
+         		my $check = $fixed_packages{$control};
+
+			if ($check->{name} eq "$aepackage") {
+                		if($check->{arch} eq "$aearchtype") {
+					print "[warning] Found an included package in packages field that are already choosen in a bundle.\n";
+					print "[warning] Ignoring:$aepackage $aearchtype\n";
+					next;
+				}
+			}
+	
+	 	}
+	 	for my $control (sort keys %auto_packages) {
+         		my $check = $auto_packages{$control};
+
+			if ($check->{name} eq "$aepackage") {
+                        	if($check->{arch} eq "$aearchtype") {
+                                	print "[warning] Found an included package in packages field that are already choosen in a bundle.\n";
+                                	print "[warning] Ignoring:$aepackage $aearchtype\n";
+					next;
+                        	}
+                	}
+
+	 	}
+	
+		if(defined($aeversion) && $aeversion ne "0") {
+        		print "\t[info] Package:$aepackage has a fixed version. Loading it to fixed hash.\n";
+			$id++;
+                	$fixed_packages{$id} = { name => $aepackage, version => $aeversion, release => $aerelease, arch => $aearchtype };
+        	}
+        	elsif(defined($aerelease) && $aerelease ne "0") {
+                	print "\t[info] Package:$aepackage has a fixed release. Loading it to fixed hash.\n";
+			$id++;
+                	$fixed_packages{$id} = { name => $aepackage, version => $aeversion, release => $aerelease, arch => $aearchtype };
+        	} else {
+                	print "\t[info] Package:$aepackage has auto version and release set. Loading it to auto hash.\n";
+                	print "\t[debug] Package:$aepackage Version:$aeversion Release:$aerelease Arch:$aearchtype will be loaded.\n";
+			$id++;
+                	$auto_packages{$id} = { name => $aepackage, version => $aeversion, release => $aerelease, arch => $aearchtype };
+			$id++;
+        	}
+	}
+}
+print "Package with autoversion and release: ". keys( %auto_packages ) ."\n";
+print "Package with fixedversion and/or release: ". keys( %fixed_packages ) ."\n";
+
+# End of subfunction
+}
+sub replace_versions_and_releases_with_index_data {
+
+connect_to_database();
+
+$sql="select distribution,patchlevel from andutteye_specifications where system_name = '$system' and revision = '$specification_revision'";
+$sth = $dbh->prepare("$sql");
+$sth->execute or die "Failed :$!\n";
+@row = $sth->fetchrow_array;
+my $system_distribution = $row[0];
+$distribution = "$row[0]";
+my $system_patchlevel   = $row[1];
+my $replaced="0";
+
+for($patchlevel = 0;$patchlevel <= $system_patchlevel;$patchlevel++) {
+	print "Traversing patchlevels, now $patchlevel up to -> $system_patchlevel distribution -> $system_distribution\n";
+
+	$sql="select distinct(patchlevel) from andutteye_packages where patchlevel = '$patchlevel' and distribution = '$system_distribution' and domain_name = '$domain'";
+	$sth = $dbh->prepare("$sql");
+	$sth->execute or die "Failed :$!\n";
+	@row = $sth->fetchrow_array;
+
+	if(!defined($row[0])) {
+		print "[error] There is not patchlevel:$patchlevel for distribution:$system_distribution.\n";
+		print "[error] Correct this in the system specification.\n";
+		exit(1);
+	}
+
+       for my $control (sort keys %auto_packages) {
+       		my $check = $auto_packages{$control};
+		my $checkpkg = $check->{name};
+		my $checkarch = $check->{arch};
+
+		if($debug) {
+			print "[info] Trying to replace package:$checkpkg arch:$checkarch\n";
+		}
+		if(!defined($checkpkg) || (!defined($checkarch))) {
+			print "[warning] Removing blank bundle line in hash auto_packages, id->$control\n";
+			delete $auto_packages{$control};
+			next;
+		}
+
+		$subsql ="select aepackage,aeversion,aerelease,aearchtype,location,seqnr from andutteye_packages where patchlevel = '$patchlevel'";
+                $subsql.=" and distribution = '$system_distribution' and aepackage = '$checkpkg' and aearchtype = '$checkarch'";
+                $substh = $dbh->prepare("$subsql");
+                $substh->execute or die "Failed :$!\n";
+                @result = $substh->fetchrow_array;
+
+		if(("$checkpkg" eq "$result[0]") && ("$checkarch" eq $result[3])) {
+			if($debug) {
+				print "[info] Found package:$checkpkg in database\n";
+				print "\tReplacing with package:$checkpkg version:$result[1] release:$result[2] arch:$checkarch\n";
+			}
+			delete $auto_packages{$control};
+                	$auto_packages{$id} = { name => $checkpkg, version => $result[1], release => $result[2], arch => $checkarch, location => $result[4], depref => $result[5] };
+			$replaced++;
+			$id++;
+
+			# Search for all dependencies belonging to the specific seqnr, all packages that are available in the repository
+			# and where package data can be retrived should be loaded. This is used as a master on which dependencies the
+			# system should already have resolved with packages already installled.
+
+			my $depsubsql ="select aeprovides from andutteye_packages_dependencies where seqref = '$result[5]'";
+                        my $depsubsth = $dbh->prepare("$depsubsql");
+                        $depsubsth->execute or die "Failed :$!\n";
+
+			$depsubsth->bind_columns(undef, \my $aeprovides);
+
+			while($depsubsth->fetch()) {
+				if(!defined($aeprovides)) {
+					next;
+				}
+				if($debug > 4) {
+        				print "Package:$checkpkg arch:$checkarch dependencieinformation->$aeprovides\n";
+				}
+                		$dependencies{$nrdependencies} = { name => $checkpkg, arch => $checkarch, dependencie => $aeprovides, depref => $result[5] };
+				$nrdependencies++;
+			}
+		}
+	}
+
+print "--------------------------------------------\n";
+print "$replaced packages replaced in patchlevel:$patchlevel\n";
+print "Package with autoversion and release: ". keys( %auto_packages ) ."\n";
+print "Package with fixedversion and/or release: ". keys( %fixed_packages ) ."\n";
+print "Dependencies saved on packages we got: ". keys( %dependencies ) ."\n";
+print "--------------------------------------------\n";
+$replaced="0";
+}
+
+#for my $control (sort keys %auto_packages) {
+#	my $check = $auto_packages{$control};
+#	my $checkpkg = $check->{name};
+#	my $checkarch = $check->{arch};
+#
+#	if(!$check->{location}) {
+#        	print "[warning] Choosen package in bundle or on package field doesnt exist in database.\n";
+#                print "[warning] Package:$checkpkg Arch:$checkarch\n";
+#                exit(1);
+#        } else {
+#		if($debug) {
+#			print "[debug] Package:$checkpkg Arch:$checkarch has been found in database, has location set to->$check->{location}";
+#		}
+#	}
+#}
+
+# End of subfunction
+}
+sub remove_packages_from_exclude_field {
+my $deleted="0";
+
+connect_to_database();
+
+$sql="select aepackage,aeversion,aerelease,aearchtype,aeaction from andutteye_choosenpackages where system_name = '$system' and aeaction = 'exclude'";
+$sql.=" and specid = '$specification_revision' and specaction = 'N'";
+$sth = $dbh->prepare("$sql");
+$sth->execute or die "Failed :$!\n";
+
+$sth->bind_columns(undef, \$aepackage, \$aeversion, \$aerelease, \$aearchtype, \$aeaction);
+
+while($sth->fetch()) {
+        print "[info] Choosen package to exclude->$aepackage\n";
+
+                for my $control (sort keys %fixed_packages) {
+                        my $check = $fixed_packages{$control};
+
+                        if ("$check->{name}" eq "$aepackage") {
+                                if($check->{arch} eq "$aearchtype") {
+                                        print "[info] Removing package:$aepackage archtype:$aearchtype since it is specified as exclude.\n";
+					delete $fixed_packages{$control};
+					$deleted++;
+                                }
+                        }
+
+                }
+                for my $control (sort keys %auto_packages) {
+                        my $check = $auto_packages{$control};
+	
+                        if ("$check->{name}" eq "$aepackage") {
+                                if($check->{arch} eq "$aearchtype") {
+                                        print "[info] Removing package:aepackage archtype:aearchtype since it is specified as exclude.\n";
+					delete $auto_packages{$control};
+					$deleted++;
+                                }
+                        }
+
+                }
+}
+print "$deleted packages deleted when specified as exclude.\n";
+print "Package with autoversion and release: ". keys( %auto_packages ) ."\n";
+print "Package with fixedversion and/or release: ". keys( %fixed_packages ) ."\n";
+
+# End of subfunction
+}
+sub enforce_fixed_hash_over_auto_hash {
+my $enforced="0";
+my $found="0";
+
+
+for my $control (sort keys %fixed_packages) {
+	my $fixed = $fixed_packages{$control};
+
+        for my $control2 (sort keys %auto_packages) {
+                my $auto  = $auto_packages{$control2};
+
+                if (("$fixed->{name}" eq "$auto->{name}") && ("$fixed->{arch}" eq "$auto->{arch}")) {
+			$id++;
+			print "[info] Enforcing fixed specified packages over auto setting.\n";
+			print "\tAuto package :$auto->{name}  arch:$auto->{arch}\n";
+			print "\tFixed package:$fixed->{name}  arch:$fixed->{arch} Version:$fixed->{version} Release:$fixed->{release}\n"; 
+			delete $auto_packages{$control2};
+			delete $fixed_packages{$control};
+                	$auto_packages{$id} = { name => $fixed->{name}, version => $fixed->{version}, release => $fixed->{release}, arch => $fixed->{arch} };
+			$enforced++;
+			$found="1";
+		}
+
+        }
+	if(!$found) {
+		$id++;
+		print "[info] Package:$fixed->{name} arch:$fixed->{arch} is not included in autohash. Adding it.\n";
+		print "\tVersion:$fixed->{version} Release:$fixed->{release}\n";
+                $auto_packages{$id} = { name => $fixed->{name}, version => $fixed->{version}, release => $fixed->{release}, arch => $fixed->{arch} };
+	}
+}
+
+print "$enforced fixed packages replaced auto packages.\n";
+print "Package with autoversion and release: ". keys( %auto_packages ) ."\n";
+print "Package with fixedversion and/or release: ". keys( %fixed_packages ) ."\n";
+
+# End function
+}
+sub validate_version_and_releases {
+my @installed;
+my $aepackage;
+my $aeversion;
+my $aerelease;
+my $aearchtype;
+my $samecount=0;
+my $found=0;
+connect_to_database();
+
+my $sql2 = "select aepackage,aeversion,aerelease,aearchtype from andutteye_software where system_name = '$system' and status = 'CURRENT'";
+$sth = $dbh->prepare("$sql2");
+$sth->execute or die "Failed:$!\n";
+# retrieve all installed packages and check for any nonexisting packages which will be removed.
+while (@installed = $sth->fetchrow_array){
+        $found=0;
+        # check entire package hash for a match on name and archtype.
+        for my $control2 (sort keys %auto_packages) {
+                my $auto2 = $auto_packages{$control2};
+                # if name and archtype cant be found in hash, then Uninstall ! (we skip version and release here!)
+                if (($installed[0] eq "$auto2->{name}") && ($installed[3] =~ /^$auto2->{arch}$/) ) {
+                        # is defined in hash, go last in loop to check for next package in fetchrow -loop.
+                        if($debug) {
+                                print "[debug] [validate_version_and_releases] This package name and arch match against proposed packages, lets check for versions later.\n";
+                        }
+                        $found=1;
+                        last;
+		}
+        }
+        if ($found == 0) {
+                # could not find a package and arch -match in the hash. lets uninstall package!.
+                $perform_count++;
+                print "[info] [Uninstall] Package only exist on server: name => $installed[0], version => $installed[1], release => $installed[2], arch => $installed[3]\n";
+                $perform_packages{"$perform_count"} = { name => "$installed[0]", version => "--", release => "--", arch => "$installed[3]", sversion => "$installed[1]", srelease => "$installed[2]", action => "Uninstall" };
+                $uninstall++;
+		# Uninstall problems fix.
+                $perform_count++;
+        }
+}
+#
+for my $control2 (sort keys %auto_packages) {
+	my $auto  = $auto_packages{$control2};
+	
+	$sql ="select aepackage,aeversion,aerelease,aearchtype from andutteye_software where system_name = '$system' and status = 'CURRENT'";
+	$sql.=" and aepackage = '$auto->{name}' and aearchtype = '$auto->{arch}'";
+	$sth = $dbh->prepare("$sql");
+	$sth->execute or die "Failed :$!\n";
+	@installed = $sth->fetchrow_array;
+
+	if(!defined($installed[0]) && (!defined($installed[3]))) {
+		print "[info] [Install] Package:$auto->{name} Archtype:$auto->{arch} is defined in Andutteye database but not installed on the system.\n";
+               	$perform_packages{"$perform_count"} = { name => "$auto->{name}", version => "$auto->{version}", release => "$auto->{release}", arch => "$auto->{arch}", sversion => "--", srelease => "--", action => "Install", orgversion => "$auto->{version}", orgrelease => "$auto->{release}", depref => "$auto->{depref}" };
+		$perform_count++;
+		delete $auto_packages{$control2};
+		$install++;
+		next;
+	} else {
+		$aepackage=$installed[0];
+		$aeversion=$installed[1];	
+		$aerelease=$installed[2];	
+		$aearchtype=$installed[3];
+	}
+
+	if (("$auto->{name}" eq "$aepackage") && ("$auto->{arch}" eq "$aearchtype")) {
+
+		# check if version and release match before doing anything else, this could save some CPU cycles..
+		if (($aeversion =~ /^$auto->{version}$/ ) && ($aerelease =~ /^$auto->{release}$/) )  {
+			print "[info] [Nothing] Package doesnt need to be marked, version are the same.\n";
+			delete $auto_packages{$control2};
+			$samecount++;
+			next;
+		}
+		# Save original version and releases to be able to extract packages from andutteye_packages table.
+		$orgversion = $auto->{version};
+		$orgrelease = $auto->{release};
+
+		# Removing any dots and alphasign in version and release fields.
+		$aeversion = regex_version_and_release_fields("$aeversion");
+		$aerelease = regex_version_and_release_fields("$aerelease");
+		$auto->{version} = regex_version_and_release_fields("$auto->{version}");
+		$auto->{release} = regex_version_and_release_fields("$auto->{release}");
+
+		if(get_highest_version_or_release($aeversion,$auto->{version}) =~ /^INSTALL$/ )  {
+			print "[info] [Upgrade] Package:$aepackage have a higher version defined in database then installed on system.\n";
+			#create_action_log("INSTALL:$repo->{name}:$repo->{version}:$repo->{release}:$repo->{location}:$repo->{arch}:$repo->{filename}");
+			delete $auto_packages{$control2};
+			$update++;
+			$perform_packages{"$perform_count"} = { name => "$auto->{name}", version => "$auto->{version}", release => "$auto->{release}", arch => "$auto->{arch}", sversion => "$aeversion", srelease => "$aerelease", action => "Upgrade", orgversion => "$orgversion", orgrelease => "$orgrelease", depref => "$auto->{depref}" };
+			$perform_count++;
+		}
+		elsif(get_highest_version_or_release($aeversion,$auto->{version}) =~ /^EQUAL$/ ) {
+			if(get_highest_version_or_release($aerelease,$auto->{release}) =~ /^INSTALL$/ ) {
+				print "[info] [Upgrade] Package:$aepackage has the same version but has a higher release in database then installed on system.\n";
+				#create_action_log("INSTALL:$repo->{name}:$repo->{version}:$repo->{release}:$repo->{location}:$repo->{arch}:$repo->{filename}");
+				delete $auto_packages{$control2};
+				$update++;
+				$perform_packages{"$perform_count"} = { name => "$auto->{name}", version => "$auto->{version}", release => "$auto->{release}", arch => "$auto->{arch}", sversion => "$aeversion", srelease => "$aerelease", action => "Upgrade", orgversion => "$orgversion", orgrelease => "$orgrelease", depref => "$auto->{depref}"};
+				$perform_count++;
+			} elsif(get_highest_version_or_release($aerelease,$auto->{release}) =~ /^NEWERINSTALLED$/ ) {
+				print "[info] [Downgrade?] Package:$aepackage have a higher release installed then registered in Andutteye database, Downgrade?.\n";
+				#create_action_log("NEWERINSTALLED:$repo->{name}:$repo->{version}:$server->{version}:$repo->{release}:$server->{release}:$repo->{arch}:$server->{arch}");
+				delete $auto_packages{$control2};
+				$uninstall++;
+				$install++;
+				$perform_packages{"$perform_count"} = { name => "$auto->{name}", version => "$auto->{version}", release => "$auto->{release}", arch => "$auto->{arch}", sversion => "$aeversion", srelease => "$aerelease", action => "Downgrade", orgversion => "$orgversion", orgrelease => "$orgrelease" };
+				$perform_count++;
+			} else {
+				print "[info] [Nothing] Packages are the same, this should not happen here it should be caught in an earlier check!!.\n";
+				delete $auto_packages{$control2};
+				$samecount++;
+				next;
+			}
+		}
+	}
+
+}
+
+print "--------------------------------------------------------------\n";
+print "Install  :$install packages.\n";
+print "Uninstall:$uninstall packages.\n";
+print "Update   :$update packages.\n";
+print "Ignored  :$samecount packages where same.\n";
+print "Package with autoversion and release: ". keys( %auto_packages ) ."\n";
+print "Package with fixedversion and/or release: ". keys( %fixed_packages ) ."\n";
+print "Phase completed. All packages that remained have either been deleted, installed, upgraded or downgraded. Hashes should be empty.\n";
+print "--------------------------------------------------------------\n";
+
+# End of subfunction
+}
+
+sub get_highest_version_or_release ($$) {
+
+# Function: get_highest_version_or_release
+# Description: find out which version is higher: 3.103.4 or 3.4.4.1
+# Param1: actual installed package version/release on the managed system.
+# Param2: proposed package version/release from andutteye.
+# Return: strings INSTALL, EQUAL or NEWERINSTALL
+
+# installed package version/release 
+my $instpkgstr	   = $_[0];
+
+# proposed package version/release from andutteye.
+my $proposedpkgstr = $_[1];
+
+if ( $instpkgstr =~ /^$proposedpkgstr$/ ) {
+	if ($debug) {
+		print "[debug] [get_highest_version_or_release] version or release numbers are equal\n";
+	}
+	return "EQUAL";
+}
+
+# split the number in to arrays
+my @instpkg        = split(/\./,$instpkgstr);
+my @proposedpkg    = split(/\./,$proposedpkgstr);
+my $i              = 0;
+
+foreach my $num(@instpkg) {
+	if ($proposedpkg[$i] > $num) {
+		if ($debug) {
+			print "[debug] [get_highest_version_or_release] INSTALL: Proposed package have a higher number then installed package (on position: $i)\n";
+		} 
+		# Proposed package has a higher number then the installed package, lets INSTALL this.
+		return "INSTALL";
+	}
+	elsif($num > $proposedpkg[$i]) {
+		if($debug) {
+			print "[debug] [get_highest_version_or_release] NEWERINSTALLED: Installed package has a higher number then proposed package (on position: $i)\n";
+		}
+		# Installed package has a higher number then proposed package. 
+		return "NEWERINSTALLED";
+	}
+	else {
+		if($debug) {
+			print "[debug] [get_highest_version_or_release] numbers match in the test-arrays (on position: $i)\n";
+		}
+	}
+
+	# INSTALL package if another number exist in the proposed package version/release number-array, that doesnt exist in the instpkg-array !!.
+	if(!defined $instpkg[$i+1]) {
+		if(defined $proposedpkg[$i+1]) {
+			if ($debug) {
+				print "[debug] [get_highest_version_or_release] INSTALL: Proposed package have one number more then installed package (on position: $i+1)\n";
+			}
+			return "INSTALL";
+		}
+	}
+	$i++;
+}
+# End of subfunction
+}
+
+sub regex_version_and_release_fields {
+
+# Function: regex_version_and_release_fields
+# Description: strip alpha characters from version or release string (to make it possible to calc newest version)
+# Param1: a versionnumber
+# Return: a clean version or release string with only digits and dots
+
+my $verify=$_[0];
+
+if(!defined($verify)) {
+        print "regex_version_and_release_fields:  ERROR recived and empty data field to validate:$verify aborting\n";
+        exit;
+} else {
+        if($debug > 2) {
+                print "-- [regex_version_and_release_fields] Recived datafield to verify:$verify\n";
+        }
+}
+if ( $verify =~ m/[A-Za-z]/ ) {
+
+        # remove release 2.nisse.3 to 2.3
+        $verify =~ s/\.[A-Za-z]+\././g;
+
+        # remove e.g. el5, EL5, fc6, svn, jpp etc.
+        $verify =~ s/(\.?el[0-9]+|\.?EL[0-9]+|\.?fc[0-9]+|[A-Za-z])//g;
+	
+	# set e.g 1...3 to 1.3 (in case earlier regex removed 1.nisse.fc5.3 to 1...3) - or should it be 1.0.0.3 !? :-/.
+	$verify =~ s/\.\./\./g;
+
+        if($debug > 2) {
+                print "-- [regex_version_and_release_fields] Datafield after modification:$verify\n";
+        }
+
+	return("$verify");
+
+} else {
+        if($debug > 2) {
+                print "-- [regex_version_and_release_fields] Did not need to convert datafield:$verify\n";
+        }
+
+	return("$verify");
+}
+
+# End of subfunction
+}
+sub determine_specification_revision {
+
+connect_to_database();
+
+$sql="select revision from andutteye_specifications where system_name = '$system' order by seqnr desc limit 0,1";
+$sth = $dbh->prepare("$sql");
+$sth->execute or die "Failed :$!\n";
+@row = $sth->fetchrow_array;
+
+$specification_revision="$row[0]";
+
+if($debug) { 
+	print "[info] Specification revision to use is:$specification_revision\n";
+}
+
+$sql="select package_update from andutteye_specifications where system_name = '$system' and revision = '$specification_revision'";
+$sth = $dbh->prepare("$sql");
+$sth->execute or die "Failed :$!\n";
+@row = $sth->fetchrow_array;
+
+if("$row[0]" eq "") {
+	print "[Error] Packagemanagement parameter is not set, setting it to disabled.\n";
+	$Active="disabled";
+} else {
+	if("$row[0]" eq "Active") {
+		print "[info] Package management is set to Active.\n";
+		$Active="Active";
+	} else {
+		print "[info] Package management is set to Disabled.\n";
+		$Active="Disabled";
+	}
+}
+	
+# End of subfunction
+}
+
+sub determine_jobid {
+my $result;
+
+connect_to_database();
+
+$sql="select runid from andutteye_managementlog where system_name = '$system' order by seqnr desc limit 0,1";
+$sth = $dbh->prepare("$sql");
+$sth->execute or die "Failed :$!\n";
+@row = $sth->fetchrow_array;
+
+if(!defined($row[0])) {
+	$row[0]="0";
+}
+$runid=($row[0] + 1);
+
+if($debug) {
+	print "[info] RunJob Id is set to:$runid\n";
+}
+
+# End of subfunction
+}
+sub generate_action_list {
+my $count="0";
+my $firstaction="0";
+my @content;
+
+connect_to_database();
+
+if(! -d "$Cache_dir_location/$system") {
+	mkdir("$Cache_dir_location/$system");
+}
+open("actionlist",">>$Cache_dir_location/$system/actionlist.dat")
+	or die $!;
+
+printf "%20.20s", "Package:";
+printf "%15.12s", "Aversion";
+printf "%15.12s", "Arelease";
+printf "%15.12s", "Sversion";
+printf "%15.12s", "Srelease";
+printf "%15.12s", "Archtype";;
+printf "%15.12s", "Action\n";
+
+for my $control2 (keys %perform_packages) {
+	my $value  = $perform_packages{$control2};
+
+	printf "%20.20s", "$value->{name}";
+	printf "%15.12s", "$value->{version}";
+	printf "%15.12s", "$value->{release}";
+	printf "%15.12s", "$value->{sversion}";
+	printf "%15.12s", "$value->{srelease}";
+	printf "%15.12s", "$value->{arch}";
+	printf "%15.12s", "$value->{action}\n";
+
+	if($value->{action} eq "Install" || $value->{action} eq "Upgrade") {
+		$sql ="select savemode,location,filename,content,seqnr from andutteye_packages where distribution = '$distribution' and aepackage = '$value->{name}'";
+		$sql.=" and aeversion = '$value->{orgversion}' and aerelease = '$value->{orgrelease}' and aearchtype = '$value->{arch}' and domain_name = '$domain'";
+		$sth = $dbh->prepare("$sql");
+		$sth->execute or die "Failed :$!\n";
+		@row = $sth->fetchrow_array;
+
+		if(!defined($row[0])) {
+			print "[error] No savemode or location specified for Package:$value->{name} and Arch:$value->{arch} Action:$value->{action}\n";
+			log_progress("Error","No savemode or location specified for Package:$value->{name} and Arch:$value->{arch}");
+			exit(1);
+		}
+		if("$Active" eq "Active") {
+			if("$row[0]" eq "fs") {
+				if(! -f "$row[1]") {
+					print "[error] Package doesnt exist where it suppose to:$row[1]. Database info not in sync with filesystem.\n";
+					exit(1);
+				} else {
+					print "[info] Copying package $row[1] -> $Cache_dir_location/$system\n";
+					`cp $row[1] $Cache_dir_location/$system`;
+				}
+			}
+			elsif("$row[0]" eq "db") {
+
+				open("file",">$Cache_dir_location/$system/$row[2]")
+        				or die;
+		
+				$sql ="select content from andutteye_packages_content where seqref = '$row[4]'";
+				$sth = $dbh->prepare("$sql");
+				$sth->execute or die "Failed :$!\n";
+				@content = $sth->fetchrow_array;
+
+        			print "[info] Exporting package $row[2] seqref $row[4] from Andutteye database.\n";
+        			print file "$content[0]";
+
+			} else {
+				print "[error] Found an unsupported savemode:$row[0] only db for Database and fs for Filesystem is valid.\n";
+				log_progress("Error","Found an unsupported savemode:$row[0] only db for Database and fs for Filesystem is valid");
+				exit(1);
+			}
+		}
+	}
+	if("$value->{action}" eq "Uninstall") {
+		$row[2]="--";
+	}
+	if("$value->{action}" eq "Downgrade") {
+		if($firstaction == 0) {
+			log_progress("JobId","RunId to use is:$runid");
+			log_progress("SpecRevision","Specification revision to use is:$specification_revision");
+			$firstaction++;
+		}
+		log_progress("$value->{action}","Package:$value->{name} Version:$value->{version} Release:$value->{release} is not supported yet.");
+	} else {
+		if($firstaction == 0) {
+			log_progress("JobId","RunId to use is:$runid");
+			log_progress("SpecRevision","Specification revision to use is:$specification_revision");
+			$firstaction++;
+		}
+		log_progress("$value->{action}","Package:$value->{name} Version:$value->{version} Release:$value->{release} Arch:$value->{arch} File:$row[2]");
+		print actionlist "Package#$value->{action}#$value->{name}#$value->{version}#$value->{release}#$value->{arch}#$row[2]\n";
+		$count++;
+	}
+}
+if("$Active" ne "Active") {
+	print "[info] Package managment is disabled, will not distribute and package to the system. Unlinking action index($Cache_dir_location/$system/actionlist.dat).\n";
+	log_progress("Info","Package managment is disabled, will not distribute and package to the system.");
+	unlink("$Cache_dir_location/$system/actionlist.dat");
+}
+
+# End of subfunction
+}
+sub clean_old_cache {
+
+if (! -d "$Cache_dir_location/$system") {
+	mkdir("$Cache_dir_location/$system")
+		or die $!;
+}
+print "[info] Cleaning old cachefiles under $Cache_dir_location/$system\n";
+my $ecode=system("rm -f $Cache_dir_location/$system/*");
+if($ecode == 0) {
+	print "[info] Cache files cleaned ok.\n";
+}else {
+	print "[error] Cache files clean failed with exitcode:$ecode\n";
+	exit(1);
+}
+
+# End of subfunction
+}
+sub log_progress {
+my $msgtype="$_[0]";
+my $logentry="$_[1]";
+
+connect_to_database();
+
+($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+$date=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+$time=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+$sql ="insert into andutteye_managementlog(system_name,runid,messagetype,logentry,created_date,created_time) values(";
+$sql.="'$system','$runid','$msgtype','$logentry','$date','$time')";
+$sth = $dbh->prepare("$sql");
+$sth->execute;
+
+# End of subfunction
+}
+sub determine_if_valid {
+
+connect_to_database();
+
+$sql="select count(seqnr) from andutteye_specifications where system_name = '$system'";
+$sth = $dbh->prepare("$sql");
+$sth->execute or die "Failed :$!\n";
+@row = $sth->fetchrow_array;
+
+if($row[0] == 0) {
+	print "[error] System $system have no saved specification. Unable to validate.\n";
+	exit(1);
+} else {
+	if($debug) {
+		print "[info] System $system have $row[0] saved specifications. Continue to validate.\n";
+	}
+}
+$sql="select count(seqnr) from andutteye_choosenbundles where system_name = '$system' and specaction = 'N'";
+$sth = $dbh->prepare("$sql");
+$sth->execute or die "Failed :$!\n";
+@row = $sth->fetchrow_array;
+
+if($row[0] == 0) {
+	print "[error] System $system have no saved bundles. Unable to validate.\n";
+	exit(1);
+} else {
+	if($debug) {
+		print "[info] System $system have $row[0] saved bundles. Continue to validate.\n";
+	}
+}
+
+# End of subfunction
+}
+sub get_domain {
+
+connect_to_database();
+
+$sql="select domain_name from andutteye_systems where system_name = '$system'";
+$sth = $dbh->prepare("$sql");
+$sth->execute or die "Failed :$!\n";
+@row = $sth->fetchrow_array;
+
+if($row[0] eq "") {
+	print "[error] No domain name specified for system $system.\n";
+	exit(1);
+} else {
+	$domain="$row[0]";
+	print "[info] System has domain $domain.\n";
+}
+
+# End of subfunction
+}
+sub calculate_dependencies_match {
+#
+# Search for dependencie match in dependencie hash where all selected packages
+# and their dependencies should have been loaded. If the dependencie are resolveble
+# it should be present there. Otherwhise some more package need to be added for installation.
+
+my $verify="$_[0]";
+my $package="$_[1]";
+my $arch="$_[2]";
+
+chomp $verify;
+
+for my $control3 (keys %dependencies) {
+	my $dep  = $dependencies{$control3};
+
+        if($dep->{dependencie} eq "$verify") {
+		print "\t Package to be installed:$package arch:$arch. Resolved with package:$dep->{name} arch:$dep->{arch}\n";
+		print "\t Dependencie wanted:$verify, dependencie found in hash:$dep->{dependencie}\n";
+		return("1");
+	}
+}
+return("0");
+
+# End of subfunction
+}
+sub calculate_dependencies {
+#
+# All packages selected for installation or upgrade is being resolved for dependencies.
+# Loop over thoose packages and try to resolve all of them.
+#
+my $found="0";
+
+connect_to_database();
+
+for my $control2 (keys %perform_packages) {
+        my $value  = $perform_packages{$control2};
+
+	if($value->{action} eq "Install" || $value->{action} eq "Upgrade") {
+		print "Trying to resolve package dependencies for package:$value->{name} arch:$value->{arch} action:$value->{action} Dist:$distribution Plevel:$patchlevel DepRef:$value->{depref}\n";
+
+		$sql="select distinct aerequires from andutteye_packages_dependencies where seqref = '$value->{depref}'";
+		$sth = $dbh->prepare("$sql");
+		$sth->execute or die "Failed :$!\n";
+
+		$sth->bind_columns(undef, \my $aerequires);
+
+		while($sth->fetch()) {
+			if(!defined($aerequires)) {
+				next;
+			}
+			print "Package:$value->{name} arch:$value->{arch} requires->$aerequires\n";
+
+				if(defined(calculate_dependencies_match("$aerequires","$value->{name}","$value->{arch}"))) {
+					print "\t[info] Dependencie:$aerequires resolved.\n";
+				} else {
+					print "\t[info] Dependencie:$aerequires not resolved.\n";
+				}
+        	}
+
+	}
+}
+exit;
+
+# End of subfunction
+}
+# Parse of commandline arguments.
+for(@ARGV) {
+        if ( $_ =~/-config/ ) {
+                my @tmp=split("=","$_");
+                $config="$tmp[1]";
+        }
+        if ( $_ =~/-system/ ) {
+                my @tmp=split("=","$_");
+                $system="$tmp[1]";
+        }
+	if( $_ =~/^verify$/ ) {
+		$verify="1";
+	}
+	if( $_ =~/^-debug=/ ) {
+                my @tmp=split("=","$_");
+                $debug="$tmp[1]";
+	}
+}
+if(!defined($ARGV[0])) {
+        program_info();
+}
+if(!defined($config)) {
+	$config="/etc/andutteye/andutteyedsrv.conf";
+}
+if(!defined($system)) {
+        program_info();
+}
+parse_and_load_configuration();
+determine_if_valid();
+determine_jobid();
+determine_specification_revision();
+get_domain();
+load_choosen_bundles_and_packages_info();
+load_choosen_package_from_packages_field();
+remove_packages_from_exclude_field();
+replace_versions_and_releases_with_index_data();
+validate_version_and_releases();
+enforce_fixed_hash_over_auto_hash();
+#calculate_dependencies();
+generate_action_list();

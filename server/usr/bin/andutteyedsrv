@@ -1,0 +1,1968 @@
+#!/usr/bin/perl
+#
+#  Copyright Andreas Utterberg Thundera (c) All rights Reserved 2008
+#
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# $Id: andutteyedsrv 731 2008-10-09 19:00:11Z andutt $
+#
+# The current version of the program.
+our $version  	= "Andutteye Server Version 3.0. (2008 www.thundera.se)";
+
+our $Server_listen_adress;
+our $Server_listen_port;
+our $Enable_ssl_encryption;
+our $Enable_syslog_notification;
+our $Enable_forking_mode;
+our $Enable_daemon_mode;
+our $Use_database_type;
+our $Use_database_name;
+our $Use_database_user;
+our $Use_dbi_database_extra_string;
+our $Use_database_password;
+our $Use_smtp_server;
+our $Use_mail_from_adress;
+our $Use_mail_subject;
+our $Use_hooks_directory;
+our $Use_debug_level;
+our $Log_dir_location;
+our $Transfer_dir_location;
+our $Management_package_program;
+our $Management_files_program;
+our $Cache_dir_location;
+our $Use_ssl_server_key;
+our $Use_ssl_server_cert;
+our $config;
+our @ARGV;
+our $sql;
+our $dbh;
+our $sth;
+our $pid;
+our $waitpid;
+our @splittedsoft;
+our $splittedsoft;
+our $transfer_item_loops="0";
+our $next_transfer_item_loops="0";
+my $socket;
+my $client;
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+my $date=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+my $time=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+use strict;
+use DBI;
+use Digest::MD5;
+use IO::Socket::INET;
+
+sub parse_and_load_configuration {
+my @tmp;
+my $params="0";
+
+print "$date $time Parsing and reading parameters from config $config.\n";
+
+      open("conf","<$config")
+                or die "ERROR Failed to open configuration file for reading config:$config error:$!\n";
+        for(<conf>) {
+                chomp;
+                if(/^#/) {
+                        next;
+                }
+                if(/^$/) {
+                        next;
+                }
+                if(/^Server_listen_adress/) {
+                        @tmp=split("=","$_");
+                        $Server_listen_adress="$tmp[1]";
+                        $params++;
+                }
+                if(/^Server_listen_port/) {
+                        @tmp=split("=","$_");
+                        $Server_listen_port="$tmp[1]";
+                        $params++;
+                }
+                if(/^Enable_ssl_encryption/) {
+                        @tmp=split("=","$_");
+                        $Enable_ssl_encryption="$tmp[1]";
+                        $params++;
+		}
+                if(/^Enable_syslog_notification/) {
+                        @tmp=split("=","$_");
+                        $Enable_syslog_notification="$tmp[1]";
+                        $params++;
+                }
+                if(/^Enable_forking_mode/) {
+                        @tmp=split("=","$_");
+                        $Enable_forking_mode="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_database_type/) {
+                        @tmp=split("=","$_");
+                        $Use_database_type="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_database_name/) {
+                        @tmp=split("=","$_");
+                        $Use_database_name="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_database_user/) {
+                        @tmp=split("=","$_");
+                        $Use_database_user="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_database_password/) {
+                        @tmp=split("=","$_");
+                        $Use_database_password="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_smtp_server/) {
+                        @tmp=split("=","$_");
+                        $Use_smtp_server="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_mail_from_adress/) {
+                        @tmp=split("=","$_");
+                        $Use_mail_from_adress="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_mail_subject/) {
+                        @tmp=split("=","$_");
+                        $Use_mail_subject="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_hooks_directory/) {
+                        @tmp=split("=","$_");
+                        $Use_hooks_directory="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_debug_level/) {
+                        @tmp=split("=","$_");
+                        $Use_debug_level="$tmp[1]";
+                        $params++;
+                }
+                if(/^Enable_daemon_mode/) {
+                        @tmp=split("=","$_");
+                        $Enable_daemon_mode="$tmp[1]";
+                        $params++;
+                }
+                if(/^Log_dir_location/) {
+                        @tmp=split("=","$_");
+                        $Log_dir_location="$tmp[1]";
+                        $params++;
+                }
+                if(/^Transfer_dir_location/) {
+                        @tmp=split("=","$_");
+                        $Transfer_dir_location="$tmp[1]";
+                        $params++;
+                }
+                if(/^Management_package_program/) {
+                        @tmp=split("=","$_");
+                        $Management_package_program="$tmp[1]";
+                        $params++;
+                }
+                if(/^Management_files_program/) {
+                        @tmp=split("=","$_");
+                        $Management_files_program="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_ssl_server_key/) {
+                        @tmp=split("=","$_");
+                        $Use_ssl_server_key="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_ssl_server_cert/) {
+                        @tmp=split("=","$_");
+                        $Use_ssl_server_cert="$tmp[1]";
+                        $params++;
+                }
+                if(/^Cache_dir_location/) {
+                        @tmp=split("=","$_");
+                        $Cache_dir_location="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_dbi_database_extra_string/) {
+                        @tmp=split("=","$_");
+                        $Use_dbi_database_extra_string="$tmp[1]";
+                        $params++;
+                }
+	}
+
+print "$params configuration parameters loaded.\n";
+
+# End of subfunction
+}
+sub program_info {
+print "\n";
+print "$version\n";
+print "\n";
+print "Example $0 -config=/etc/andutteye/andutteyedsrv.conf\n";
+print "\n";
+print "-config         :Specifies server configuration to use.\n";
+print "\n";
+exit 1;
+}
+sub bind_and_listen_for_connections {
+if($Use_debug_level > 3) {
+        print "[$date $time] Starting Andutteye server, waiting for incoming connections.\n";
+}
+if ( $Enable_ssl_encryption eq "yes" ) {
+require IO::Socket::SSL;
+	if($Use_debug_level > 2) {
+        	print "[$date $time] Starting Andutteye server on port:$Server_listen_port with ssl encryption enabled.\n";
+	}
+	$socket = IO::Socket::SSL->new(
+        		LocalPort 	=> $Server_listen_port,
+        		Proto 		=> 'tcp',
+        		Type 		=> SOCK_STREAM,
+       		 	Reuse 		=> 1,
+        		Listen		=> 5,
+        		SSL_key_file	=> "$Use_ssl_server_key",
+        		SSL_cert_file	=> "$Use_ssl_server_cert"
+	) or die $!;
+} else {
+        if($Use_debug_level > 2) {
+        	print "[$date $time] Starting Andutteye server on port:$Server_listen_port with tcp, ssl encryption disabled.\n";
+        }
+	$socket = IO::Socket::INET->new(
+			LocalPort 	=> $Server_listen_port,
+        		Type   		=> SOCK_STREAM,
+        		Reuse  		=> 1,
+        		Listen 		=> 10
+	) or die "$!\n";
+}
+# End of subfunction
+}
+sub aesid_check {
+my $hostvalue="$_[0]";
+
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+my $date=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+my $time=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+
+if($Use_debug_level > 4) {
+        print "[$date,$time] Updating system status.\n";
+}
+$dbh = DBI->connect("dbi:$Use_dbi_database_extra_string$Use_database_type:$Use_database_name", $Use_database_user, $Use_database_password) or die ("ERROR Couldnt open database:$Use_database_name errormessage:$!");
+        $sth = $dbh->prepare("update andutteye_systems set system_heartbeat = 'Last system transaction $date $time' where system_name = '$hostvalue'");
+        $sth->execute;
+	log_entry("Updating system status.","SystemStatusUpdate","$hostvalue");
+
+undef $sth;
+$dbh->disconnect or die $!;
+
+if($Enable_forking_mode eq "yes") {
+        print "[$date,$time] Closing child. Subfunction aesid_check.\n";
+	exit;
+}
+
+# End of subfunction
+}
+sub back_resolv_connected_system {
+my $hostvalue=$_[0];
+my $system_name;
+my $address;
+
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+my $date=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+my $time=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+$address = inet_ntoa(inet_aton($hostvalue));
+
+if (!defined($address)) {
+	print "[$date,$time] Unable to resolve ipadress of $hostvalue, configure dns services properly.\n";
+        log_entry("Unable to resolve ipadress of $hostvalue, configure dns services properly.","SystemResolv","$hostvalue");
+	return("1");
+} else {
+	$system_name = gethostbyaddr(inet_aton($address), AF_INET);
+}
+if (!defined($system_name)) {
+	print "[$date,$time] Unable to resolve hostname of $hostvalue from ipadress, configure dns services properly.\n";
+        log_entry("Unable to resolve hostname of $hostvalue from ipadress, configure dns services properly.","SystemResolv","$hostvalue");
+	return("1");
+}
+if("$hostvalue" ne "$system_name") {
+	print "[$date,$time] Unidentical answers when resolving $hostvalue with adress $address, got=$system_name, configure dns services properly.\n";
+        log_entry("Unidentical answers when resolving $hostvalue with adress $address, got=$system_name, configure dns services properly.","SystemResolv","$hostvalue");
+	return("1");
+} else {
+	print "[$date,$time] System $hostvalue resolved, answer ($system_name,$address).\n";
+        log_entry("System $hostvalue resolved, answer ($system_name,$address).","SystemResolv","$hostvalue");
+	return("0");
+}
+undef $sth;
+$dbh->disconnect or die $!;
+
+if($Enable_forking_mode eq "yes") {
+        print "[$date,$time] Closing child. Subfunction back_resolv_connected_system.\n";
+        exit;
+}
+
+# End of subfunction
+}
+sub aesid_installconfig {
+my $system_name=$_[0];
+my $parametername;
+my $parametervalue;
+my $monitorname;
+my $monitortype;
+my $monitorvalue;
+my $status;
+my $schedule;
+my $message;
+my $sendemail;
+my $runprogram;
+my $severity;
+my $alarmlimit;
+my $errorlimit;
+my $searchpattern;
+my $program;
+my $programargs;
+my $warninglimit;
+my $criticallimit;
+my $fatallimit;
+my $exitstatus;
+
+($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+$date=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+$date=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+$dbh = DBI->connect("dbi:$Use_dbi_database_extra_string$Use_database_type:$Use_database_name", $Use_database_user, $Use_database_password) or die("ERROR Couldnt open database:$Use_database_name errormessage:$!");
+        $sql ="select parametervalue from andutteye_base_agentconfiguration where system_name = '$system_name' and parametername = 'Install_New_Agent_Configuration'";
+        $sth = $dbh->prepare("$sql");
+        $sth->execute;
+        my @row = $sth->fetchrow_array;
+
+        if("$row[0]" eq "yes") {
+                log_entry("Agent settings or monitor changes. Installing new settings on system","InstallConfig","$system_name");
+                print "[$date,$time] Agent settings or monitor changes. Installing new settings on system","InstallConfig","$system_name.\n";
+
+                print $client "OPENCONFIG\n";
+
+		$sql="select parametername, parametervalue from andutteye_base_agentconfiguration where system_name = '$system_name' order by seqnr asc";
+		$sth = $dbh->prepare("$sql");
+		$sth->execute or die "Failed :$!\n";
+
+		$sth->bind_columns(undef, \$parametername, \$parametervalue);
+		while($sth->fetch()) {
+			print $client "$parametername\t\t=$parametervalue\n";
+		}
+		$sql="select monitorname,monitortype,monitorvalue,status,schedule,message,sendemail,runprogram,severity,alarmlimit,errorlimit,searchpattern,program,programargs,warninglimit,criticallimit,fatallimit";
+		$sql.=",exitstatus from andutteye_monitor_configuration where system_name = '$system_name' order by monitortype asc";
+		$sth = $dbh->prepare("$sql");
+		$sth->execute or die "Failed :$!\n";
+
+		$sth->bind_columns(\$monitorname, \$monitortype, \$monitorvalue, \$status, \$schedule, \$message, \$sendemail, \$runprogram, \$severity, \$alarmlimit, \$errorlimit, \$searchpattern, \$program, \$programargs, \$warninglimit, \$criticallimit, \$fatallimit, \$exitstatus);
+
+		while($sth->fetch()) {
+
+			if($monitortype eq "PS") {
+
+				print $client "monitor:PS:$monitorname\n";
+				print $client "\tstatus\t=$status\n";
+				print $client "\texecute_program\t=$runprogram\n";
+				print $client "\tsend_email\t=$sendemail\n";
+				print $client "\tseverity\t=$severity\n";
+				print $client "\tschedule\t=$schedule\n";
+				print $client "\tmessage\t=$message\n";
+				print $client "\talarmlimit\t=$alarmlimit\n";
+				print $client "\terrorlimit\t=$errorlimit\n";
+				print $client "\n";
+			}
+			elsif($monitortype eq "FT") {
+
+				print $client "monitor:FT:$monitorname\n";
+				print $client "\tsearchpattern\t=$searchpattern\n";
+				print $client "\texecute_program\t=$runprogram\n";
+				print $client "\tsend_email\t=$sendemail\n";
+				print $client "\tseverity\t=$severity\n";
+				print $client "\tschedule\t=$schedule\n";
+				print $client "\tmessage\t=$message\n";
+				print $client "\talarmlimit\t=$alarmlimit\n";
+				print $client "\terrorlimit\t=$errorlimit\n";
+				print $client "\n";
+
+			}
+			elsif($monitortype eq "FM") {
+
+				print $client "monitor:FM:$monitorname\n";
+				print $client "\tstatus\t=$status\n";
+				print $client "\texecute_program\t=$runprogram\n";
+				print $client "\tsend_email\t=$sendemail\n";
+				print $client "\tseverity\t=$severity\n";
+				print $client "\tschedule\t=$schedule\n";
+				print $client "\tmessage\t=$message\n";
+				print $client "\talarmlimit\t=$alarmlimit\n";
+				print $client "\terrorlimit\t=$errorlimit\n";
+				print $client "\n";
+
+			}
+			elsif($monitortype eq "PH") {
+
+				print $client "monitor:PH:$monitorname\n";
+				print $client "\tstatus\t=$status\n";
+				print $client "\texecute_program\t=$runprogram\n";
+				print $client "\tsend_email\t=$sendemail\n";
+				print $client "\tseverity\t=$severity\n";
+				print $client "\tschedule\t=$schedule\n";
+				print $client "\tmessage\t=$message\n";
+				print $client "\talarmlimit\t=$alarmlimit\n";
+				print $client "\terrorlimit\t=$errorlimit\n";
+				print $client "\n";
+
+			}
+			elsif($monitortype eq "AM") {
+
+				print $client "monitor:AM:$monitorname\n";
+				print $client "\tstatus\t=$status\n";
+				print $client "\tprogram\t=$program\n";
+				print $client "\targuments\t=$programargs\n";
+				print $client "\n";
+			}
+			elsif($monitortype eq "ST") {
+
+				print $client "monitor:ST:$monitorname\n";
+				print $client "\tstatus\t=$status\n";
+				print $client "\tprogram\t=$program\n";
+				print $client "\targuments\t=$programargs\n";
+				print $client "\n";
+			}
+			elsif($monitortype eq "MA") {
+
+				print $client "monitor:MA:$monitorname\n";
+				print $client "\texecute_program\t=$runprogram\n";
+				print $client "\tsend_email\t=$sendemail\n";
+				print $client "\tseverity\t=$severity\n";
+				print $client "\tschedule\t=$schedule\n";
+				print $client "\tmessage\t=$message\n";
+				print $client "\talarmlimit\t=$alarmlimit\n";
+				print $client "\terrorlimit\t=$errorlimit\n";
+				print $client "\n";
+
+			}
+			elsif($monitortype eq "LA") {
+
+				print $client "monitor:LA:$monitorname\n";
+				print $client "\texecute_program\t=$runprogram\n";
+				print $client "\tsend_email\t=$sendemail\n";
+				print $client "\tseverity\t=$severity\n";
+				print $client "\tschedule\t=$schedule\n";
+				print $client "\tmessage\t=$message\n";
+				print $client "\talarmlimit\t=$alarmlimit\n";
+				print $client "\terrorlimit\t=$errorlimit\n";
+				print $client "\n";
+
+			}
+			elsif($monitortype eq "SA") {
+
+				print $client "monitor:LA:$monitorname\n";
+				print $client "\texecute_program\t=$runprogram\n";
+				print $client "\tsend_email\t=$sendemail\n";
+				print $client "\tseverity\t=$severity\n";
+				print $client "\tschedule\t=$schedule\n";
+				print $client "\tmessage\t=$message\n";
+				print $client "\talarmlimit\t=$alarmlimit\n";
+				print $client "\terrorlimit\t=$errorlimit\n";
+				print $client "\n";
+			}
+			elsif($monitortype eq "EV") {
+
+				print $client "monitor:EV:$monitorname\n";
+				print $client "\tstatus\t=$status\n";
+				print $client "\texecute_program\t=$runprogram\n";
+				print $client "\tsend_email\t=$sendemail\n";
+				print $client "\tseverity\t=$severity\n";
+				print $client "\tschedule\t=$schedule\n";
+				print $client "\tmessage\t=$message\n";
+				print $client "\talarmlimit\t=$alarmlimit\n";
+				print $client "\terrorlimit\t=$errorlimit\n";
+				print $client "\texitstatus\t=$exitstatus\n";
+				print $client "\targuments\t=$programargs\n";
+				print $client "\n";
+
+			}
+			elsif($monitortype eq "FS") {
+
+			        print $client "monitor:FS:$monitorname\n";
+                                print $client "\twarning_limit\t=$warninglimit\n";
+                                print $client "\tcritical_limit\t=$criticallimit\n";
+                                print $client "\tfatal_limit\t=$fatallimit\n";
+                                print $client "\texecute_program\t=$runprogram\n";
+                                print $client "\tsend_email\t=$sendemail\n";
+                                print $client "\tseverity\t=$severity\n";
+                                print $client "\tschedule\t=$schedule\n";
+                                print $client "\tmessage\t=$message\n";
+                                print $client "\talarmlimit\t=$alarmlimit\n";
+                                print $client "\terrorlimit\t=$errorlimit\n";
+                                print $client "\n";
+
+			} else {
+				print "[$date $time] A unknown monitor type found->$monitortype\n";
+			}
+		}
+
+                print $client "CLOSECONFIG\n";
+
+		$sql ="delete from andutteye_base_agentconfiguration where system_name = '$system_name' and parametername = 'Install_New_Agent_Configuration'";
+                $sth = $dbh->prepare("$sql");
+                $sth->execute;
+
+        } else {
+                print "[$date,$time] No settings or monitor changes found for $system_name.\n";
+		log_entry("No settings or monitor changes found","Information","$system_name");
+        }
+
+#undef $sth;
+#$dbh->disconnect;
+
+print $client "ANDUTTEYEQUIT\n";
+if($Enable_forking_mode eq "yes") {
+        print "[$date,$time] Closing child. Subfunction aesid_installconfig.\n";
+	exit;
+}
+
+# End of subfunction
+}
+sub verify_banlist {
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+my $DATE=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+my $TIME=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+my $HOST="$_[0]";
+
+#$dbh = DBI->connect("dbi:$Use_database_type:$Use_database_name", $Use_database_user, $Use_database_password) or die("ERROR Couldnt open database:$Use_database_name errormessage:$!");
+#        $sql="select configparam from andutteye_webbconfig where configname = 'BANLIST'";
+#        $sth = $dbh->prepare("$sql");
+#        $sth->execute;
+#        my @row = $sth->fetchrow_array;
+#        my @BANSERVERS=split(",",$row[0]);
+#
+#        for(@BANSERVERS) {
+#                if($_ =~/$HOST/) {
+#                        print "\n[$DATE,$TIME] Incoming host:$HOST are specified in banlist:$_ ignoring messages\n";
+#                        log_entry("Host specified in banlist:$_ ignoring messages","BANNED","$HOST");
+#                        return 1;
+#                }
+#        }
+return 0;
+
+# End of subfunction
+}
+sub daemonize  {
+chdir '/' or die "ERROR Can't chdir to /: $!";
+open (STDIN,"/dev/null") or die "Can't read /dev/null as standard input: $!";
+open (STDOUT, ">>$Log_dir_location/andutteyedsrv.log") or die "Can't write standard out messages to $Log_dir_location/andutteyedsrv.log: $!";
+open (STDERR, ">>$Log_dir_location/andutteyedsrv.log") or die "Can't write standard error messages to $Log_dir_location/andutteyedsrv.log: $!";
+
+defined(my $pid = fork) or die "Can't fork andutteyedsrv. errormsg:$!";
+exit if $pid;
+umask 0;
+
+# End of subfunction
+}
+sub log_entry {
+my $LOGENTRY=$_[0];
+my $MESSAGETYPE=$_[1];
+my $HOSTNAME=$_[2];
+
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+my $DATE=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+my $TIME=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+$dbh = DBI->connect("dbi:$Use_dbi_database_extra_string$Use_database_type:$Use_database_name", $Use_database_user, $Use_database_password) or die("EYELSNERR01:Couldnt open database:$Use_database_name");
+
+if(!defined($LOGENTRY)) {
+           print "ERROR Recived an empty logentry, thats not supported, will not log anything\n";
+} else {
+        $sql="insert into andutteye_serverlog(created_date,created_time,messagetype,logentry,system_name)";
+        $sql.=" values ('$DATE','$TIME','$MESSAGETYPE','$LOGENTRY','$HOSTNAME')";
+        $sth = $dbh->prepare("$sql");
+        $sth->execute;
+        undef $sth;
+
+# Endif statement
+}
+# End subfunction
+}
+sub check_severity {
+my $SEVERITY_CHECK=$_[0];
+my $HOST=$_[1];
+
+if(!defined($SEVERITY_CHECK)) {
+        print "ERROR Recived an empty severity, thats not supported. Dropping package and logging this\n";
+        return 1;
+}
+if ($SEVERITY_CHECK eq "HARMLESS" ) {
+        return 0;
+}
+elsif ($SEVERITY_CHECK eq "WARNING" ) {
+        return 0;
+}
+elsif ($SEVERITY_CHECK eq "CRITICAL" ) {
+        return 0;
+}
+elsif ($SEVERITY_CHECK eq "FATAL" ) {
+        return 0;
+} else {
+        print "ERROR Recived and unsupported serverity:$SEVERITY_CHECK. Dropping package and logging this\n";
+	log_entry("Recived and unsupported serverity:$SEVERITY_CHECK. Dropping request.","ERROR","$HOST");
+        return 1;
+}
+# End of subfunction
+}
+sub autoclear_states {
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+my $DATE=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+my $TIME=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+my $HOST="$_[0]";
+
+$dbh = DBI->connect("dbi:$Use_dbi_database_extra_string$Use_database_type:$Use_database_name", $Use_database_user, $Use_database_password) or die("ERROR Couldnt open database:$Use_database_name errormessage:$!");
+        $sql="select seqnr from andutteye_alarm where status = 'OPEN' and shortinformation = 'Client has not checked in'";
+        $sql.="and hostname = '$HOST'";
+        $sth = $dbh->prepare("$sql");
+        $sth->execute;
+        my @row = $sth->fetchrow_array;
+
+                if ($row[0]) {
+                        $sql="update andutteye_alarm set status = 'CLOSED', closedby = 'server' where seqnr = '$row[0]'";
+                        $sth = $dbh->prepare("$sql");
+                        $sth->execute;
+			log_entry("Autoclosing alarm client has not checked in for resuming host","AUTOCLOSE","$HOST");
+
+                        if($Use_debug_level) {
+                                print "[$DATE,$TIME] Autoclosing alarm client has not checked in for resuming host:$HOST\n";
+                        }
+                }
+
+undef $sth;
+# End of subfunction
+}
+sub aesid_save_base_andutteye_configuration {
+my $system_name="$_[0]";
+my $baseconfig="$_[2]";
+my @baseconfig;
+my @baseline;
+my $loaded="0";
+my $override="0";
+
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+my $DATE=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+my $TIME=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+$dbh = DBI->connect("dbi:$Use_dbi_database_extra_string$Use_database_type:$Use_database_name", $Use_database_user, $Use_database_password) or die("ERROR Couldnt open database:$Use_database_name errormessage:$!");
+
+$sql="select count(seqnr) from andutteye_base_agentconfiguration where system_name = '$system_name' and underchange = 'yes'";
+$sth = $dbh->prepare("$sql");
+$sth->execute;
+my @row = $sth->fetchrow_array;
+
+if($row[0] == "0"){
+
+@baseconfig=split(";;;;","$baseconfig");
+for(@baseconfig) {
+        if(defined($_)) {
+                @baseline=split("=","$_");
+		chomp $baseline[0];
+		chomp $baseline[1];
+
+		$sql="select seqnr from andutteye_base_agentconfiguration where system_name = '$system_name' and parametername = '$baseline[0]'";
+                $sql.=" and override = 'no'";
+                $sth = $dbh->prepare("$sql");
+                $sth->execute;
+                my @row = $sth->fetchrow_array;
+
+                if (!defined($row[0])) {
+			print "[$date $time] Updating parameter:$baseline[0] -> $baseline[1] on system $system_name\n";	
+
+			$sql ="delete from andutteye_base_agentconfiguration where system_name = '$system_name' and parametername = '$baseline[0]'";
+                        $sth = $dbh->prepare("$sql");
+                        $sth->execute;
+
+                        $sql ="insert into andutteye_base_agentconfiguration(system_name,parametername,parametervalue,override,underchange,created_date";
+                        $sql.=",created_time,created_by) values('$system_name','$baseline[0]','$baseline[1]','yes','no','$date','$time','andutteyedsrv')";
+                        $sth = $dbh->prepare("$sql");
+                        $sth->execute;
+
+                	$loaded++;
+		} else {
+			print "[$date $time] Base parameter $baseline[0] is not overrideble.\n";
+                	$override++;
+		}
+
+
+	}
+}
+
+} else {
+  	print "[$date $time] $row[0] baseconfiguration parameters under change for system $system_name, will not save systems config.\n";
+	log_entry("$row[0] baseconfiguration parameters under change for system $system_name, no changes saved","SaveBaseConfig","$system_name");
+}
+
+print "[$date $time] Saved $loaded base configurations in database\n";
+log_entry("Saved $loaded base configurations in database","SaveBaseConfig","$system_name");
+print "[$date $time] $override dont saved because they were not overrideble.\n";
+log_entry("$override dont saved because they were not overrideble","SaveBaseConfig","$system_name");
+
+print $client "ANDUTTEYEQUIT\n";
+if($Enable_forking_mode eq "yes") {
+        print "[$date,$time] Closing child. aesid_save_base_configuration.\n";
+        exit;
+}
+
+# End of subfunction
+}
+sub aesid_save_andutteye_configuration {
+my $system_name="$_[0]";
+my $monitors="$_[2]";
+my @monitors;
+my @monitorline;
+my $loaded="0";
+my $override="0";
+
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+my $DATE=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+my $TIME=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+$dbh = DBI->connect("dbi:$Use_dbi_database_extra_string$Use_database_type:$Use_database_name", $Use_database_user, $Use_database_password) or die("ERROR Couldnt open database:$Use_database_name errormessage:$!");
+
+$sql="select count(seqnr) from andutteye_monitor_configuration where system_name = '$system_name' and underchange = 'yes'";
+$sth = $dbh->prepare("$sql");
+$sth->execute;
+my @row = $sth->fetchrow_array;
+
+if($row[0] > 0) {
+	print "[$date $time] $row[0] monitors under change for system $system_name, will not save systems monitors.\n";
+	log_entry("$row[0] monitors under pending changes, no changes will be made","SaveConfig","$system_name");
+} else {
+
+print "[$date $time] Deleting monitors for $system_name where override is set to yes.\n";
+$sql="delete from andutteye_monitor_configuration where system_name = '$system_name' and override != 'no'";
+$sth->execute;
+
+@monitors=split(";;;;","$monitors");
+for(@monitors) {
+	if(defined($_)) {
+		@monitorline=split(",","$_");
+
+		if("$monitorline[0]" eq "PS") {
+        
+			$sql="select seqnr from andutteye_monitor_configuration where system_name = '$system_name' and monitortype = 'PS'";
+        		$sql.=" and monitorname = '$monitorline[1]' and override = 'no'";
+        		$sth = $dbh->prepare("$sql");
+        		$sth->execute;
+        		my @row = $sth->fetchrow_array;
+
+                	if (!defined($row[0])) {
+				print "[$date $time] A PS Process monitor $monitorline[1] saved.\n";
+				
+				$sql ="delete from andutteye_monitor_configuration where system_name = '$system_name' and monitortype = 'PS'";
+				$sql.=" and monitorname = '$monitorline[1]'";
+        			$sth = $dbh->prepare("$sql");
+        			$sth->execute;
+
+				$sql ="insert into andutteye_monitor_configuration(system_name,monitorname,monitortype,status,runprogram,sendemail";
+				$sql.=",severity,schedule,message,alarmlimit,errorlimit,created_date,created_time,created_by,override) values ('$system_name','$monitorline[1]','PS','$monitorline[2]'";
+				$sql.=",'$monitorline[3]','$monitorline[4]','$monitorline[5]','$monitorline[5]','$monitorline[6]','$monitorline[7]','$monitorline[8]','$date','$date','andutteyedsrv','yes')";
+                        	$sth = $dbh->prepare("$sql");
+                        	$sth->execute;
+				$loaded++;
+			} else {
+				print "[$date $time] Process monitor $monitorline[1] is not overrideble.\n";
+				$override++;
+			}
+		}
+		elsif("$monitorline[0]" eq "FS") {
+
+			$sql="select seqnr from andutteye_monitor_configuration where system_name = '$system_name' and monitortype = 'FS'";
+                        $sql.=" and monitorname = '$monitorline[1]' and override = 'no'";
+                        $sth = $dbh->prepare("$sql");
+                        $sth->execute;
+                        my @row = $sth->fetchrow_array;
+
+                        if (!defined($row[0])) {
+                                print "[$date $time] A FS Filesystem monitor $monitorline[1] saved.\n";
+
+                                $sql ="delete from andutteye_monitor_configuration where system_name = '$system_name' and monitortype = 'FS'";
+                                $sql.=" and monitorname = '$monitorline[1]'";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute;
+
+                                $sql ="insert into andutteye_monitor_configuration(system_name,monitorname,monitortype,status,runprogram,sendemail";
+                                $sql.=",severity,schedule,message,alarmlimit,errorlimit,created_date,created_time,created_by,override,warninglimit,criticallimit,fatallimit)";
+				$sql.=" values ('$system_name','$monitorline[1]','FS','$monitorline[2]'";
+                                $sql.=",'$monitorline[3]','$monitorline[4]','$monitorline[5]','$monitorline[5]','$monitorline[6]','$monitorline[7]','$monitorline[8]','$date','$date','andutteyedsrv','yes'";
+				$sql.=",'$monitorline[9]','$monitorline[10]','$monitorline[11]')";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute;
+                                $loaded++;
+                        } else {
+                                print "[$date $time] Filesystem monitor $monitorline[1] is not overrideble.\n";
+                                $override++;
+                        }
+		}
+		elsif("$monitorline[0]" eq "FT") {
+
+			$sql="select seqnr from andutteye_monitor_configuration where system_name = '$system_name' and monitortype = 'FT'";
+                        $sql.=" and monitorname = '$monitorline[1]' and override = 'no'";
+                        $sth = $dbh->prepare("$sql");
+                        $sth->execute;
+                        my @row = $sth->fetchrow_array;
+
+                        if (!defined($row[0])) {
+                                print "[$date $time] A FT Filetrace patternmatch monitor $monitorline[1] saved.\n";
+
+                                $sql ="delete from andutteye_monitor_configuration where system_name = '$system_name' and monitortype = 'FT'";
+                                $sql.=" and monitorname = '$monitorline[1]'";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute;
+
+                                $sql ="insert into andutteye_monitor_configuration(system_name,monitorname,monitortype,status,runprogram,sendemail";
+                                $sql.=",severity,schedule,message,alarmlimit,errorlimit,created_date,created_time,created_by,override,searchpattern) values ('$system_name','$monitorline[1]','FT','$monitorline[2]'";
+                                $sql.=",'$monitorline[3]','$monitorline[4]','$monitorline[5]','$monitorline[5]','$monitorline[6]','$monitorline[7]','$monitorline[8]','$date','$date','andutteyedsrv','yes','$monitorline[9]')";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute;
+                                $loaded++;
+                        } else {
+                                print "[$date $time] Filetrace patternmatch monitor $monitorline[1] is not overrideble.\n";
+                                $override++;
+                        }
+
+		}
+		elsif("$monitorline[0]" eq "AM") {
+				
+		  	$sql="select seqnr from andutteye_monitor_configuration where system_name = '$system_name' and monitortype = 'AM'";
+                        $sql.=" and monitorname = '$monitorline[1]' and override = 'no'";
+                        $sth = $dbh->prepare("$sql");
+                        $sth->execute;
+                        my @row = $sth->fetchrow_array;
+
+                        if (!defined($row[0])) {
+                                print "[$date $time] A AM Assetmanagement monitor $monitorline[1] saved.\n";
+
+                                $sql ="delete from andutteye_monitor_configuration where system_name = '$system_name' and monitortype = 'AM'";
+                                $sql.=" and monitorname = '$monitorline[1]'";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute;
+
+                                $sql ="insert into andutteye_monitor_configuration(system_name,monitorname,monitortype,status,program,programargs,created_date,created_time,created_by,override)";
+                                $sql.=" values ('$system_name','$monitorline[1]','AM','$monitorline[2]',\"$monitorline[3]\",\"$monitorline[4]\",'$date','$date','andutteyedsrv','yes')";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute;
+                                $loaded++;
+                        } else {
+                                print "[$date $time] Assetmanagement monitor $monitorline[1] is not overrideble.\n";
+                                $override++;
+                        }
+
+		}
+		elsif("$monitorline[0]" eq "ST") {
+
+			 $sql="select seqnr from andutteye_monitor_configuration where system_name = '$system_name' and monitortype = 'ST'";
+                        $sql.=" and monitorname = '$monitorline[1]' and override = 'no'";
+                        $sth = $dbh->prepare("$sql");
+                        $sth->execute;
+                        my @row = $sth->fetchrow_array;
+
+                        if (!defined($row[0])) {
+                                print "[$date $time] A ST Statistics monitor $monitorline[1] saved.\n";
+
+                                $sql ="delete from andutteye_monitor_configuration where system_name = '$system_name' and monitortype = 'ST'";
+                                $sql.=" and monitorname = '$monitorline[1]'";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute;
+
+                                $sql ="insert into andutteye_monitor_configuration(system_name,monitorname,monitortype,status,program,programargs,created_date,created_time,created_by,override)";
+                                $sql.=" values ('$system_name','$monitorline[1]','ST','$monitorline[2]','$monitorline[3]','$monitorline[4]','$date','$date','andutteyedsrv','yes')";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute;
+                                $loaded++;
+                        } else {
+                                print "[$date $time] Statistics monitor $monitorline[1] is not overrideble.\n";
+                                $override++;
+                        }
+
+		}
+		elsif("$monitorline[0]" eq "PH") {
+
+			$sql="select seqnr from andutteye_monitor_configuration where system_name = '$system_name' and monitortype = 'PH'";
+                        $sql.=" and monitorname = '$monitorline[1]' and override = 'no'";
+                        $sth = $dbh->prepare("$sql");
+                        $sth->execute;
+                        my @row = $sth->fetchrow_array;
+
+                        if (!defined($row[0])) {
+                                print "[$date $time] A PH Communication monitor $monitorline[1] saved.\n";
+
+                                $sql ="delete from andutteye_monitor_configuration where system_name = '$system_name' and monitortype = 'PH'";
+                                $sql.=" and monitorname = '$monitorline[1]'";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute;
+
+                                $sql ="insert into andutteye_monitor_configuration(system_name,monitorname,monitortype,status,runprogram,sendemail";
+                                $sql.=",severity,schedule,message,alarmlimit,errorlimit,created_date,created_time,created_by,override) values ('$system_name','$monitorline[1]','PH','$monitorline[2]'";
+                                $sql.=",'$monitorline[3]','$monitorline[4]','$monitorline[5]','$monitorline[5]','$monitorline[6]','$monitorline[7]','$monitorline[8]','$date','$date','andutteyedsrv','yes')";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute;
+                                $loaded++;
+                        } else {
+                                print "[$date $time] Communication monitor $monitorline[1] is not overrideble.\n";
+                                $override++;
+                        }
+
+		}
+		elsif("$monitorline[0]" eq "LA") {
+
+			$sql="select seqnr from andutteye_monitor_configuration where system_name = '$system_name' and monitortype = 'LA'";
+                        $sql.=" and monitorname = '$monitorline[1]' and override = 'no'";
+                        $sth = $dbh->prepare("$sql");
+                        $sth->execute;
+                        my @row = $sth->fetchrow_array;
+
+                        if (!defined($row[0])) {
+                                print "[$date $time] A LA Loadaverege monitor $monitorline[1] saved.\n";
+
+                                $sql ="delete from andutteye_monitor_configuration where system_name = '$system_name' and monitortype = 'LA'";
+                                $sql.=" and monitorname = '$monitorline[1]'";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute;
+
+                                $sql ="insert into andutteye_monitor_configuration(system_name,monitorname,monitortype,status,runprogram,sendemail";
+                                $sql.=",severity,schedule,message,alarmlimit,errorlimit,created_date,created_time,created_by,override) values ('$system_name','$monitorline[1]','LA','$monitorline[2]'";
+                                $sql.=",'$monitorline[3]','$monitorline[4]','$monitorline[5]','$monitorline[5]','$monitorline[6]','$monitorline[7]','$monitorline[8]','$date','$date','andutteyedsrv','yes')";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute;
+                                $loaded++;
+                        } else {
+                                print "[$date $time] Loadaverege monitor $monitorline[1] is not overrideble.\n";
+                                $override++;
+                        }
+
+		}
+		elsif("$monitorline[0]" eq "MA") {
+
+			$sql="select seqnr from andutteye_monitor_configuration where system_name = '$system_name' and monitortype = 'MA'";
+                        $sql.=" and monitorname = '$monitorline[1]' and override = 'no'";
+                        $sth = $dbh->prepare("$sql");
+                        $sth->execute;
+                        my @row = $sth->fetchrow_array;
+
+                        if (!defined($row[0])) {
+                                print "[$date $time] A MA Memory averege monitor $monitorline[1] saved.\n";
+
+                                $sql ="delete from andutteye_monitor_configuration where system_name = '$system_name' and monitortype = 'MA'";
+                                $sql.=" and monitorname = '$monitorline[1]'";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute;
+
+                                $sql ="insert into andutteye_monitor_configuration(system_name,monitorname,monitortype,status,runprogram,sendemail";
+                                $sql.=",severity,schedule,message,alarmlimit,errorlimit,created_date,created_time,created_by,override) values ('$system_name','$monitorline[1]','MA','$monitorline[2]'";
+                                $sql.=",'$monitorline[3]','$monitorline[4]','$monitorline[5]','$monitorline[5]','$monitorline[6]','$monitorline[7]','$monitorline[8]','$date','$date','andutteyedsrv','yes')";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute;
+                                $loaded++;
+                        } else {
+                                print "[$date $time] Memory averege monitor $monitorline[1] is not overrideble.\n";
+                                $override++;
+                        }
+
+		}
+		elsif("$monitorline[0]" eq "SA") {
+			
+		        $sql="select seqnr from andutteye_monitor_configuration where system_name = '$system_name' and monitortype = 'SA'";
+                        $sql.=" and monitorname = '$monitorline[1]' and override = 'no'";
+                        $sth = $dbh->prepare("$sql");
+                        $sth->execute;
+                        my @row = $sth->fetchrow_array;
+
+                        if (!defined($row[0])) {
+                                print "[$date $time] A SA Swap averege monitor $monitorline[1] saved.\n";
+
+                                $sql ="delete from andutteye_monitor_configuration where system_name = '$system_name' and monitortype = 'SA'";
+                                $sql.=" and monitorname = '$monitorline[1]'";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute;
+
+                                $sql ="insert into andutteye_monitor_configuration(system_name,monitorname,monitortype,status,runprogram,sendemail";
+                                $sql.=",severity,schedule,message,alarmlimit,errorlimit,created_date,created_time,created_by,override) values ('$system_name','$monitorline[1]','SA','$monitorline[2]'";
+                                $sql.=",'$monitorline[3]','$monitorline[4]','$monitorline[5]','$monitorline[5]','$monitorline[6]','$monitorline[7]','$monitorline[8]','$date','$date','andutteyedsrv','yes')";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute;
+                                $loaded++;
+                        } else {
+                                print "[$date $time] Swap averege monitor $monitorline[1] is not overrideble.\n";
+                                $override++;
+                        }
+
+		}
+		elsif("$monitorline[0]" eq "EV") {
+
+			$sql="select seqnr from andutteye_monitor_configuration where system_name = '$system_name' and monitortype = 'EV'";
+                        $sql.=" and monitorname = '$monitorline[1]' and override = 'no'";
+                        $sth = $dbh->prepare("$sql");
+                        $sth->execute;
+                        my @row = $sth->fetchrow_array;
+
+                        if (!defined($row[0])) {
+                                print "[$date $time] A EV Every program monitor $monitorline[1] saved.\n";
+
+                                $sql ="delete from andutteye_monitor_configuration where system_name = '$system_name' and monitortype = 'EV'";
+                                $sql.=" and monitorname = '$monitorline[1]'";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute;
+
+                                $sql ="insert into andutteye_monitor_configuration(system_name,monitorname,monitortype,status,runprogram,sendemail";
+                                $sql.=",severity,schedule,message,alarmlimit,errorlimit,created_date,created_time,created_by,override,exitstatus,programargs) values ('$system_name','$monitorline[1]','EV','$monitorline[2]'";
+                                $sql.=",'$monitorline[3]','$monitorline[4]','$monitorline[5]','$monitorline[6]','$monitorline[7]','$monitorline[8]','$monitorline[9]','$date','$time','andutteyedsrv','yes'";
+				$sql.=",'$monitorline[10]','$monitorline[11]')";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute;
+                                $loaded++;
+                        } else {
+                                print "[$date $time] Every program monitor $monitorline[1] is not overrideble.\n";
+                                $override++;
+                        }
+
+		}
+		elsif("$monitorline[0]" eq "FM") {
+
+			$sql="select seqnr from andutteye_monitor_configuration where system_name = '$system_name' and monitortype = 'FM'";
+                        $sql.=" and monitorname = '$monitorline[1]' and override = 'no'";
+                        $sth = $dbh->prepare("$sql");
+                        $sth->execute;
+                        my @row = $sth->fetchrow_array;
+
+                        if (!defined($row[0])) {
+                                print "[$date $time] A FM Filemodification monitor $monitorline[1] saved.\n";
+
+                                $sql ="delete from andutteye_monitor_configuration where system_name = '$system_name' and monitortype = 'FM'";
+                                $sql.=" and monitorname = '$monitorline[1]'";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute;
+
+                                $sql ="insert into andutteye_monitor_configuration(system_name,monitorname,monitortype,status,runprogram,sendemail";
+                                $sql.=",severity,schedule,message,alarmlimit,errorlimit,created_date,created_time,created_by,override) values ('$system_name','$monitorline[1]','FM','$monitorline[2]'";
+                                $sql.=",'$monitorline[3]','$monitorline[4]','$monitorline[5]','$monitorline[5]','$monitorline[6]','$monitorline[7]','$monitorline[8]','$date','$date','andutteyedsrv','yes')";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute;
+                                $loaded++;
+                        } else {
+                                print "[$date $time] Filemodification monitor $monitorline[1] is not overrideble.\n";
+                                $override++;
+                        }
+
+		} else {
+			print "[$date $time] Found a invalid monitor type.\n";
+		}
+	}
+# End of forloop
+}
+print "[$date $time] Saved $loaded system monitors in database\n";
+log_entry("Saved $loaded system monitors in database","SaveConfig","$system_name");
+print "[$date $time] $override dont saved because they were not overrideble.\n";
+log_entry("$override dont saved because they were not overrideble","SaveConfig","$system_name");
+# End if
+}
+
+print $client "ANDUTTEYEQUIT\n";
+if($Enable_forking_mode eq "yes") {
+        print "[$date,$time] Closing child. aesid_save_monitor_configuration.\n";
+        exit;
+}
+
+# End of subfunction
+}
+sub aesid_resumeoperation {
+my $hostvalue="$_[0]";
+my $unknown="$_[1]";
+my $monitorvalue="$_[2]";
+my $monitortypevalue="$_[3]";
+
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+my $DATE=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+my $TIME=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+$dbh = DBI->connect("dbi:$Use_dbi_database_extra_string$Use_database_type:$Use_database_name", $Use_database_user, $Use_database_password) or die("ERRROR Couldnt open database:$Use_database_name errormsg:$!");
+        $sql="select count(*) from andutteye_alarm where hostname = '$hostvalue' and monitor = '$monitorvalue'";
+        $sql.="and monitortype = '$monitortypevalue'";
+        $sql.="and status != 'CLOSED'";
+        $sth = $dbh->prepare("$sql");
+        $sth->execute;
+        my @row = $sth->fetchrow_array;
+
+                if ( "$row[0]" == "0" ) {
+                        log_entry("Resumed operation for type:$monitortypevalue monitor:$monitorvalue, $row[0] st alarms closed","RESUMEOP","$hostvalue");
+                        print "[$DATE,$TIME] Resumed operation $row[0] st alarms closed\n";
+                } else {
+                        log_entry("Resumed operation for type:$monitortypevalue monitor:$monitorvalue, $row[0] st alarms closed","RESUMEOP","$hostvalue");
+                        $sql="update andutteye_alarm set status='CLOSED',closedby='aeserver' where hostname = '$hostvalue'";
+                        $sql.="and monitor = '$monitorvalue' and monitortype = '$monitortypevalue' and status != 'CLOSED'";
+                        $sth = $dbh->prepare("$sql");
+                        $sth->execute;
+                        print "[$DATE,$TIME] Resumed operation $row[0] st alarms closed\n";
+                }
+
+if($Enable_forking_mode eq "yes") {
+        print "[$DATE,$TIME] Closing child. Subfunction aesid_resumeoperation.\n";
+        exit;
+}
+# End of subfunction
+}
+sub aesid_snapshot {
+my $hostvalue="$_[0]";
+my $unknown="$_[1]";
+my $procvalue="$_[2]";
+my $fsvalue="$_[3]";
+my $netvalue="$_[4]";
+my $hardwarevalue="$_[5]";
+my $usersvalue="$_[6]";
+
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+my $date=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+my $time=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+$dbh = DBI->connect("dbi:$Use_dbi_database_extra_string$Use_database_type:$Use_database_name", $Use_database_user, $Use_database_password) or die("ERROR Couldnt open database:$Use_database_name errormessage:$!");
+        $sql ="insert into andutteye_snapshot(system_name,created_date,created_time,procs,fs,net,hardware,users)";
+        $sql.=" values('$hostvalue','$date','$time','$procvalue','$fsvalue','$netvalue','$hardwarevalue','$usersvalue')";
+        $sth = $dbh->prepare("$sql");
+        $sth->execute;
+        print "[$date,$time] System snapshot saved.\n";
+	log_entry("System snapshot saved.","SnapShot","$hostvalue");
+
+
+if($Enable_forking_mode eq "yes") {
+        print "[$date,$time] Closing child. Subfunction aesid_snapshot.\n";
+	exit;
+}
+
+# End of subfunction
+}
+sub aesid_alarm {
+my $hostvalue="$_[0]";
+my $aesidvalue="$_[1]";
+my $shortinfovalue="$_[2]";
+my $longinfovalue="$_[3]";
+my $severityvalue="$_[4]";
+my $monitorvalue="$_[5]";
+my $monitortypevalue="$_[6]";
+
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+my $DATE=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+my $TIME=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+$dbh = DBI->connect("dbi:$Use_dbi_database_extra_string$Use_database_type:$Use_database_name", $Use_database_user, $Use_database_password) or die ("ERROR Couldnt open database:$Use_database_name errormessage:$!");
+        $sql ="select count(seqnr) from andutteye_alarm where system_name='$hostvalue' and shortinformation='$shortinfovalue'";
+        $sql.=" and longinformation='$longinfovalue' and severity = '$severityvalue' and status != 'CLOSED'";
+        $sth = $dbh->prepare("$sql");
+        $sth->execute;
+        my @row = $sth->fetchrow_array;
+
+        if(check_severity("$severityvalue","$hostvalue") == 1) {
+                print "Subfunction check_severity gave me an exitcode, dropping this and taking next post\n";
+                next;
+        }
+        if ( "$row[0]" == "0" ) {
+                print  "[$DATE,$TIME] New alarm\n";
+                log_entry("New alarm discovered $shortinfovalue","Alarm","$hostvalue");
+
+                $dbh = DBI->connect("dbi:$Use_dbi_database_extra_string$Use_database_type:$Use_database_name", $Use_database_user, $Use_database_password) or die("ERROR Couldnt open database:$Use_database_name errormessage:$!");
+
+                $sql ="insert into andutteye_alarm(system_name,created_date,created_time,shortinformation,longinformation";
+                $sql.=",repeatcount,status,severity,monitor,monitortype) values('$hostvalue','$DATE','$TIME',";
+                $sql.="'$shortinfovalue','$longinfovalue','0','OPEN','$severityvalue','$monitorvalue','$monitortypevalue')";
+                $sth = $dbh->prepare("$sql");
+                $sth->execute;
+                print $client "ANDUTTEYEQUIT\n";
+        } else {
+                print "[$DATE,$TIME] Alarm repeatcount\n";
+                log_entry("Alarm repeatcount $shortinfovalue","Alarm","$hostvalue");
+
+                $dbh = DBI->connect("dbi:$Use_dbi_database_extra_string$Use_database_type:$Use_database_name", $Use_database_user, $Use_database_password) or die("ERROR Couldnt open database:$Use_database_name errormessage:$!");
+
+                $sql ="select repeatcount from andutteye_alarm where system_name='$hostvalue' and shortinformation='$shortinfovalue'";
+                $sql.=" and longinformation='$longinfovalue' and status != 'CLOSED'";
+                $sth = $dbh->prepare("$sql");
+                $sth->execute;
+                my @row1 = $sth->fetchrow_array;
+
+                $sql ="update andutteye_alarm set repeatcount=($row1[0] + 1),lastdate='$DATE',";
+                $sql.="lasttime='$TIME' where system_name='$hostvalue' and shortinformation='$shortinfovalue'";
+                $sql.="and longinformation='$longinfovalue'";
+                $sth = $dbh->prepare("$sql"),
+                $sth->execute;
+                print $client "ANDUTTEYEQUIT\n";
+        }
+$dbh->disconnect;
+
+if($Enable_forking_mode eq "yes") {
+        print "[$DATE,$TIME] Closing child. aesid_alarm.\n";
+	exit;
+}
+
+# End of subfunction
+}
+sub aesid_assetmanagement {
+my $assetmanagement_host="$_[0]";
+my $assetmanagement_name="$_[2]";
+my $assetmanagement_result="$_[3]";
+my $assetmanagement_prog="$_[4]";
+my $assetmanagement_args="$_[5]";
+
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+my $date=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+my $time=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+$dbh = DBI->connect("dbi:$Use_dbi_database_extra_string$Use_database_type:$Use_database_name", $Use_database_user, $Use_database_password) or die ("ERROR Couldnt open database:$Use_database_name errormessage:$!");
+$sql ="select count(seqnr) from andutteye_assetmanagement where system_name = '$assetmanagement_host' and assetmanagementname = '$assetmanagement_name'";
+$sql.=" and assetmanagementresult = '$assetmanagement_result' and assetmanagementprog = '$assetmanagement_prog' and assetmanagementargs = '$assetmanagement_args'";
+$sth = $dbh->prepare("$sql"),
+$sth->execute;
+my @row = $sth->fetchrow_array;
+
+        if ( "$row[0]" == "0" ) {
+		print  "[$date,$time] New assetmanagement information\n";
+		log_entry("New Assetmanagement information $assetmanagement_name","AssetManagement","$assetmanagement_host");
+		$dbh = DBI->connect("dbi:$Use_dbi_database_extra_string$Use_database_type:$Use_database_name", $Use_database_user, $Use_database_password) or die ("ERROR Couldnt open database:$Use_database_name errormessage:$!");
+        	$sql ="insert into andutteye_assetmanagement(system_name,assetmanagementname,assetmanagementresult,assetmanagementprog";
+        	$sql.=",assetmanagementargs,created_date,created_time) values(?,?,?,?,?,?,?)";
+		$sth = $dbh->prepare("$sql"),
+		$sth->execute($assetmanagement_host,$assetmanagement_name,$assetmanagement_result,$assetmanagement_prog,$assetmanagement_args,$date,$time);
+	} else {
+		print  "[$date,$time] Found the same assetmanagement information as saved before, wont save it.\n";
+		log_entry("Same information found on $assetmanagement_name, dont saving in db.","AssetManagement","$assetmanagement_host");
+	}
+
+print $client "ANDUTTEYEQUIT\n";
+if($Enable_forking_mode eq "yes") {
+        print "[$date,$time] Closing child. aesid_assetmanagement.\n";
+        exit;
+}
+
+# End of subfunction
+}
+sub aesid_systemstatistics {
+my $systemstatistics_host="$_[0]";
+my $systemstatistics_name="$_[2]";
+my $systemstatistics_result="$_[3]";
+my $systemstatistics_prog="$_[4]";
+my $systemstatistics_args="$_[5]";
+
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+my $date=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+my $time=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+print  "[$date,$time] Systemstatistics information $systemstatistics_name\n";
+log_entry("Systemstatistics information $systemstatistics_name","SystemStatistics","$systemstatistics_host");
+
+$dbh = DBI->connect("dbi:$Use_dbi_database_extra_string$Use_database_type:$Use_database_name", $Use_database_user, $Use_database_password) or die ("ERROR Couldnt open database:$Use_database_name errormessage:$!");
+        $sql ="insert into andutteye_statistics(system_name,systemstatisticsname,systemstatisticsresult,systemstatisticsprog";
+        $sql.=",systemstatisticsargs,created_date,created_time) values('$systemstatistics_host','$systemstatistics_name','$systemstatistics_result'";
+        $sql.=",'$systemstatistics_prog','$systemstatistics_args','$date','$time')";
+        $sth = $dbh->prepare("$sql"),
+        $sth->execute;
+
+print $client "ANDUTTEYEQUIT\n";
+if($Enable_forking_mode eq "yes") {
+        print "[$date,$time] Closing child. aesid_systemstatistics.\n";
+        exit;
+}
+
+# End of subfunction
+}
+sub aesid_transferitem {
+my $system_name="$_[0]";
+my $filename="$_[2]";
+my $filedata="$_[3]";
+my @lines;
+$transfer_item_loops="0";
+$next_transfer_item_loops="5";
+$next_transfer_item_loops=($transfer_item_loops + 100);
+
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+my $date=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+my $time=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+
+if( ! -d "$Transfer_dir_location/$system_name") {
+        mkdir ("$Transfer_dir_location/$system_name")
+                or die "[err] Failed to create transfer directory for system:$Transfer_dir_location/$system_name\n";
+}
+if($filename ne "") {
+	open("file",">>$Transfer_dir_location/$system_name/$filename")
+        	or warn "[err] Failed to spool datafile to:$Transfer_dir_location/$system_name/$filename err:$!\n";
+
+	print "[$date $time] Writing a new transferitem $Transfer_dir_location/$system_name/$filename\n";
+	log_entry("Writing a new transferitem $Transfer_dir_location/$system_name/$filename","TransferItem","$system_name");
+
+	@lines=split(";;;;","$filedata");
+	for(@lines) {
+		print file "$_\n";
+        	$transfer_item_loops++;
+	}
+	print "[$date $time] Transfer item $Transfer_dir_location/$system_name/$filename written. $transfer_item_loops lines.\n";
+	close("file");
+} else {
+	print "[$date $time] No transferitems to load.\n";
+}
+	
+print $client "ANDUTTEYEQUIT\n";
+if($Enable_forking_mode eq "yes") {
+        print "[$date,$time] Closing child. aesid_transferitem.\n";
+        exit;
+}
+
+# End of subfunction
+}
+sub aesid_validatemanagement {
+my $system_name="$_[0]";
+my $ecode;
+my $ecode1;
+my $ecode2;
+my @filedata;
+my $filedata;
+my $count="1";
+my $last;
+my $usetimeout="0";
+
+
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+my $date=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+my $time=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+if (! -d "$Cache_dir_location/$system_name") {
+	mkdir("$Cache_dir_location/$system_name");
+} else {
+	`rm -rf $Cache_dir_location/$system_name/*`;
+}
+
+if (! -f "$Management_package_program") {
+	print "[$date $time] ERROR Management package program $Management_package_program isnt present.\n";
+	log_entry("ERROR Management package program $Management_package_program isnt present","ValidateManagement","$system_name");
+} else {
+	print "[$date $time] Validate management packages for $system_name\n";
+	log_entry("Validating management packages","ValidateManagement","$system_name");
+	system("$Management_package_program -system=$system_name > /dev/null 2>&1");
+
+}
+if (! -f "$Management_files_program") {
+	print "[$date $time] ERROR Management files program $Management_files_program isnt present.\n";
+	log_entry("ERROR Management files program $Management_files_program isnt present","ValidateFiles","$system_name");
+} else {
+	print "[$date $time] Validate management files for $system_name\n";
+	log_entry("Validating management files","ValidateFiles","$system_name");
+	system("$Management_files_program -system=$system_name > /dev/null 2>&1");
+}
+if( -s "$Cache_dir_location/$system_name/actionlist.dat" ){
+	print "[$date $time] Actionlist exists for $system_name and is not empty. Packaging content.\n";
+
+        	chdir("$Cache_dir_location/$system_name")
+                	or die $!;
+
+        	print "[$date $time] Packaging selected Andutteye data.\n";
+        	system("tar -cvf $system_name.tar * --exclude $system_name.tar > /dev/null 2>&1");
+
+
+		print "[$date $time] Parsing package, counting size.\n";
+        	open("file","<$Cache_dir_location/$system_name/$system_name.tar")
+                	or warn "[err] Failed to open file:$Cache_dir_location/$system_name/$system_name.tar.gz for reading\n";
+
+		$last="0";
+        	for(<file>) {
+                	$last++;
+        	}
+        	print "[$date $time] Last line found $last\n";
+        	close("file");
+
+        	print "[$date $time] Sending system management content.\n";
+        	open("file","<$Cache_dir_location/$system_name/$system_name.tar")
+                	or warn "[err] Failed to open file:$Cache_dir_location/$system_name/$system_name.tar.gz for reading\n";
+		
+		   binmode("file");
+		 
+                	print $client "ANDUTTEYEOPENFILE\n";
+
+				my $output;
+                        	for(<file>) {
+                                	if ("$last" == "$count") {
+                                        	print "[$date $time] ($last = $count) No newline on last managementcontent line.\n";
+                                        	print $client "$_";
+                                	} else {
+                                        	print $client "$_";
+                                	}
+                                	$count++;
+                        	}
+
+                	print $client "ANDUTTEYECLOSEFILE\n";
+
+        	close("file");
+        	print "[$date $time] $count system management content lines transfered.\n";
+
+} else {
+	print "[$date $time] Actionlist for $system_name doesnt exist. Suppose we have nothing to do.\n";
+}
+
+print $client "ANDUTTEYEQUIT\n";
+if($Enable_forking_mode eq "yes") {
+        print "[$date,$time] Closing child. aesid_validatemanagement.\n";
+        exit;
+}
+# End of subfunction
+}
+sub aesid_savemanagementresult {
+my $system_name="$_[0]";
+my $result="$_[2]";
+my $runid;
+my $count="0";
+my @lines;
+
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+my $date=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+my $time=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+$dbh = DBI->connect("dbi:$Use_dbi_database_extra_string$Use_database_type:$Use_database_name", $Use_database_user, $Use_database_password) or die("ERROR Couldnt open database:$Use_database_name errormsg:$!");
+
+$sql ="select runid from andutteye_managementlog where system_name = '$system_name' order by seqnr desc limit 0,1";
+$sth = $dbh->prepare("$sql");
+$sth->execute;
+my @row = $sth->fetchrow_array;
+
+if(defined($row[0])) {
+	$runid="$row[0]";
+	print "[$date $time] Saving management result on last runid:$row[0]\n";
+
+	@lines=split(";;;;","$result");
+        	for(@lines) {
+			$sql ="insert into andutteye_managementlog(runid,system_name,logentry,messagetype,created_date,created_time) values (?,?,?,?,?,?)";
+			$sth = $dbh->prepare("$sql");
+                        $sth->execute($runid,$system_name,"$_","AgentLogEntry",$date,$time);
+		$count++;
+		}
+	print "[$date $time] $count management result saved for system $system_name\n";
+} else {
+	print "[$date $time] Error found no last runid for management resultlog save on system:$system_name\n";
+}
+
+
+print $client "ANDUTTEYEQUIT\n";
+if($Enable_forking_mode eq "yes") {
+        print "[$date,$time] Closing child. aesid_savemanagementresult.\n";
+        exit;
+}
+
+# End of subfunction
+}
+sub aesid_savemonitorstatus {
+my $hostvalue="$_[0]";
+my $monitor_status_data="$_[2]";
+my @monitor_status_bulk;
+my @monitor_status=split;
+
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+my $date=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+my $time=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+$dbh = DBI->connect("dbi:$Use_dbi_database_extra_string$Use_database_type:$Use_database_name", $Use_database_user, $Use_database_password) or die("ERROR Couldnt open database:$Use_database_name errormsg:$!");
+
+@monitor_status_bulk=split(";;;;", $monitor_status_data);
+for(@monitor_status_bulk) {
+	chomp;
+	@monitor_status=split("~", "$_");
+
+	$sql ="select count(*) from andutteye_monitor_status where monitorname = '$monitor_status[0]' and monitortype  = '$monitor_status[1]'";
+        $sql.=" and system_name = '$hostvalue'";
+        $sth = $dbh->prepare("$sql");
+        $sth->execute;
+        my @row = $sth->fetchrow_array;
+
+	if($row[0] == 0) {
+		print "[$date $time] Saving monitorstatus on a new monitor->$monitor_status[0] on system $hostvalue\n";
+		print "\tMonitorname:$monitor_status[0]\n";
+		print "\tMonitortype:$monitor_status[1]\n";
+		print "\tMonitorstatus:$monitor_status[2]\n";
+		print "\tMonitormessage:$monitor_status[3]\n";
+
+		if($monitor_status[2] eq "Error") {
+			$sql="select number_notok from andutteye_monitor_status where monitorname = '$monitor_status[0]' and monitortype = '$monitor_status[1]' and system_name = '$hostvalue'";
+			$sth = $dbh->prepare("$sql");
+			$sth->execute;
+			my @result = $sth->fetchrow_array;
+			my $newresult = ($result[0] + 1);
+
+			$sql ="insert into andutteye_monitor_status(monitorname,monitortype,monitorstatus,monitormessage,system_name,created_date,created_time,lastdate_notok,lasttime_notok,number_notok) values('$monitor_status[0]',";
+        		$sql.="'$monitor_status[1]','$monitor_status[2]','$monitor_status[3]','$hostvalue','$date','$time','$date','$time','$newresult')";
+        		$sth = $dbh->prepare("$sql");
+        		$sth->execute;
+		} else {
+			$sql="select number_ok from andutteye_monitor_status where monitorname = '$monitor_status[0]' and monitortype = '$monitor_status[1]' and system_name = '$hostvalue'";
+			$sth = $dbh->prepare("$sql");
+			$sth->execute;
+			my @result = $sth->fetchrow_array;
+			my $newresult = ($result[0] + 1);
+
+			$sql ="insert into andutteye_monitor_status(monitorname,monitortype,monitorstatus,monitormessage,system_name,created_date,created_time,lastdate_ok,lasttime_ok,number_ok) values('$monitor_status[0]',";
+        		$sql.="'$monitor_status[1]','$monitor_status[2]','$monitor_status[3]','$hostvalue','$date','$time','$date','$time','$newresult')";
+        		$sth = $dbh->prepare("$sql");
+        		$sth->execute;
+		}
+	} else {
+		print "[$date $time] Updating monitorstatus on monitor->$monitor_status[0] on system $hostvalue\n";
+		print "\tMonitorname:$monitor_status[0]\n";
+		print "\tMonitortype:$monitor_status[1]\n";
+		print "\tMonitorstatus:$monitor_status[2]\n";
+		print "\tMonitormessage:$monitor_status[3]\n";
+	
+		$sql ="select monitorstatus,seqnr from andutteye_monitor_status where monitorname = '$monitor_status[0]' and monitortype  = '$monitor_status[1]'";
+        	$sql.=" and system_name = '$hostvalue' order by seqnr desc limit 0,1";
+        	$sth = $dbh->prepare("$sql");
+        	$sth->execute;
+        	my @status = $sth->fetchrow_array;
+
+		if("$status[0]" eq "$monitor_status[2]") {
+			# The same result as last time, only update date, time and total results.
+
+			if($monitor_status[2] eq "Error") {
+				$sql="select number_notok from andutteye_monitor_status where monitorname = '$monitor_status[0]' and monitortype = '$monitor_status[1]' and system_name = '$hostvalue' and seqnr = '$status[1]'";
+				$sth = $dbh->prepare("$sql");
+				$sth->execute;
+				my @result = $sth->fetchrow_array;
+				my $newresult = ($result[0] + 1);
+
+				$sql ="update andutteye_monitor_status set monitorname = '$monitor_status[0]', monitortype = '$monitor_status[1]', monitorstatus = '$monitor_status[2]',";
+        			$sql.=" monitormessage = '$monitor_status[3]', created_date = '$date', created_time = '$time', lastdate_notok = '$date', lasttime_notok = '$time', number_notok = '$newresult'";
+        			$sql.=" where monitorname = '$monitor_status[0]' and monitortype = '$monitor_status[1]' and system_name = '$hostvalue' and seqnr = '$status[1]'";
+        			$sth = $dbh->prepare("$sql");
+        			$sth->execute;
+			} else {
+				$sql="select number_ok from andutteye_monitor_status where monitorname = '$monitor_status[0]' and monitortype = '$monitor_status[1]' and system_name = '$hostvalue' and seqnr = '$status[1]'";
+				$sth = $dbh->prepare("$sql");
+				$sth->execute;
+				my @result = $sth->fetchrow_array;
+				my $newresult = ($result[0] + 1);
+
+				$sql ="update andutteye_monitor_status set monitorname = '$monitor_status[0]', monitortype = '$monitor_status[1]', monitorstatus = '$monitor_status[2]',";
+        			$sql.=" monitormessage = '$monitor_status[3]', created_date = '$date', created_time = '$time', lastdate_ok = '$date', lasttime_ok = '$time', number_ok = '$newresult'";
+        			$sql.=" where monitorname = '$monitor_status[0]' and monitortype = '$monitor_status[1]' and system_name = '$hostvalue' and seqnr = '$status[1]'";
+        			$sth = $dbh->prepare("$sql");
+        			$sth->execute;
+			}
+		} else {
+			# New result, create a new entry in history log.
+
+			 if($monitor_status[2] eq "Error") {
+                        	$sql="select number_notok from andutteye_monitor_status where monitorname = '$monitor_status[0]' and monitortype = '$monitor_status[1]' and system_name = '$hostvalue' and seqnr = '$status[1]'";
+                        	$sth = $dbh->prepare("$sql");
+                        	$sth->execute;
+                        	my @result = $sth->fetchrow_array;
+                        	my $newresult = ($result[0] + 1);
+
+                        	$sql ="insert into andutteye_monitor_status(monitorname,monitortype,monitorstatus,monitormessage,system_name,created_date,created_time,lastdate_notok,lasttime_notok,number_notok) values('$monitor_status[0]',";
+                        	$sql.="'$monitor_status[1]','$monitor_status[2]','$monitor_status[3]','$hostvalue','$date','$time','$date','$time','$newresult')";
+                        	$sth = $dbh->prepare("$sql");
+                        	$sth->execute;
+                	} else {
+                        	$sql="select number_ok from andutteye_monitor_status where monitorname = '$monitor_status[0]' and monitortype = '$monitor_status[1]' and system_name = '$hostvalue' and seqnr = '$status[1]'";
+                        	$sth = $dbh->prepare("$sql");
+                        	$sth->execute;
+                        	my @result = $sth->fetchrow_array;
+                        	my $newresult = ($result[0] + 1);
+
+                        	$sql ="insert into andutteye_monitor_status(monitorname,monitortype,monitorstatus,monitormessage,system_name,created_date,created_time,lastdate_ok,lasttime_ok,number_ok) values('$monitor_status[0]',";
+                        	$sql.="'$monitor_status[1]','$monitor_status[2]','$monitor_status[3]','$hostvalue','$date','$time','$date','$time','$newresult')";
+                        	$sth = $dbh->prepare("$sql");
+                        	$sth->execute;
+                	}
+		}
+	}
+}
+#$sql="delete from andutteye_monitor_status where system_name = '$hostvalue' and created_time != '$time'";
+#$sth = $dbh->prepare("$sql");
+#$sth->execute;
+
+print $client "ANDUTTEYEQUIT\n";
+if($Enable_forking_mode eq "yes") {
+        print "[$date,$time] Closing child. aesid_savemonitorstatus.\n";
+        exit;
+}
+
+# End of subfunction
+}
+sub aesid_software {
+
+my $hostvalue="$_[0]";
+my $unknown="$_[1]";
+my $countonhostvalue="$_[2]";
+my $softwarevalue="$_[3]";
+my $packagetypevalue="$_[4]";
+
+my @softlist=split(" ","$softwarevalue");
+my @splittedsoft;
+my $nr="0";
+my $updatecount="0";
+
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+my $date=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+my $time=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+print "[$date,$time] Software inventory from $hostvalue\n";
+$dbh = DBI->connect("dbi:$Use_dbi_database_extra_string$Use_database_type:$Use_database_name", $Use_database_user, $Use_database_password) or die("ERROR Couldnt open database:$Use_database_name errormsg:$!");
+
+for(@softlist) {
+	@splittedsoft=split("~",$_);
+	$sql ="select count(*) from andutteye_software where aepackage = '$splittedsoft[0]' and aeversion =";
+	$sql.=" '$splittedsoft[1]' and aerelease = '$splittedsoft[2]' and aearchtype = '$splittedsoft[3]' and system_name = '$hostvalue'";
+	$sth = $dbh->prepare("$sql");
+	$sth->execute;
+	my @row = $sth->fetchrow_array;
+
+        	if ( "$row[0]" == "0" ) {
+           		$updatecount++;
+       		 }
+}
+print "[$date $time] $updatecount packages updated/modified\n";
+for(@softlist) {
+        @splittedsoft=split("~",$_);
+	$sql ="select count(*) from andutteye_software where aepackage = '$splittedsoft[0]' and aeversion =";
+	$sql.=" '$splittedsoft[1]' and aerelease = '$splittedsoft[2]' and aearchtype = '$splittedsoft[3]' and system_name = '$hostvalue' and status = 'CURRENT'";
+	$sth = $dbh->prepare("$sql");
+	$sth->execute;
+	my @row = $sth->fetchrow_array;
+
+	if ( "$row[0]" == "0" ) {
+			print "[$date $time] Adding new package $splittedsoft[0] for system $hostvalue\n";
+			$sql ="insert into andutteye_software(system_name,aepackage,packagetype,aeversion,aerelease,aearchtype,status,created_date,created_time)";
+			$sql.=" values('$hostvalue','$splittedsoft[0]','$packagetypevalue','$splittedsoft[1]','$splittedsoft[2]','$splittedsoft[3]','CURRENT','$date','$time')";
+			$sth = $dbh->prepare("$sql");
+			$sth->execute;
+
+        		print "[$date $time] Package $splittedsoft[0] has been installed or upgraded or is initially checked in.\n";
+			log_entry("Package $splittedsoft[0] have been modified.","SoftwareInventory","$hostvalue");
+	} else {
+			if ($Use_debug_level > 8) {
+				#print "[$date $time] Updating package cridentials for package $splittedsoft[0] for system $hostvalue\n";
+			}
+			$sql ="update andutteye_software set created_date = '$date', created_time = '$time',aepackage='$splittedsoft[0]',packagetype='$packagetypevalue',aeversion='$splittedsoft[1]',aerelease='$splittedsoft[2]'";
+			$sql.=" where system_name='$hostvalue' and aepackage='$splittedsoft[0]' and aeversion='$splittedsoft[1]' and aerelease='$splittedsoft[2]' and status = 'CURRENT'";
+			$sth = $dbh->prepare("$sql");
+                        $sth->execute;
+	}
+
+   if ($Use_debug_level > 8) {
+           print "[$date,$time] Package:$splittedsoft[0] version:$splittedsoft[1] release:$splittedsoft[2] \n";
+   }
+
+$nr++;
+# End of for-loop
+}
+$sql="select aepackage from andutteye_software where created_time != '$time' and system_name = '$hostvalue' and status = 'CURRENT' and reported_date is NULL";
+$sth = $dbh->prepare("$sql");
+$sth->execute;
+my @deleted = $sth->fetchrow_array;
+
+for(@deleted) {
+	print "[$date $time] Package $_ have been uninstalled on $hostvalue\n";
+	log_entry("Package $_ have been uninstalled.","SoftwareInventory","$hostvalue");
+}
+$sql="update andutteye_software set status='DELETED',reported_date = '$date' where created_time != '$time' and system_name = '$hostvalue'";
+$sth = $dbh->prepare("$sql");
+$sth->execute;
+print "[$date $time] Package count by Andutteye server:$nr on host:$countonhostvalue.\n";
+log_entry("Package count by Andutteye server:$nr on host:$countonhostvalue.","SoftwareInventory","$hostvalue");
+
+if($Enable_forking_mode eq "yes") {
+        print "[$date,$time] Closing child. Subfunction aesid_software.\n";
+	exit;
+}
+# End of subfunction
+}
+sub aesid_transfer_management_files {
+my $system_name = "$_[0]";
+my @filedata;
+my $filedata;
+my $count="1";
+my $last;
+
+
+if( -f "$Cache_dir_location/$system_name/$system_name.tar") {
+	print "[$date $time] Sending system management content.\n";
+
+	open("file","<$Cache_dir_location/$system_name/$system_name.tar")
+        	or warn "[err] Failed to open file:$Cache_dir_location/$system_name/$system_name.tar.gz for reading\n";
+
+	for(<file>) {
+		$last++;
+	}	
+	print "[$date $time] Last line found $last\n";
+	close("file");
+
+	open("file","<$Cache_dir_location/$system_name/$system_name.tar")
+        	or warn "[err] Failed to open file:$Cache_dir_location/$system_name/$system_name.tar.gz for reading\n";
+
+                print $client "OPENFILE\n";
+
+			for(<file>) {
+				chomp;
+				if ("$last" == "$count") {
+					print "[$date $time] ($last = $count) No newline on last managementcontent line.\n";
+					print $client "$_\n";
+				} else {
+					print $client "$_\n";
+				}
+				$count++;
+			}
+                
+		print $client "CLOSEFILE\n";
+        
+	close("file");
+	print "[$date $time] $count system management content lines transfered.\n";
+
+} else {
+	print "[$date $time] No management content to transfer was found for system $system_name\n";
+}
+
+print $client "ANDUTTEYEQUIT\n";
+if($Enable_forking_mode eq "yes") {
+        print "[$date,$time] Closing child. aesid_transfer_management_files.\n";
+        exit;
+}
+
+
+# End of subfunction
+}
+sub aesid_checkforactions {
+
+
+print $client "ANDUTTEYEQUIT\n";
+if($Enable_forking_mode eq "yes") {
+        print "[$date,$time] Closing child. aesid_checkforactions.\n";
+        exit;
+}
+sub aesid_hardwarecheckin {
+my $macaddress = "@_[0]";
+my $serialnumber = "@_[1]";
+
+my $status;
+print "[$date,$time] New hardware checked in, got $macaddress from client\n";
+
+$dbh = DBI->connect("dbi:$Use_dbi_database_extra_string$Use_database_type:$Use_database_name", $Use_database_user, $Use_database_password) or die("ERROR Couldnt open database:$Use_database_name errormsg:$!");
+#macaddress serialnumber systemname status created_date created_time
+
+$sql ="select count(seqnr) from andutteye_provisioning_checkin where macaddress = '$macaddress'";
+$sth = $dbh->prepare("$sql");
+$sth->execute;
+my @row = $sth->fetchrow_array;
+
+if ($row[0] == 0) {
+        $status = "new";
+        $sql ="insert into andutteye_provisioning_checkin(macaddress,serialnumber, status, created_date, created_time)";
+        $sql .= " values('$macaddress','$serialnumber','$status','$date','$time')";
+
+        $sth = $dbh->prepare("$sql") or die "$!";
+        $sth->execute or die "$!";
+        print "[$date $time] $macaddress registered.\n";
+        print $client "HELLO\n";
+} else {
+        # if sql select find server marked for install:
+        $sql ="select status from andutteye_provisioning_checkin where macaddress = '$macaddress'";
+        $sth = $dbh->prepare("$sql");
+        $sth->execute;
+        my @row = $sth->fetchrow_array;
+        if ($row[0] eq "install") {
+                print $client "INSTALL\n";
+        }
+        else {
+                print $client "WAIT\n";
+        }
+}
+
+if ($Enable_forking_mode eq "yes") {
+        print "[$date,$time] Closing child. aesid_hardwarecheckin.\n";
+        exit;
+}
+# End of subfunction
+}
+
+
+# End of subfunction
+}
+# Parse of commandline arguments.
+for(@ARGV) {
+        if ( $_ =~/-config/ ) {
+                my @tmp=split("=","$_");
+                $config="$tmp[1]";
+        }
+}
+if(!defined($ARGV[0])) {
+        program_info();
+}
+
+#########################################################
+# STARTING MAIN EXECUTING
+#########################################################
+parse_and_load_configuration();
+
+if("$Enable_daemon_mode" eq "yes") {
+	daemonize();
+}
+bind_and_listen_for_connections();
+
+while(1) {
+	print "[$date $time] Waiting on incoming agent connections.\n";
+
+while ($client = $socket->accept()) {
+my $childpid;
+my $message;
+my $subject_name;
+my $issuer_name;
+$SIG{CHLD} = 'IGNORE';
+
+if (!$client) {
+	print "[$date $time] ERROR no defined packet:$socket->errstr\n";
+	next;
+}
+if( ref($socket) eq "IO::Socket::SSL") {
+	  $subject_name = $client->peer_certificate("subject");
+	  $issuer_name = $client->peer_certificate("issuer");
+}
+
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+my $DATE=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+my $TIME=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+if("$Enable_forking_mode" eq "yes" ) {
+                next if $pid = fork;
+                die "fork: $!" unless defined $pid;
+                $childpid="$$";
+                print "[$DATE,$TIME] Starting new session. Forking child:$childpid\n";
+}
+$message = <$client>;
+my @DATA = split("#----###----#","$message");
+
+if(verify_banlist("$DATA[0]") == 1) {
+        next;
+}
+print "[$DATE,$TIME] Message from Host:$DATA[0] aesid:$DATA[1]\n";
+
+if ($DATA[1] eq "CHECK") {
+	aesid_check("$DATA[0]",
+                    "$DATA[1]",
+                    "$DATA[2]",
+                    "$DATA[3]",
+                    "$DATA[4]",
+                    "$DATA[5]",
+                    "$DATA[6]",
+                    "$DATA[7]",
+                    "$DATA[8]",
+                    "$DATA[9]",
+                    "$DATA[10]",
+                    "$DATA[11]",
+                    "$DATA[12]",
+                    "$DATA[13]",
+                    "$DATA[14]",
+                    "$DATA[15]");
+}
+elsif ($DATA[1] eq "CHECKINSOFTWARE") {
+      aesid_software("$DATA[0]",
+                     "$DATA[1]",
+                     "$DATA[2]",
+                     "$DATA[3]",
+                     "$DATA[4]");
+
+}
+elsif ($DATA[1] eq "SaveConfig") {
+	aesid_save_andutteye_configuration("$DATA[0]",
+                    "$DATA[1]",
+                    "$DATA[2]");
+}
+elsif ($DATA[1] eq "SaveBaseConfig") {
+	aesid_save_base_andutteye_configuration("$DATA[0]",
+                    "$DATA[1]",
+                    "$DATA[2]");
+}
+elsif ($DATA[1] eq "SNAPSHOT") {
+	aesid_snapshot("$DATA[0]","$DATA[1]","$DATA[2]","$DATA[3]","$DATA[4]","$DATA[5]","$DATA[6]");
+}
+elsif ($DATA[1] eq "ALARM") {
+	aesid_alarm("$DATA[0]",
+                    "$DATA[1]",
+                    "$DATA[2]",
+                    "$DATA[3]",
+                    "$DATA[4]",
+                    "$DATA[5]",
+                    "$DATA[6]");
+}
+elsif ($DATA[1] eq "AssetManagement") {
+	aesid_assetmanagement("$DATA[0]",
+                    "$DATA[1]",
+                    "$DATA[2]",
+                    "$DATA[3]",
+                    "$DATA[4]",
+                    "$DATA[5]");
+}
+elsif ($DATA[1] eq "SystemStatistics") {
+	aesid_systemstatistics("$DATA[0]",
+                    "$DATA[1]",
+                    "$DATA[2]",
+                    "$DATA[3]",
+                    "$DATA[4]",
+                    "$DATA[5]");
+}
+elsif ($DATA[1] eq "RESUMEOPERATION") {
+	aesid_resumeoperation("$DATA[0]",
+                    "$DATA[1]",
+                    "$DATA[2]",
+                    "$DATA[3]");
+}
+elsif ($DATA[1] eq "TransferItem") {
+	aesid_transferitem("$DATA[0]",
+                    "$DATA[1]",
+                    "$DATA[2]",
+                    "$DATA[3]");
+}
+elsif ($DATA[1] eq "TransferContent") {
+	aesid_transfer_management_files("$DATA[0]",
+                    "$DATA[1]");
+}
+elsif ($DATA[1] eq "ValidateManagement") {
+	aesid_validatemanagement("$DATA[0]",
+                    "$DATA[1]");
+}
+elsif ($DATA[1] eq "SaveManagementResult") {
+	aesid_savemanagementresult("$DATA[0]",
+                    "$DATA[1]",
+                    "$DATA[2]");
+}
+elsif ($DATA[1] eq "CheckForActions") {
+	aesid_checkforactions("$DATA[0]",
+                    "$DATA[1]");
+}
+elsif ($DATA[1] eq "SaveMonitorStatus") {
+	aesid_savemonitorstatus("$DATA[0]",
+                    "$DATA[1]",
+                    "$DATA[2]");
+}
+elsif ($DATA[1] eq "INSTALLCONFIG") {
+	aesid_installconfig("$DATA[0]");
+}
+elsif ($DATA[1] eq "HardwareCheckin") {
+	aesid_hardwarecheckin("$DATA[0]","$DATA[1]");
+}
+else {
+	print "[$DATE,$TIME] ERROR Invalid aesid recived.\n";
+	print "[$DATE,$TIME] TRACE Complete packets->$message\n";
+	exit;
+}
+
+# End of while
+}
+
+# End of while
+}

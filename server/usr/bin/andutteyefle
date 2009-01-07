@@ -1,0 +1,347 @@
+#!/usr/bin/perl
+#
+#    Copyright Andreas Utterberg Thundera (c) All rights Reserved 2008
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#    $Id$
+#
+our $Use_database_type;
+our $Use_database_name;
+our $Use_database_user;
+our $Use_database_password;
+our $Use_dbi_database_extra_string;
+our $Cache_dir_location;
+our $specification_revision;
+our $config;
+our $domain;
+our $group;
+our $patchlevel;
+our $distribution;
+our $system;
+our $Active;
+our @row;
+our @tagging;
+our $verify="0";
+our $debug="0";
+our $id="0";
+our $sql;
+our $subsql;
+our $subdbh;
+our $substh;
+our $dbh;
+our $sth;
+our %files;
+our $files;
+our $version="Andutteye File Validator Version 3.0. (2008 www.thundera.se)";
+
+our @ARGV;
+our ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+our $date=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+our $time=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+use File::Basename;
+use strict;
+
+sub parse_and_load_configuration {
+my @tmp;
+my $params="0";
+
+print "[info] Parsing and reading parameters from config $config. (This can be overrided by specifying -config=<another config>)\n";
+
+      open("conf","<$config")
+                or die "ERROR Failed to open configuration file for reading config:$config error:$!\n";
+        for(<conf>) {
+                chomp;
+                if(/^#/) {
+                        next;
+                }
+                if(/^$/) {
+                        next;
+                }
+                if(/^Use_database_type/) {
+                        @tmp=split("=","$_");
+                        $Use_database_type="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_database_name/) {
+                        @tmp=split("=","$_");
+                        $Use_database_name="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_database_user/) {
+                        @tmp=split("=","$_");
+                        $Use_database_user="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_database_password/) {
+                        @tmp=split("=","$_");
+                        $Use_database_password="$tmp[1]";
+                        $params++;
+                }
+		if(/^Use_dbi_database_extra_string/) {
+                        @tmp=split("=","$_");
+                        $Use_dbi_database_extra_string="$tmp[1]";
+                        $params++;
+                }
+                if(/^Cache_dir_location/) {
+                        @tmp=split("=","$_");
+                        $Cache_dir_location="$tmp[1]";
+                        $params++;
+                }
+        }
+
+print "[info] $params configuration parameters loaded.\n";
+
+# End of subfunction
+}
+sub program_info {
+print "\n";
+print "$version\n";
+print "\n";
+exit(1);
+
+#End of subfunction
+}
+sub connect_to_database {
+require DBI;
+$dbh = DBI->connect("dbi:$Use_dbi_database_extra_string$Use_database_type:$Use_database_name", $Use_database_user, $Use_database_password)
+        or die("Failed to connect to database:$Use_database_name err:$!");
+
+# End of subfunction
+}
+sub get_valid_domain_group_assignments {
+
+connect_to_database();
+
+$sql="select domain_name, group_name from andutteye_systems where system_name = '$system'";
+$sth = $dbh->prepare("$sql");
+$sth->execute or die "Failed :$!\n";
+@row = $sth->fetchrow_array;
+
+if (!defined($row[0])) {
+	print "[error] No domain specified for system:$system\n";
+	exit(1);
+} else {
+	$domain="$row[0]";
+}
+if (!defined($row[1])) {
+	print "[error] No group specified for system:$system\n";
+	exit(1);
+} else {
+	$group="$row[1]";
+}
+
+$sql="select patchlevel,distribution from andutteye_specifications where system_name = '$system' order by revision desc limit 0,1";
+$sth = $dbh->prepare("$sql");
+$sth->execute or die "Failed :$!\n";
+@row = $sth->fetchrow_array;
+
+if (!defined($row[0])) {
+	print "[error] No patchlevel found for system:$system\n";
+	exit(1);
+} else {
+	$patchlevel="$row[0]";
+	$distribution="$row[1]";
+}
+
+
+print "[info] System:$system Domain:$domain Group:$group Distribution:$distribution Patchlevel:$patchlevel\n";
+
+# End of subfunction
+}
+sub search_database_for_filematches {
+my $filename;
+my $directory;
+my $revision;
+my @res;
+
+print "[info] Building tagging index.\n";
+
+push(@tagging,"--$domain");
+print "\tTag:--$domain\n";
+
+push(@tagging,"--$domain--$patchlevel");
+print "\tTag:--$domain--$patchlevel\n";
+
+push(@tagging,"--$group");
+print "\tTag:--$group\n";
+
+push(@tagging,"--$group--$patchlevel");
+print "\tTag:--$group--$patchlevel\n";
+
+push(@tagging,"--$domain--$group");
+print "\tTag:--$domain--$group\n";
+
+push(@tagging,"--$domain--$group--$patchlevel");
+print "\tTag:--$domain--$group--$patchlevel\n";
+
+push(@tagging,"--$system");
+print "\tTag:--$system\n";
+
+push(@tagging,"--$system--$patchlevel");
+print "\tTag:--$system--$patchlevel\n";
+
+
+for(@tagging) {
+	chomp;
+	my $tagging="$_";
+	print "Searching for files with tagging:$tagging\n";
+
+	$sql="select filename,directory,tagging,revision from andutteye_files where distribution = '$distribution' and tagging = '$tagging' order by filename asc";
+	$sth = $dbh->prepare("$sql");
+	$sth->execute or die "Failed :$!\n";
+
+	$sth->bind_columns(undef, \$filename, \$directory, \$tagging, \$revision);
+
+	while($sth->fetch()) {
+		print "\tFound:$directory/$filename$tagging rev:$revision\n";
+	
+		$subsql = "select filename,directory,tagging,revision,fileindex,prestep,poststep,perms,perm_owner,perm_group,content,seqnr";
+		$subsql.= " from andutteye_files where filename = '$filename' and directory = '$directory' and tagging";
+		$subsql.= " = '$tagging' order by revision desc limit 0,1";
+		$substh = $dbh->prepare("$subsql");
+		$substh->execute or die "Failed :$!\n";
+		@res = $substh->fetchrow_array;
+
+		print "\t\t->File lock on:$res[1]/$res[0]$res[2] last revision:$res[3]\n";
+
+		if (exists($files{"$res[1]/$res[0]"})) {
+			print "Loading file->$res[1]/$res[0] [OVERRIDING]\n";
+			 delete $files{"$res[1]/$res[0]"};
+			$files{"$res[1]/$res[0]"} = { filename => $res[0], directory => $res[1], seqnr => $res[11], tagging => $res[2], fileindex => $res[4], rev => $res[3] };
+			print "Loaded files in hash: ". keys( %files ) ."\n";
+
+		} else {
+			print "Loading file->$res[1]/$res[0] [IS NOT LOADED BEFORE]\n";
+			$files{"$res[1]/$res[0]"} = { filename => $res[0], directory => $res[1], seqnr => $res[11], tagging => $res[2], fileindex => $res[4], rev => $res[3] };
+			print "Loaded files in hash: ". keys( %files ) ."\n";
+		}
+		
+	}
+}
+
+# End of subfunction
+}
+sub parse_and_export_files {
+my $prestep;
+my $poststep;
+my $perms;
+my $perm_owner;
+my $perm_group;
+my $content;
+my $count="0";
+my @row;
+connect_to_database();
+
+open("action",">>$Cache_dir_location/$system/actionlist.dat")
+	or die $!;
+
+for my $control (keys %files) {
+	my $check = $files{$control};
+	print "\t------- Found and to be exported file(s)\n";
+	print "\tFile     :$check->{directory}/$check->{filename}\n";
+	print "\tTagging  :$check->{tagging}\n";
+	print "\tFileindex:$check->{fileindex}\n";
+	print "\tSeqnr    :$check->{seqnr}\n";
+	print "\tRevision :$check->{rev}\n";
+	print "\t-------\n";
+
+	$sql="select content,prestep,poststep,perms,perm_owner,perm_group from andutteye_files where seqnr = '$check->{seqnr}'";
+        $sth = $dbh->prepare("$sql");
+        $sth->execute or die "Failed :$!\n";
+	@row = $sth->fetchrow_array;
+	if(! -d "$Cache_dir_location/$system/$check->{directory}") {
+		`mkdir -p $Cache_dir_location/$system/$check->{directory}`;
+	}
+		
+	open("file",">$Cache_dir_location/$system/$check->{directory}/$check->{filename}")
+		or die $!;
+	print file "$row[0]\n";
+	close("file");
+
+	print "Creating actionlist for $check->{directory}/$check->{filename}\n";
+	print action "File#$check->{filename}#$check->{directory}#$check->{fileindex}#$row[3]#$row[4]#$row[5]#$row[1]#$row[2]#$Active\n";
+}
+
+close("action");
+
+# End of subfunction
+}
+sub determine_specification_revision {
+
+connect_to_database();
+
+$sql="select revision from andutteye_specifications where system_name = '$system' order by seqnr desc limit 0,1";
+$sth = $dbh->prepare("$sql");
+$sth->execute or die "Failed :$!\n";
+@row = $sth->fetchrow_array;
+
+$specification_revision="$row[0]";
+
+if($debug) {
+        print "[info] Specification revision to use is:$specification_revision\n";
+}
+
+$sql="select config_update from andutteye_specifications where system_name = '$system' and revision = '$specification_revision'";
+$sth = $dbh->prepare("$sql");
+$sth->execute or die "Failed :$!\n";
+@row = $sth->fetchrow_array;
+
+if("$row[0]" eq "") {
+        print "[Error] Filemanagement parameter is not set, setting it to disabled.\n";
+        $Active="disabled";
+} else {
+        if("$row[0]" eq "Active") {
+                print "[info] Filemanagement is set to Active.\n";
+                $Active="Active";
+        } else {
+                print "[info] Filemanagement is set to Disabled.\n";
+                $Active="Disabled";
+        }
+}
+
+# End of subfunction
+}
+# Parse of commandline arguments.
+for(@ARGV) {
+        if ( $_ =~/-config/ ) {
+                my @tmp=split("=","$_");
+                $config="$tmp[1]";
+        }
+        if ( $_ =~/-system/ ) {
+                my @tmp=split("=","$_");
+                $system="$tmp[1]";
+        }
+	if( $_ =~/^verify$/ ) {
+		$verify="1";
+	}
+	if( $_ =~/^debug$/ ) {
+		$debug="1";
+	}
+}
+if(!defined($ARGV[0])) {
+        program_info();
+}
+if(!defined($config)) {
+	$config="/etc/andutteye/andutteyedsrv.conf";
+}
+if(!defined($system)) {
+        program_info();
+}
+parse_and_load_configuration();
+determine_specification_revision();
+get_valid_domain_group_assignments();
+search_database_for_filematches();
+parse_and_export_files();

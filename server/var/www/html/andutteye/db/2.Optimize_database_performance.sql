@@ -1,0 +1,15 @@
+create unique index uniq_andutteye_user on andutteye_users (andutteye_username);
+create index andutteye_stattype on andutteye_statistics (systemstatisticsargs);
+create index andutteye_statsyst on andutteye_statistics (system_name);
+create index andutteye_softsyst on andutteye_software (system_name);
+create index andutteye_softstat on andutteye_software (status);
+create index andutteye_softpkgn on andutteye_software (aepackage);
+create index andutteye_packpkg on andutteye_packages (aepackage);
+create index andutteye_packarc on andutteye_packages (aearchtype);
+create index andutteye_packdst on andutteye_packages (distribution);
+create index andutteye_packplv on andutteye_packages (patchlevel);
+create index andutteye_packcontdst on andutteye_packages_content (distribution);
+create index andutteye_packcontplv on andutteye_packages_content (patchlevel);
+create index andutteye_packcontdom on andutteye_packages_content (domain_name);
+create index andutteye_pkgdepref on andutteye_packages_dependencies (seqref);
+create unique index uniq_andutteye_pkgcontref on andutteye_packages_content (seqref);

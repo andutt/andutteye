@@ -1,0 +1,34 @@
+.TH ANDUTTEYEDSRV 28 "AUG 2008" Linux "User Manuals"
+.SH NAME
+andutteyedsrv \- Andutteye server service
+.SH SYNOPSIS
+.B andutteyedsrv
+.B ...
+.SH DESCRIPTION
+.B andutteyedsrv
+is the andutteye server listener. Its used to retrive and parse incoming messages and requests from the agents. The server is listening on one port with tcp communication, but supports encrypted communications by the ssl module in Perl.
+.SH OPTIONS
+.IP config
+All andutteyedsrv configuration and options are specified in andutteyedsrv.conf
+
+.SH FILES
+.I /etc/andutteyedsrv.conf
+.RS
+The andutteye server configuration file.
+.RE
+.SH DIAGNOSTICS
+Debug and verify andutteye server service by changing debug parameters in the configuration.
+ 
+.I /var/log/andutteye/andutteyedsrv.log
+.RS
+Ouput log from the server service.
+.RE
+.SH BUGS
+Report found bugs or suggestions at <www dot andutteye dot com>
+.RE
+.SH AUTHOR
+Andreas Utterberg (andutt) <info at thunderas dot se>
+.SH "SEE ALSO"
+.BR andutteyedagt (1),
+.BR andutteyepst (1),
+.BR andutteyeadm (1)

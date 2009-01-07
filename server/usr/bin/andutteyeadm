@@ -1,0 +1,1634 @@
+#!/usr/bin/perl
+#
+#    Copyright Andreas Utterberg Thundera (c) All rights Reserved 2008
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#    $Id: andutteyeadm 737 2008-10-17 11:50:20Z andutt $
+#
+our $Use_database_type;
+our $Use_database_name;
+our $Use_database_user;
+our $Use_dbi_database_extra_string;
+our $Use_database_password;
+our $config;
+our @row;
+our $verify="0";
+our $version="Andutteye Administration Tool Version 3.0. (2008 www.thundera.se)";
+our $pkgrepo;
+our $pkgdist;
+our $plevel;
+our $plevelinfo;
+our $perms;
+our $system;
+our $todir;
+our $lock_file;
+our $tagging;
+our $savemode;
+our $nodelete;
+our $sql;
+our $dbh;
+our $sth;
+our $command;
+our $domain;
+our $revision;
+
+our $filedistribution;
+our $counter=0;
+our $onlycheck=0;
+our $debug=0;
+our $fileindex="10";
+our $perm_owner="root";
+our $perm_group="root";
+our $perms="644";
+our $command;
+our @ARGV;
+our ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+our $date=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+our $time=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+use File::Basename;
+use strict;
+
+sub parse_and_load_configuration {
+my @tmp;
+my $params="0";
+
+print "[info] Parsing and reading parameters from config $config. (This can be overrided by specifying -config=<another config>)\n";
+
+      open("conf","<$config")
+                or die "ERROR Failed to open configuration file for reading config:$config error:$!\n";
+        for(<conf>) {
+                chomp;
+                if(/^#/) {
+                        next;
+                }
+                if(/^$/) {
+                        next;
+                }
+                if(/^Use_database_type/) {
+                        @tmp=split("=","$_");
+                        $Use_database_type="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_database_name/) {
+                        @tmp=split("=","$_");
+                        $Use_database_name="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_database_user/) {
+                        @tmp=split("=","$_");
+                        $Use_database_user="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_database_password/) {
+                        @tmp=split("=","$_");
+                        $Use_database_password="$tmp[1]";
+                        $params++;
+                }
+		if(/^Use_dbi_database_extra_string/) {
+                        @tmp=split("=","$_");
+                        $Use_dbi_database_extra_string="$tmp[1]";
+                        $params++;
+                }
+        }
+
+print "[info] $params configuration parameters loaded.\n";
+
+# End of subfunction
+}
+sub program_info {
+print "\n";
+print "$version\n";
+print "\n";
+print "$0 addbundle /repository/bundles/redhat-es5-x86_64-base verify\n";
+print "\n";
+print "\t-> addspec 	\t:Add specification to Andutteye database from file.\n";
+print "\t-> addbundle 	\t:Add bundles to Andutteye database from file.\n";
+print "\t-> addpackage	\t:Add single package to Andutteye database.\n";
+print "\t-> addfile 	\t:Add file/script/program to Andutteye database from file.\n";
+print "\t-> baddpackage	\t:Batch add packages to  Andutteye database from a local directory.\n";
+print "\t-> regenerate	\t:Batch regenerate a package repository and use it as repo, no copying.\n";
+print "\t-> delspec 	\t:Add file/script/program to Andutteye database from file.\n";
+print "\t-> delbundle 	\t:Add file/script/program to Andutteye database from file.\n";
+print "\t-> delfile 	\t:Add file/script/program to Andutteye database from file.\n";
+print "\t-> extractpkg 	\t:Export package from Andutteye database or from filesystem.\n";
+print "\t-> bextractpkg 	\t:Batch export packages from Andutteye database or from filesystem.\n";
+print "\t-> extractbundle \t:Export bundle from Andutteye database to a file for modification or backup.\n";
+print "\t-> searchpkg 	\t:Search for package(s) in the Andutteye database.\n";
+print "\t-> showtag 	\t:Show valid Domains, group and systems to connect files to.\n";
+print "\t-> showbundle 	\t:Show available bundles\n";
+print "\t---------\n";
+print "\t-> crtbaserpm 	\t:Create basebundle on rpmbased systems.\n";
+print "\t---------\n";
+print "\t\t |-> <verify>    \t:Only verify, dont update anything in the Andutteye database.\n";
+print "\t\t |-> <debug>    \t:Show more verbose output.\n";
+print "\t\t |-> <nodelete>    \t:Dont delete before load.\n";
+print "\t\t |-> -config=    \t:Specify a different database configuration file..\n";
+print "\t\t |-> -perms=    \t:Specify file permissions, default will be 644.\n";
+print "\t\t |-> -perm_owner=    \t:Specify owner of a file, default will be root.\n";
+print "\t\t |-> -perm_group=    \t:Specify group of a file, default will be root.\n";
+print "\t\t |-> -domain=    \t:Specify a domain.\n";
+print "\t\t |-> -system=    \t:Specify a system.\n";
+print "\t\t |-> -pkgrepo=  \t:Specify a package repository directory to load packages from.\n";
+print "\t\t |-> -pkgdist=  \t:Specify the package distribution.\n";
+print "\t\t |-> -plevel=  	\t:Specify which patchlevel this packages belongs to.\n";
+print "\t\t |-> -plevelinfo= \t:Specify patchlevel information within \"\" ex \"6 packages errartas 2008-09-20\".\n";
+print "\t\t |-> -revision=  \t:Specify a specific revision to modify or delete.\n";
+print "\t\t |-> -savemode=  \t:Specify what save mechanism to use for packages db or fs.\n";
+print "\t\t |-> -tagging=  \t:Specify tagging for a file.\n";
+print "\t\t |-> -todir=    \t:Specify a different target directory for a file to be loaded.\n";
+print "\t\t |-> -lockfile    \t:Specifies that the file is locked for edit or change in Controlcenter\n";
+print "\n";
+exit(1);
+#End of subfunction
+}
+sub connect_to_database {
+#
+#
+#
+require DBI;
+$dbh = DBI->connect("dbi:$Use_dbi_database_extra_string$Use_database_type:$Use_database_name", $Use_database_user, $Use_database_password)
+        or die("Failed to connect to database:$Use_database_name err:$!");
+
+# End of subfunction
+}
+sub del_bundle {
+my $bundle_name="$_[0]";
+my $bundle_revision="$_[1]";
+
+if($bundle_name eq "") {
+        print "[error] Specify the bundle name as second argumentn.\n";
+        exit(1);
+}
+if($bundle_revision eq "") {
+        print "[error] Specify the bundle revision as second argument.\n";
+        exit(1);
+}
+if(!$domain) {
+        print "[error] Specify domain with -domain=.\n";
+        exit(1);
+}
+
+connect_to_database();
+
+print "[info] Trying to remove bundle $bundle_name rev $bundle_revision\n";
+
+$sql="select system_name,bundle,revision from andutteye_choosenbundles where bundle = '$bundle_name' and revision = '$bundle_revision' and domain_name = '$domain'";
+$sth = $dbh->prepare("$sql");
+$sth->execute or die "Failed :$!\n";
+@row = $sth->fetchrow_array;
+
+if(defined($row[0])) {
+	print "[error] Unable to delete bundle $bundle_name with revision $bundle_revision since its choosen by system->$row[0]\n";
+	print "[error] unselect the bundle in the webinterface and try again.\n";
+	exit(1);
+} else {
+	print "[info] No system has choosen bundle $bundle_name with revision $bundle_revision. Ok to delete.\n";
+
+	if(!$verify) {
+		print "Delete\n";
+	} else {
+		print "[info] Running with verify mode will not delete but want to delete bundle $bundle_name with revision $bundle_revision.\n";
+	}
+}
+
+# End of subfunction
+}
+sub extract_bundle {
+my $bundle_name=$_[0];
+my $aepackage;
+my $aeversion;
+my $aerelease;
+my $aearch;
+my $count="0";
+
+if($bundle_name eq "") {
+	print "[error] Specify the bundle name as second argument.\n";
+	exit(1);
+}
+if(!defined($pkgdist)) {
+        print "[error] A distribution must be specified with -pkgdist=redhat-es5-x86_64 and should correspond to package distribution used for the bundle.\n";
+        exit(1);
+}
+if(!defined($domain)) {
+        print "[error] A domain must be specified with -domain=Thundera.\n";
+        exit(1);
+}
+if(!defined($revision)) {
+        print "[error] A revision must be specified with -revision=1.\n";
+        exit(1);
+}
+
+connect_to_database();
+
+$sql="select count(seqnr) from andutteye_bundles where bundle = '$bundle_name' and revision = '$revision'";
+$sth = $dbh->prepare("$sql");
+$sth->execute or die "Failed :$!\n";
+@row = $sth->fetchrow_array;
+
+if($row[0] == 0) {
+	print "[error] Bundle:$bundle_name with revision:$revision for distribution:$pkgdist and domain:$domain doesnt exist.\n";
+	exit(1);
+} else {
+	open("bundle",">$bundle_name-$revision.bundle")
+		or die "[error] Failed to open bundle file for writing err:$!\n";
+
+	$sql="select aepackage,aeversion,aerelease,aearch from andutteye_bundles where bundle = '$bundle_name' and revision = '$revision'";
+	$sth = $dbh->prepare("$sql");
+	$sth->execute or die "Failed :$!\n";
+
+	$sth->bind_columns(\$aepackage, \$aeversion, \$aerelease, \$aearch,);
+
+	while($sth->fetch()) {
+		print bundle "$aepackage          $aeversion $aerelease $aearch\n";
+	$count++;
+	}
+
+print "[info] $count packages extracted to $bundle_name-$revision.bundle\n";
+}
+
+# End of subfunction
+}
+sub add_bundle {
+my $bundle_name=$_[0];
+my $bundle_revision="0";
+my $dirname=dirname($bundle_name);
+my $filename=basename($bundle_name);
+my $packages="0";
+my @bundle_line;
+
+if(!defined($pkgdist)) {
+        print "[error] A distribution must be specified with -pkgdist=redhat-es5-x86_64 and should correspond to package distribution.\n";
+        exit(1);
+}
+if(!defined($domain)) {
+        print "[error] A domain must be specified with -domain=Thundera.\n";
+        exit(1);
+}
+if(! -f "$bundle_name") {
+	print "[error] Couldnt locate specified bundle file->$bundle_name, or is it not a file?\n";
+	exit(1);
+} else {
+	print "[info] Bundle found directory->$dirname file->$filename\n";
+	open("bundle","<$bundle_name")
+		or die "[error] Failed to open bundle file for reading err:$!\n";
+}
+
+connect_to_database();
+
+$sql="select distinct(revision) from andutteye_bundles where bundle = '$filename' and domain_name = '$domain' order by seqnr desc";
+$sth = $dbh->prepare("$sql");
+$sth->execute or die "Failed :$!\n";
+@row = $sth->fetchrow_array;
+
+if(!defined($row[0])) {
+	print "[info] No current bundle revision found for bundle $filename and domain $domain, this will be revision 1.0\n";
+	$bundle_revision="1";
+} else {
+	$bundle_revision=($row[0] + 1);
+	print "[info] Latest found revision for $filename and domain $domain is $row[0].0. New revision $bundle_revision.0\n";
+}
+if($verify) {
+	print "[info] Show only specified. Will only print whats planned to be done.\n";
+	for(<bundle>) {
+		chomp;
+		if ($_ =~/^$/) {
+			next;
+		}
+		if ($_ =~/^#/) {
+			next;
+		}
+   		@bundle_line= split(/\s+/, $_);
+
+		if(!defined($bundle_line[0]) || (!defined($bundle_line[1]) || (!defined($bundle_line[2]) || (!defined($bundle_line[3]))))) {
+			print "[error] Some or all parameters that are needed to be defined is empty, is this a correctly specified bundle?\n";
+			exit(1);
+		}
+		if($debug) {
+			print "[info] Packagename:$bundle_line[0]\n";
+			print "[info]\tVersion:$bundle_line[1]\tRelease:$bundle_line[2]\tArchtype:$bundle_line[3]\n";
+		}
+		$packages++;
+	}
+	print "[info] Want to load $packages package to database.\n";
+} else {
+	print "[info] Loading packages and package information.\n";
+	 for(<bundle>) {
+                chomp;
+                if ($_ =~/^$/) {
+                        next;
+                }
+                if ($_ =~/^#/) {
+                        next;
+                }
+                @bundle_line= split(/\s+/, $_);
+
+		if(!defined($bundle_line[0]) || (!defined($bundle_line[1]) || (!defined($bundle_line[2]) || (!defined($bundle_line[3]))))) {
+			print "[error] Some or all parameters that are needed to be defined is empty, is this a correctly specified bundle?\n";
+			exit(1);
+		}
+		if($debug) {
+			print "[info] Packagename:$bundle_line[0]\n";
+			print "[info]\tVersion:$bundle_line[1]\tRelease:$bundle_line[2]\tArchtype:$bundle_line[3]\n";
+		}
+		$sql="insert into andutteye_bundles(bundle,aepackage,aeversion,aerelease,aearch,revision,created_date,created_time,created_by,distribution,domain_name)";
+                $sql.=" values(\"$filename\",'$bundle_line[0]','$bundle_line[1]','$bundle_line[2]','$bundle_line[3]','$bundle_revision','$date','$time','andutteyeadm','$pkgdist','$domain')";
+                $sth = $dbh->prepare("$sql");
+                $sth->execute;
+                $packages++;
+        }
+	print "[info] $packages packages loaded from bundle to database.\n";
+}
+
+close("bundle")
+	or die $!;
+# End of subfunction
+}
+sub add_spec {
+my $spec_name=$_[0];
+my $spec_revision="0";
+my $dirname=dirname($spec_name);
+my $filename=basename($spec_name);
+my $packagetype;
+my $distribution;
+my $patchlevel;
+my $group;
+my $location;
+my $archtype;
+my $description;
+my $status;
+my $exclude;
+my $packages;
+my $bundles;
+my $allowrpmupdate;
+my $allowconfigupdate;
+my $allowsyslog;
+my $email;
+my $specline;
+my $valid="0";
+my @spec_line;
+my $parameter;
+my $value;
+my $parameters="0";
+my @bundles;
+my @packages;
+my @valid_args=("packagetype:",
+		"distribution:",
+		"patchlevel:",
+		"group:",
+		"location:",
+		"archtype:",
+		"description:",
+		"status:",
+		"exclude:",
+		"packages:",
+		"bundles:",
+		"allow-rpmupdate:",
+		"allow-configupdate:",
+		"allow-syslog:",
+		"email:");
+
+if(! -f "$spec_name") {
+        print "[error] Couldnt locate specified specification file->$spec_name, or is it not a file?\n";
+        exit(1);
+} else {
+        print "[info] Specification found directory->$dirname file->$filename\n";
+        open("spec","<$dirname/$filename")
+                or die "[error] Failed to open spec file for reading err:$!\n";
+}
+connect_to_database();
+
+$sql="select distinct(revision) from andutteye_specifications where system_name = '$filename' order by seqnr desc";
+$sth = $dbh->prepare("$sql");
+$sth->execute or die "Failed :$!\n";
+@row = $sth->fetchrow_array;
+
+if(!defined($row[0])) {
+        print "[info] No current specification revision found for system $filename, this will be revision 1.0\n";
+        $spec_revision="1";
+} else {
+        $spec_revision=($row[0] + 1);
+        print "[info] Latest found revision for $filename is $row[0].0. New revision $spec_revision.0\n";
+}
+for(<spec>) {
+	chomp;
+	$specline="$_";
+	print "\t[info] Specification input:$specline\n";
+		for(@valid_args) {
+			chomp;
+			if($specline =~/^$_/) {
+				$valid="1";
+			}
+		}
+	if(!$valid) {
+		print "[error] Found a invalid specification parameter:$_ reformat the specification and try again.\n";
+		exit(1);
+	} else {
+		@spec_line=split(":",$specline);
+		if($debug) {
+			print "\t[info] Found a valid specification variable:$specline parameter:$spec_line[0] value:$spec_line[1]\n";
+		}
+
+		if($parameters == 0) {
+			if($verify) {
+				print "\t[info] Verify only specified. Will only print whats planned to be done.\n";
+			} else {
+				$sql="insert into andutteye_specifications(system_name,$spec_line[0],revision)";
+                		$sql.=" values(\"$filename\",\"$spec_line[1]\",'$spec_revision')";
+                		$sth = $dbh->prepare("$sql");
+                		$sth->execute;
+			}
+		} else {
+			$parameter="$spec_line[0]";
+
+			if($parameter eq "allow-rpmupdate") {
+				$parameter="package_update";
+			}
+			if($parameter eq "allow-configupdate") {
+				$parameter="config_update";
+			}
+			if($parameter eq "allow-syslog") {
+				$parameter="syslog_update";
+			}
+			if($parameter eq "group") {
+				$parameter="aegroup";
+			}
+			if($parameter eq "bundles") {
+				@bundles=split(",", $spec_line[1]);
+				for(@bundles) {
+					chomp;
+					print "\t[info] Selected bundle:$_\n";
+					$sql="select count(seqnr) from andutteye_bundles where bundle = '$_'";
+					$sth = $dbh->prepare("$sql");
+					$sth->execute or die "Failed :$!\n";
+					@row = $sth->fetchrow_array;
+
+					if(!defined($row[0]) || ($row[0] == 0)) {
+						print "\t[error] Selected bundle:$_ doesnt exist in Andutteye database. Bundles must be loaded before they are selected.\n";
+						print "\t[error] Load specified bundle with addbundle or deselect it in the specification or create the bundle in Andutteye controlcenter.\n";
+						exit(1);
+					} else {
+						print "\t[info] And it exists/are created in Andutteye database.\n";
+					}
+
+				        $sql="select count(seqnr) from andutteye_choosenbundles where bundle = '$_' and system_name='$filename'";
+                                        $sth = $dbh->prepare("$sql");
+                                        $sth->execute or die "Failed :$!\n";
+                                        @row = $sth->fetchrow_array;
+					
+					if(!defined($row[0]) || ($row[0] == 0)) {
+						print "[info] Bundle:$_ is not corrently choosen, adding it to database. Revision 1 will be used.\n";
+
+						if(!$verify) {
+							$sql="insert into andutteye_choosenbundles(system_name,bundle,revision,created_date,created_time,created_by,specid,specaction)";
+                					$sql.=" values('$filename','$_','1','$date','$time','andutteyeadm','$spec_revision','N')";
+                					$sth = $dbh->prepare("$sql");
+                					$sth->execute;
+						}
+					} else {
+						print "[info] Bundle:$_ is already choosen for system:$filename. No action is done for this bundle.\n";
+					}
+				}
+			}
+			elsif($parameter eq "packages") {
+				my @tmp=split(",", $spec_line[1]);
+                                for(@tmp) {
+                                        chomp;
+					@packages=split("--",$_);
+					substr($packages[0], 0, 1, "");
+		
+					if(!defined($packages[0]) || (!defined($packages[1]) || (!defined($packages[2]) || (!defined($packages[3]))))) {
+						print "[error] Some of the package parameters was not defined, verify package syntax and try again.\n";
+						exit(1);
+					} else {
+						print "\t[info] Selected package:$_ Packagename:$packages[0] Version:$packages[1] Release:$packages[2] Arch:$packages[3]\n";
+				
+						if($verify) {
+							print "\t[info] Verify only specified. Want to load Packagename:$packages[0] Version:$packages[1] Release:$packages[2] Arch:$packages[3].\n";
+						} else {
+							$sql="insert into andutteye_choosenpackages(system_name,aepackage,aeversion,aerelease,aearchtype,created_date,created_time,created_by,specid,specaction)";
+                					$sql.=" values('$filename','$packages[0]','$packages[1]','$packages[2]','$packages[3]','$date','$time','andutteyeadm','$spec_revision','N')";
+                					$sth = $dbh->prepare("$sql");
+                					$sth->execute;
+						}
+					}
+					
+					
+				}
+			} else {
+				if($verify) {
+					print "\t[info] Verify only specified. Will only print whats planned to be done.\n";
+				} else {
+					$value="$spec_line[1]";
+					$sql="update andutteye_specifications set $parameter = '$value' where system_name = '$filename'";
+                			$sql.=" and revision = '$spec_revision'";
+                			$sth = $dbh->prepare("$sql");
+                			$sth->execute;
+				}
+			}
+		}
+	$valid="0";
+	$parameters++;
+	}
+}
+
+
+# End of subfunction
+}
+sub add_package {
+my $package="$_[0]";
+my $Management_top_directory_location;
+my $deps="0";
+my @requires;
+my @provides;
+my @information;
+
+connect_to_database();
+
+if($package eq "") {
+        print "[error] Specify full path to the package as second argument.\n";
+        exit(1);
+} else {
+	if (! -f "$package") {
+		print "[error] Unable to find Package:$package or it isnt a file.\n";
+		exit(1);
+	}
+}
+if(!defined($pkgdist)) {
+        print "[error] A package distribution must be specified with -pkgdist=redhat-es5-x86_64.\n";
+        exit(1);
+}
+if(!defined($plevel)) {
+        print "[error] A patchlevel must be specified to -plevel=0\n";
+}
+if(!defined($plevelinfo)) {
+        print "[error] Specify patchlevel information -plevelinfo=\"Base packages\"\n";
+        exit(1);
+}
+if(!defined($savemode)) {
+        print "[error] Specify which savemode to use db to save content in database, fs to save content in filesystem -savemode=db\n";
+        exit(1);
+}
+if(!defined($domain)) {
+        print "[error] Specify which domain the package should be connected to.\n";
+        exit(1);
+}
+if($savemode eq "fs") {
+
+        $sql="select parametervalue from andutteye_core_configuration where parametername = 'Management_top_directory_location'";
+        $sth = $dbh->prepare("$sql");
+        $sth->execute;
+        @row = $sth->fetchrow_array;
+
+        if(!defined($row[0])) {
+                print "[error] Management_top_directory_location is not correctly set in database. Define it and try again.\n";
+                exit(1);
+        }else {
+                $Management_top_directory_location = $row[0];
+                mkdir ("$Management_top_directory_location");
+                mkdir ("$Management_top_directory_location/$domain");
+                mkdir ("$Management_top_directory_location/$domain/$pkgdist");
+                mkdir ("$Management_top_directory_location/$domain/$pkgdist/$plevel");
+        }
+}
+@information=split(" ", `rpm -qp --qf %-30{NAME}\\\t%{VERSION}\\\t%{RELEASE}\\\t%{ARCH} $package`); 
+
+if(!$verify) {
+	$sql="select count(seqnr) from andutteye_packages where aepackage = '$information[0]'";
+        $sql.=" and aeversion = '$information[1]' and aerelease = '$information[2]' and aearchtype = '$information[3]' and patchlevel = '$plevel'";
+        $sql.=" and distribution = '$pkgdist' and domain_name = '$domain'";
+        $sth = $dbh->prepare("$sql");
+        $sth->execute;
+        @row = $sth->fetchrow_array;
+
+       if($row[0] == 0) {
+
+       		@requires=`rpm -qp --requires $package`;
+                @provides=`rpm -qp --provides $package`;
+
+		my $filename=basename($package);
+		
+                if($savemode eq "fs") {
+                	$sql="insert into andutteye_packages(aepackage,aeversion,aerelease,aearchtype,patchlevel,distribution,location,status";
+                        $sql.=",packagetype,savemode,filename,domain_name,patchlevelinfo) values('$information[0]','$information[1]'";
+                        $sql.=",'$information[2]','$information[3]','$plevel','$pkgdist'";
+                        $sql.=",'$Management_top_directory_location/$domain/$pkgdist/$plevel/$filename','active','rpm','fs','$filename','$domain','$plevelinfo')";
+                        $sth = $dbh->prepare("$sql");
+                        $sth->execute;
+
+                        if ( ! -f "$Management_top_directory_location/$domain/$pkgdist/$plevel/$filename" ) {
+                        	`cp -f $package $Management_top_directory_location/$domain/$pkgdist/$plevel/`;
+                        }
+
+                        $sql="select seqnr from andutteye_packages where aepackage = '$information[0]'";
+                        $sql.=" and aeversion = '$information[1]' and aerelease = '$information[2]' and aearchtype = '$information[3]' and patchlevel = '$plevel'";
+                        $sql.=" and distribution = '$pkgdist' and domain_name = '$domain'";
+                        $sth = $dbh->prepare("$sql");
+                        $sth->execute;
+                        my @pointer = $sth->fetchrow_array;
+
+                        for(@requires) {
+                        	chomp;
+                                $sql="insert into andutteye_packages_dependencies(seqref,distribution,patchlevel,domain_name,aerequires)";
+                                $sql.=" values(?,?,?,?,?)";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute($pointer[0],$pkgdist,$plevel,$domain,$_);
+                                $deps++;
+                        }
+                        for(@provides) {
+                        	chomp;
+                                $sql="insert into andutteye_packages_dependencies(seqref,distribution,patchlevel,domain_name,aeprovides)";
+                                $sql.=" values(?,?,?,?,?)";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute($pointer[0],$pkgdist,$plevel,$domain,$_);
+                                $deps++;
+                        }
+
+             }
+	     elsif($savemode eq "db") {
+                                my $filehandle;
+                                my $filedata;
+				my $n;
+				my $data;
+
+                                open("filehandle", "<$package")
+                                        or die $!;
+                                binmode filehandle;
+
+                                while (($n = read filehandle, $data, 4) != 0) {
+                                        $filedata .= $data;
+                                }
+                                close("filehandle");
+
+                                $sql="insert into andutteye_packages(aepackage,aeversion,aerelease,aearchtype,patchlevel,distribution,status,packagetype,savemode,filename,domain_name,patchlevelinfo";
+                                $sql.=")";
+                                $sql.=" values(?,?,?,?,?,?,?,?,?,?,?)";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute($information[0],$information[1],$information[2],$information[3],$plevel,$pkgdist,'active','rpm','db',$package,$domain,$plevelinfo);
+
+                                $sql="select seqnr from andutteye_packages where aepackage = '$information[0]'";
+                                $sql.=" and aeversion = '$information[1]' and aerelease = '$information[2]' and aearchtype = '$information[3]' and patchlevel = '$plevel'";
+                                $sql.=" and distribution = '$pkgdist' and domain_name = '$domain'";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute;
+                                my @pointer = $sth->fetchrow_array;
+
+                                $sql="insert into andutteye_packages_content(content,seqref,distribution,patchlevel,domain_name)";
+                                $sql.=" values(?,?,?,?,?)";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute($filedata,$pointer[0],$pkgdist,$plevel,$domain);
+
+                                for(@requires) {
+                                        chomp;
+                                        $sql="insert into andutteye_packages_dependencies(seqref,distribution,patchlevel,domain_name,aerequires)";
+                                        $sql.=" values(?,?,?,?,?)";
+                                        $sth = $dbh->prepare("$sql");
+                                        $sth->execute($pointer[0],$pkgdist,$plevel,$domain,$package);
+                                        $deps++;
+                                }
+                                for(@provides) {
+                                        chomp;
+                                        $sql="insert into andutteye_packages_dependencies(seqref,distribution,patchlevel,domain_name,aeprovides)";
+                                        $sql.=" values(?,?,?,?,?)";
+                                        $sth = $dbh->prepare("$sql");
+                                        $sth->execute($pointer[0],$pkgdist,$plevel,$domain,$package);
+                                        $deps++;
+                                }
+
+                                undef $filedata;
+
+                 } else {
+                 	print "[error] An invalid savemode specified:$savemode only db = Database fs = Filesystem are valid savemode types.\n";
+                        exit(1);
+                }
+		print "[info] Package $package loaded with $deps lines of dependencie info.\n";
+	} else {
+		print "[info] Package $package is already loaded.\n";
+	}
+} else {
+	print "[info] Running in verifymode, want to add package $package.\n";
+}
+
+
+
+
+# End of subfunction
+}
+sub badd_package {
+my @information;
+my @requires;
+my @provides;
+my $count="0";
+my $deps="0";
+my $alreadycount="0";
+my $data;
+my $n;
+my $count_print="0";
+my $count_print_ident="10";
+my $alreadycount_print="0";
+my $alreadycount_print_ident="10";
+my $Management_top_directory_location;
+
+connect_to_database();
+
+if(!defined($pkgrepo)) {
+	print "[error] A package repository directory must be specified to -pkgrepo=/repository/redhat-es5\n";
+	exit(1);
+}
+if(!defined($pkgdist)) {
+	print "[error] A package distribution must be specified with -pkgdist=redhat-es5-x86_64.\n";
+	exit(1);
+}
+if(!defined($plevel)) {
+	print "[error] A patchlevel must be specified to -plevel=0\n";
+	exit(1);
+}
+if(!defined($plevelinfo)) {
+	print "[error] Specify patchlevel information -plevelinfo=\"Base packages\"\n";
+	exit(1);
+}
+if(!defined($savemode)) {
+	print "[error] Specify which savemode to use db to save content in database, fs to save content in filesystem -savemode=db\n";
+	exit(1);
+}
+if(!defined($domain)) {
+	print "[error] Specify which domain the package should be connected to.\n";
+	exit(1);
+}
+chdir("$pkgrepo")
+	or die "[error] Failed to change directory to specified package repository error:$!\n";
+
+if(!$verify) {
+	if(!$nodelete) {
+		print "[info] Deleting all packages in patchlevel:$plevel in distribution:$pkgdist for domain:$domain\n";
+		$sql="delete from andutteye_packages where distribution = '$pkgdist' and patchlevel = '$plevel' and domain_name = '$domain'";
+		$sth = $dbh->prepare("$sql");
+		$sth->execute;
+		print "[info] Deleting all package content in patchlevel:$plevel in distribution:$pkgdist for domain:$domain\n";
+		$sql="delete from andutteye_packages_content where distribution = '$pkgdist' and patchlevel = '$plevel' and domain_name = '$domain'";
+		$sth = $dbh->prepare("$sql");
+		$sth->execute;
+		print "[info] Deleting all package dependencie information in patchlevel:$plevel in distribution:$pkgdist for domain:$domain\n";
+		$sql="delete from andutteye_packages_dependencies where distribution = '$pkgdist' and patchlevel = '$plevel' and domain_name = '$domain'";
+		$sth = $dbh->prepare("$sql");
+		$sth->execute;
+	}
+} else {
+	print "[info] Want to delete all packages in patchlevel:$plevel in distribution:$pkgdist\n";
+}
+
+if($savemode eq "fs") {
+
+	$sql="select parametervalue from andutteye_core_configuration where parametername = 'Management_top_directory_location'";
+	$sth = $dbh->prepare("$sql");
+	$sth->execute;
+	@row = $sth->fetchrow_array;
+
+	if(!defined($row[0])) {
+		print "[error] Management_top_directory_location is not correctly set in database. Define it and try again.\n";
+		exit(1);
+	}else {
+		$Management_top_directory_location = $row[0];
+		mkdir ("$Management_top_directory_location");
+		mkdir ("$Management_top_directory_location/$domain");
+		mkdir ("$Management_top_directory_location/$domain/$pkgdist");
+		mkdir ("$Management_top_directory_location/$domain/$pkgdist/$plevel");
+	}
+}
+
+print "[info] Loading packages to $pkgdist in patchlevel $plevel from repository $pkgrepo\n";
+print "[info] Package savemode is set to $savemode.\n";
+my @packages=`find . -name "*.rpm" -type f | cut -c3-900`;
+for(@packages) {
+        chomp;
+        @information=split(" ", `rpm -qp --qf %-30{NAME}\\\t%{VERSION}\\\t%{RELEASE}\\\t%{ARCH} $_`);
+
+	if($debug) {
+		print "[info] $count packages loaded. Package:$information[0]\n";
+		print "\tVersion:$information[1] Release:$information[2] Arch:$information[3]\n";
+	}
+	if(!$verify) {
+		$sql="select count(seqnr) from andutteye_packages where aepackage = '$information[0]'";
+		$sql.=" and aeversion = '$information[1]' and aerelease = '$information[2]' and aearchtype = '$information[3]' and patchlevel = '$plevel'";
+		$sql.=" and distribution = '$pkgdist' and domain_name = '$domain'";
+		$sth = $dbh->prepare("$sql");
+		$sth->execute;
+		@row = $sth->fetchrow_array;
+
+		if($row[0] == 0) {
+
+			@requires=`rpm -qp --requires $_`;
+			@provides=`rpm -qp --provides $_`;
+
+			if($savemode eq "fs") {
+        			$sql="insert into andutteye_packages(aepackage,aeversion,aerelease,aearchtype,patchlevel,distribution,patchlevelinfo,location,status";
+        			$sql.=",packagetype,savemode,filename,domain_name) values('$information[0]','$information[1]'";
+				$sql.=",'$information[2]','$information[3]','$plevel','$pkgdist','$plevelinfo'";
+        			$sql.=",'$Management_top_directory_location/$domain/$pkgdist/$plevel/$_','active','rpm','fs','$_','$domain')";
+        			$sth = $dbh->prepare("$sql");
+        			$sth->execute;
+				
+				if ( ! -f "$Management_top_directory_location/$domain/$pkgdist/$plevel/$_" ) {
+					`cp -f $_ $Management_top_directory_location/$domain/$pkgdist/$plevel/$_`;
+				}
+
+				$sql="select seqnr from andutteye_packages where aepackage = '$information[0]'";
+                                $sql.=" and aeversion = '$information[1]' and aerelease = '$information[2]' and aearchtype = '$information[3]' and patchlevel = '$plevel'";
+                                $sql.=" and distribution = '$pkgdist' and domain_name = '$domain'";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute;
+                                my @pointer = $sth->fetchrow_array;
+
+                                for(@requires) {
+                                        chomp;
+                                        $sql="insert into andutteye_packages_dependencies(seqref,distribution,patchlevel,domain_name,aerequires)";
+                                        $sql.=" values(?,?,?,?,?)";
+                                        $sth = $dbh->prepare("$sql");
+                                        $sth->execute($pointer[0],$pkgdist,$plevel,$domain,$_);
+					$deps++;
+                                }
+                                for(@provides) {
+                                        chomp;
+                                        $sql="insert into andutteye_packages_dependencies(seqref,distribution,patchlevel,domain_name,aeprovides)";
+                                        $sql.=" values(?,?,?,?,?)";
+                                        $sth = $dbh->prepare("$sql");
+                                        $sth->execute($pointer[0],$pkgdist,$plevel,$domain,$_);
+					$deps++;
+                                }
+
+			}
+			elsif($savemode eq "db") {
+				my $filehandle;
+				my $filedata;
+
+				open("filehandle", "<$_")
+        				or die $!;
+				binmode filehandle;
+
+				while (($n = read filehandle, $data, 4) != 0) { 
+					$filedata .= $data; 
+				}
+				close("filehandle");
+
+				$sql="insert into andutteye_packages(aepackage,aeversion,aerelease,aearchtype,patchlevel,distribution,status,packagetype,savemode,filename,domain_name,patchlevelinfo";
+				$sql.=")";
+				$sql.=" values(?,?,?,?,?,?,?,?,?,?,?,?)";
+				$sth = $dbh->prepare("$sql");
+				$sth->execute($information[0],$information[1],$information[2],$information[3],$plevel,$pkgdist,'active','rpm','db',$_,$domain,$plevelinfo);
+
+				$sql="select seqnr from andutteye_packages where aepackage = '$information[0]'";
+                		$sql.=" and aeversion = '$information[1]' and aerelease = '$information[2]' and aearchtype = '$information[3]' and patchlevel = '$plevel'";
+                		$sql.=" and distribution = '$pkgdist' and domain_name = '$domain'";
+                		$sth = $dbh->prepare("$sql");
+                		$sth->execute;
+                		my @pointer = $sth->fetchrow_array;
+
+				$sql="insert into andutteye_packages_content(content,seqref,distribution,patchlevel,domain_name)";
+				$sql.=" values(?,?,?,?,?)";
+				$sth = $dbh->prepare("$sql");
+				$sth->execute($filedata,$pointer[0],$pkgdist,$plevel,$domain);
+
+				for(@requires) {
+					chomp;
+					$sql="insert into andutteye_packages_dependencies(seqref,distribution,patchlevel,domain_name,aerequires)";
+					$sql.=" values(?,?,?,?,?)";
+					$sth = $dbh->prepare("$sql");
+					$sth->execute($pointer[0],$pkgdist,$plevel,$domain,$_);
+					$deps++;
+				}
+				for(@provides) {
+					chomp;
+					$sql="insert into andutteye_packages_dependencies(seqref,distribution,patchlevel,domain_name,aeprovides)";
+					$sql.=" values(?,?,?,?,?)";
+					$sth = $dbh->prepare("$sql");
+					$sth->execute($pointer[0],$pkgdist,$plevel,$domain,$_);
+					$deps++;
+				}
+	
+				undef $filedata;
+
+			} else {
+				print "[error] An invalid savemode specified:$savemode only db = Database fs = Filesystem are valid savemode types.\n";
+				exit(1);
+			}
+		}
+	}else {
+		print "[info] Running in verifymode.\n";
+	}
+	if($row[0] == 0) {
+	 	if($count == $count_print) {
+                	if(!$debug) {
+                        	print "[info] $count packages loaded with $deps lines of dependencie info.\n";
+                	}
+                	$count_print=($count + $count_print_ident);
+			$deps="0";
+        	}
+        	$count++;
+	} else {
+	 	if($alreadycount == $alreadycount_print) {
+                	if(!$debug) {
+                        	print "[info] $alreadycount packages already loaded\n";
+                	}
+                	$alreadycount_print=($alreadycount + $alreadycount_print_ident);
+        	}
+        	$alreadycount++;
+	}
+
+}
+print "[info] $count packages loaded to Andutteye database.\n";
+
+# End of subfunction
+}
+sub search_package {
+my $searchpkg="$_[0]";
+my $aepackage;
+my $aeversion;
+my $aerelease;
+my $distribution;
+my $aearchtype;
+my $patchlevel;
+my $found="0";
+
+connect_to_database();
+
+if(!$domain) {
+	$sql="select aepackage,aeversion,aerelease,distribution,aearchtype,patchlevel from andutteye_packages where aepackage like '%$searchpkg%' order by distribution asc";
+	$sth = $dbh->prepare("$sql");
+	$sth->execute or die "Failed :$!\n";
+} else {
+	$sql="select aepackage,aeversion,aerelease,distribution,aearchtype,patchlevel from andutteye_packages where aepackage like '%$searchpkg%' and domain_name = '$domain' order by distribution asc";
+	$sth = $dbh->prepare("$sql");
+	$sth->execute or die "Failed :$!\n";
+}
+
+$sth->bind_columns(undef, \$aepackage, \$aeversion, \$aerelease, \$distribution, \$aearchtype, \$patchlevel);
+
+printf "%20.20s", "Package";
+printf "%15.10s", "Version";
+printf "%15.10s", "Release";
+printf "%15.10s", "Archtype";
+printf "%20.20s", "Distribution";
+printf "%15.10s\n", "Patchlevel";
+print "-----------------------------------------------------------------------------------------------------\n";
+
+while($sth->fetch()) {
+	#print "-> Distribution:$distribution Package:$aepackage Version:$aeversion Release:$aerelease Arch:$aearchtype Plevel:$patchlevel\n";
+	printf "%20.20s", "$aepackage";
+	printf "%15.10s", "$aeversion";
+	printf "%15.10s", "$aerelease";
+	printf "%15.10s", "$aearchtype";
+	printf "%20.20s", "$distribution";
+	printf "%15.10s\n", "$patchlevel";
+	$found++;
+}
+
+print "-----------------------------------------------------------------------------------------------------\n";
+print "$found packages found in Andutteye database that matched your search critieria. Domain = $domain\n";
+print "-----------------------------------------------------------------------------------------------------\n";
+
+# End of subfunction
+}
+sub show_tag {
+my $domain_name;
+my $group_name;
+my $system_name;
+
+connect_to_database();
+
+$sql="select domain_name, group_name, system_name from andutteye_systems order by system_name asc";
+$sth = $dbh->prepare("$sql");
+$sth->execute or die "Failed :$!\n";
+
+$sth->bind_columns(undef, \$domain_name, \$group_name, \$system_name);
+
+printf "%25.20s", "Domain";
+printf "%25.20s", "Group";
+printf "%25.20s", "System";
+printf "%45.40s", "Available tagging\n";
+print "------------------------------------------------------------------------------------------------------------------\n";
+
+while($sth->fetch()) {
+        printf "%25.20s", "$domain_name";
+        printf "%25.20s", "$group_name";
+        printf "%25.20s", "$system_name";
+        printf "%45.40s", "Filematch override system\n";
+}
+
+
+$sql="select domain_name, group_name, system_name from andutteye_systems order by system_name asc";
+$sth = $dbh->prepare("$sql");
+$sth->execute or die "Failed :$!\n";
+
+$sth->bind_columns(undef, \$domain_name, \$group_name, \$system_name);
+print "------------------------------------------------------------------------------------------------------------------\n";
+printf "%25.190s", "Available tagging, from worst to best match tagging, from left to right. 10 dimensions of grouping and matching.\n";
+printf "%25.190s", "(W) = Worst match, (B) = Best match, <plevel> = Defined system patchlevel.\n";
+print "------------------------------------------------------------------------------------------------------------------\n";
+
+while($sth->fetch()) {
+        printf "%25.190s", "(W)|--$domain_name|--$domain_name--<plevel>|--$group_name|--$group_name--<plevel>|--$domain_name--$group_name|--$domain_name--$group_name--<plevel>|--$system_name|--$system_name--<plevel>|(B)\n";
+}
+
+
+print "\n[info] The Andutteye Filematch overridesystem will search and match saved files from (W) Worst filematching to the (B) Best filematch.\n";
+print "[info] If files are found on the way they will be overrided with the better match, this will give you great dynamic to group files to many\n";
+print "[info] or few systems with a single file tagged the right way.\n\n"; 
+# End of subfunction
+}
+sub crtbaserpm {
+
+system("/usr/bin/andutteye_crtbaserpm");
+
+# End of subfunction
+}
+sub add_file {
+my $file = $_[0];
+my $dirname;
+my $filename;
+my $filehandle;
+my $filedata;
+my $revision;
+my $Management_top_directory_location;
+
+if($file eq "") {
+        print "[error] Specify a directo path to a file as second argument.\n";
+        exit(1);
+}
+
+connect_to_database();
+
+$sql="select parametervalue from andutteye_core_configuration where parametername = 'Management_top_directory_location'";
+$sth = $dbh->prepare("$sql");
+$sth->execute;
+@row = $sth->fetchrow_array;
+
+if(!defined($row[0])) {
+        print "[error] Management_top_directory_location is not correctly set in database. Define it and try again.\n";
+        exit(1);
+}else {
+        $Management_top_directory_location = $row[0];
+}
+
+if (! -f "$file") {
+	print "[error] file->$file doesnt exist or isnt a file.\n";
+	exit(1);
+} else {
+	# If todir is specified, use that target directory.
+	if(defined($todir)) {
+		$dirname="$todir";
+	} else {
+		$dirname=dirname($file);
+	}
+	$filename=basename($file);
+}
+if(!defined($tagging)) {
+	print "[error] Specify which tagging the file shall have, ex -tagging=--<your domain>\n";
+	exit(1);
+}
+if(!defined($pkgdist)) {
+	print "[error] Specify which distribution the file should be connected to\n";
+	exit(1);
+}
+if(!defined($domain)) {
+	print "[error] Specify which Andutteye domain the file should be connected to\n";
+	exit(1);
+}
+
+# If its a binary file, we lock it. It will not be editeble in Controlcenter.
+if( -B "$file" ) {
+	$lock_file="yes";
+}
+if(defined($lock_file)) {
+	$lock_file="yes";
+}
+print "[info] Want to load file:$file directory:$dirname filename:$filename domain:$domain distribution:$pkgdist Todir:$todir Filelock:$lock_file\n";
+
+open($filehandle, "$file") 
+	or die $!;
+read($filehandle, $filedata, -s $filehandle);
+
+if($debug) {
+	print "Data->$filedata\n";
+}
+
+$sql ="select distinct distribution from andutteye_packages where distribution = '$pkgdist'";
+$sth = $dbh->prepare("$sql");
+$sth->execute;
+@row = $sth->fetchrow_array;
+
+if(!defined($row[0])) {
+        print "[error] The distribution you specified->$pkgdist doesnt exist in Andutteye database.\n";
+        print "[error] Load and create the package repository before adding files to it.\n";
+        exit(1);
+}
+
+$sql ="select content from andutteye_files where filename = '$filename' and directory = '$dirname' and distribution = '$pkgdist'";
+$sql.=" and tagging = '$tagging' and domain_name = '$domain' order by revision desc limit 1 offset 0";
+$sth = $dbh->prepare("$sql");
+$sth->execute;
+@row = $sth->fetchrow_array;
+
+if ($row[0] eq $filedata) {
+        print "[info] New file is the same as existing revision, doing nothing.\n";
+        exit;
+}
+
+$sql ="select revision from andutteye_files where filename = '$filename' and directory = '$dirname' and distribution = '$pkgdist'";
+$sql.=" and tagging = '$tagging' and domain_name = '$domain 'order by revision desc limit 0,1";
+$sth = $dbh->prepare("$sql");
+$sth->execute;
+@row = $sth->fetchrow_array;
+
+if(!defined($row[0])) {
+	print "[info] No revision found for this file, revision will be 1.0\n";
+	$revision="1";
+} else {
+	$revision=($row[0] + 1);
+	print "[info] Latest revision found for this file is->$row[0].0 Adding new revision of this file->$revision.0\n";
+}
+
+$sql="insert into andutteye_files(filename,directory,distribution,content,tagging,revision,created_date,created_time,created_by,fileindex,perms,perm_owner,perm_group,domain_name,filelocked)";
+$sql.=" values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+$sth = $dbh->prepare("$sql");
+$sth->execute($filename,$dirname,$pkgdist,$filedata,$tagging,$revision,$date,$time,'andutteyeadm',$fileindex,$perms,$perm_owner,$perm_group,$domain,$lock_file);
+
+
+print "[info] Add file completed\n";
+print "[info] Permissions:$perms Owner:$perm_owner Group:$perm_group (override with arguments)\n";
+
+# End of subfunction
+}
+sub show_bundle {
+my $bundle;
+my $revision;
+my $subsql;
+my $substh;
+
+connect_to_database();
+
+$sql="select distinct bundle, revision from andutteye_bundles order by bundle asc";
+$sth = $dbh->prepare("$sql");
+$sth->execute or die "Failed :$!\n";
+
+$sth->bind_columns(undef, \$bundle, \$revision);
+
+printf "%25.20s", "Bundle";
+printf "%25.20s", "Revision";
+printf "%25.20s", "Selected on system\n";
+print "------------------------------------------------------------------------------------------------------------------\n";
+
+while($sth->fetch()) {
+
+	$subsql ="select count(seqnr) from andutteye_choosenbundles where bundle = '$bundle' and revision = '$revision' and specaction = 'N'";
+	$substh = $dbh->prepare("$subsql");
+	$substh->execute;
+	@row = $substh->fetchrow_array;
+
+        printf "%25.20s", "$bundle";
+        printf "%25.20s", "$revision";
+        printf "%25.20s", "$row[0]\n";
+}
+
+# End of subfunction
+}
+sub extract_package {
+
+connect_to_database();
+my $content;
+my $package="$_[0]";
+
+if($package eq "") {
+	print "[error] Specify package name to extract the package from the Andutteye database.\n";
+	exit(1);
+}
+$sql="select seqnr,filename,savemode,location from andutteye_packages where aepackage = '$ARGV[1]'";
+$sth = $dbh->prepare("$sql");
+$sth->execute or die "Failed :$!\n";
+@row = $sth->fetchrow_array;
+
+if ($row[2] eq "db") {
+	$sql="select content from andutteye_packages_content where seqref = '$row[0]'";
+	$sth = $dbh->prepare("$sql");
+	$sth->execute or die "Failed :$!\n";
+	my @content = $sth->fetchrow_array;
+
+
+	open("file",">$row[1]")
+		or die;
+		print "[info] Extracting package:($package) $row[1] from Andutteye database.\n";
+		print file "$content[0]";
+} else {
+
+	if( -f "$row[3]") {
+		print "[info] Extracting package:($package) $row[1] from Andutteye filesystem.\n";
+		`cp $row[3] .`;
+	}
+
+}
+
+# End of subfunction
+}
+sub bextract_package {
+my $content;
+my $seqnr;
+my $filename;
+my $savemode;
+my $location;
+my $count="0";
+my $subsql;
+my $substh;
+my $ssubsql;
+my $ssubsth;
+
+if(!defined($pkgdist)) {
+        print "[error] A distribution must be specified with -pkgdist=redhat-es5-x86_64 and should correspond to package distribution you want to export.\n";
+        exit(1);
+}
+if(!defined($plevel)) {
+        print "[error] A patchlevel must be specified with -plevel=0.\n";
+        exit(1);
+}
+if(!defined($domain)) {
+        print "[error] A domain must be specified with -domain=Thundera.\n";
+        exit(1);
+}
+
+connect_to_database();
+
+
+$sql="select seqnr,filename,savemode,location from andutteye_packages where distribution = '$pkgdist' and patchlevel = '$plevel' and domain_name = '$domain'";
+$sth = $dbh->prepare("$sql");
+$sth->execute or die "Failed :$!\n";
+
+        $sth->bind_columns(\$seqnr, \$filename, \$savemode, \$location);
+        while($sth->fetch()) {
+
+		$subsql="select seqnr,filename,savemode,location from andutteye_packages where seqnr = '$seqnr'";
+		$substh = $dbh->prepare("$subsql");
+		$substh->execute or die "Failed :$!\n";
+		@row = $substh->fetchrow_array;
+
+		if ($row[2] eq "db") {
+        		$ssubsql="select content from andutteye_packages_content where seqref = '$seqnr'";
+        		$ssubsth = $dbh->prepare("$ssubsql");
+        		$ssubsth->execute or die "Failed :$!\n";
+        		my @content = $ssubsth->fetchrow_array;
+
+        		open("file",">$filename")
+                	or die;
+                	print "[info] Savemode:$savemode Extracting package:$filename from Andutteye database.\n";
+                	print file "$content[0]";
+		} else {
+	
+        		if( -f "$row[3]") {
+                		print "[info] Savemode:$savemode Extracting package:$filename from Andutteye database.\n";
+                		`cp $row[3] .`;
+        		}
+
+		}
+	$count++;
+	}
+
+print "[info] $count packages extracted.\n";
+# End of subfunction
+}
+sub regenerate {
+my @information;
+my @requires;
+my @provides;
+my $count="0";
+my $deps="0";
+my $alreadycount="0";
+my $data;
+my $n;
+my $count_print="0";
+my $count_print_ident="10";
+my $alreadycount_print="0";
+my $alreadycount_print_ident="10";
+my $Management_top_directory_location;
+
+connect_to_database();
+
+if(!defined($pkgrepo)) {
+        print "[error] A package repository directory must be specified to -pkgrepo=/repository/redhat-es5\n";
+        exit(1);
+}
+if(!defined($pkgdist)) {
+        print "[error] A package distribution must be specified with -pkgdist=redhat-es5-x86_64.\n";
+        exit(1);
+}
+if(!defined($plevel)) {
+        print "[error] A patchlevel must be specified to -plevel=0\n";
+        exit(1);
+}
+if(!defined($plevelinfo)) {
+        print "[error] Specify patchlevel information -plevelinfo=\"Base packages\"\n";
+        exit(1);
+}
+if(!defined($savemode)) {
+        print "[error] Specify which savemode to use db to save content in database, -savemode=fs\n";
+        exit(1);
+}
+if(!defined($domain)) {
+        print "[error] Specify which domain the package should be connected to. -domain=Thundera\n";
+        exit(1);
+}
+chdir("$pkgrepo")
+        or die "[error] Failed to change directory to specified package repository error:$!\n";
+
+if(!$verify) {
+        if(!$nodelete) {
+                print "[info] Deleting all packages in patchlevel:$plevel in distribution:$pkgdist for domain:$domain\n";
+                $sql="delete from andutteye_packages where distribution = '$pkgdist' and patchlevel = '$plevel' and domain_name = '$domain'";
+                $sth = $dbh->prepare("$sql");
+                $sth->execute;
+                print "[info] Deleting all package content in patchlevel:$plevel in distribution:$pkgdist for domain:$domain\n";
+                $sql="delete from andutteye_packages_content where distribution = '$pkgdist' and patchlevel = '$plevel' and domain_name = '$domain'";
+                $sth = $dbh->prepare("$sql");
+                $sth->execute;
+                print "[info] Deleting all package dependencie information in patchlevel:$plevel in distribution:$pkgdist for domain:$domain\n";
+                $sql="delete from andutteye_packages_dependencies where distribution = '$pkgdist' and patchlevel = '$plevel' and domain_name = '$domain'";
+                $sth = $dbh->prepare("$sql");
+                $sth->execute;
+        }
+} else {
+        print "[info] Want to delete all packages in patchlevel:$plevel in distribution:$pkgdist\n";
+}
+
+print "[info] Loading database with packages as location $pkgrepo in patchlevel $plevel from repository $pkgrepo\n";
+print "[info] Package savemode is set to $savemode.\n";
+my @packages=`find . -name "*.rpm" -type f | cut -c3-900`;
+for(@packages) {
+        chomp;
+        @information=split(" ", `rpm -qp --qf %-30{NAME}\\\t%{VERSION}\\\t%{RELEASE}\\\t%{ARCH} $_`);
+
+        if($debug) {
+                print "[info] $count packages loaded. Package:$information[0]\n";
+                print "\tVersion:$information[1] Release:$information[2] Arch:$information[3]\n";
+        }
+        if(!$verify) {
+                $sql="select count(seqnr) from andutteye_packages where aepackage = '$information[0]'";
+                $sql.=" and aeversion = '$information[1]' and aerelease = '$information[2]' and aearchtype = '$information[3]' and patchlevel = '$plevel'";
+                $sql.=" and distribution = '$pkgdist' and domain_name = '$domain'";
+                $sth = $dbh->prepare("$sql");
+                $sth->execute;
+                @row = $sth->fetchrow_array;
+
+                if($row[0] == 0) {
+
+                        @requires=`rpm -qp --requires $_`;
+                        @provides=`rpm -qp --provides $_`;
+
+                        if($savemode eq "fs") {
+                                $sql="insert into andutteye_packages(aepackage,aeversion,aerelease,aearchtype,patchlevel,distribution,location,status";
+                                $sql.=",packagetype,savemode,filename,domain_name,patchlevelinfo) values('$information[0]','$information[1]'";
+                                $sql.=",'$information[2]','$information[3]','$plevel','$pkgdist'";
+                                $sql.=",'$pkgrepo/$_','active','rpm','fs','$_','$domain','$plevelinfo')";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute;
+
+                                $sql="select seqnr from andutteye_packages where aepackage = '$information[0]'";
+                                $sql.=" and aeversion = '$information[1]' and aerelease = '$information[2]' and aearchtype = '$information[3]' and patchlevel = '$plevel'";
+                                $sql.=" and distribution = '$pkgdist' and domain_name = '$domain'";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute;
+                                my @pointer = $sth->fetchrow_array;
+
+                                for(@requires) {
+                                        chomp;
+                                        $sql="insert into andutteye_packages_dependencies(seqref,distribution,patchlevel,domain_name,aerequires)";
+                                        $sql.=" values(?,?,?,?,?)";
+                                        $sth = $dbh->prepare("$sql");
+                                        $sth->execute($pointer[0],$pkgdist,$plevel,$domain,$_);
+                                        $deps++;
+                                }
+                                for(@provides) {
+                                        chomp;
+                                        $sql="insert into andutteye_packages_dependencies(seqref,distribution,patchlevel,domain_name,aeprovides)";
+                                        $sql.=" values(?,?,?,?,?)";
+                                        $sth = $dbh->prepare("$sql");
+                                        $sth->execute($pointer[0],$pkgdist,$plevel,$domain,$_);
+                                        $deps++;
+                                }
+
+                        }
+                        elsif($savemode eq "db") {
+                                my $filehandle;
+                                my $filedata;
+
+                                open("filehandle", "<$_")
+                                        or die $!;
+                                binmode filehandle;
+
+                                while (($n = read filehandle, $data, 4) != 0) {
+                                        $filedata .= $data;
+                                }
+                                close("filehandle");
+
+                                $sql="insert into andutteye_packages(aepackage,aeversion,aerelease,aearchtype,patchlevel,distribution,status,packagetype,savemode,filename,domain_name,patchlevelinfo";
+                                $sql.=")";
+                                $sql.=" values(?,?,?,?,?,?,?,?,?,?,?,?)";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute($information[0],$information[1],$information[2],$information[3],$plevel,$pkgdist,'active','rpm','db',$_,$domain,$plevelinfo);
+
+                                $sql="select seqnr from andutteye_packages where aepackage = '$information[0]'";
+                                $sql.=" and aeversion = '$information[1]' and aerelease = '$information[2]' and aearchtype = '$information[3]' and patchlevel = '$plevel'";
+                                $sql.=" and distribution = '$pkgdist' and domain_name = '$domain'";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute;
+                                my @pointer = $sth->fetchrow_array;
+
+                                $sql="insert into andutteye_packages_content(content,seqref,distribution,patchlevel,domain_name)";
+                                $sql.=" values(?,?,?,?,?)";
+                                $sth = $dbh->prepare("$sql");
+                                $sth->execute($filedata,$pointer[0],$pkgdist,$plevel,$domain);
+
+                                for(@requires) {
+                                        chomp;
+                                        $sql="insert into andutteye_packages_dependencies(seqref,distribution,patchlevel,domain_name,aerequires)";
+                                        $sql.=" values(?,?,?,?,?)";
+                                        $sth = $dbh->prepare("$sql");
+                                        $sth->execute($pointer[0],$pkgdist,$plevel,$domain,$_);
+                                        $deps++;
+                                }
+                                for(@provides) {
+                                        chomp;
+                                        $sql="insert into andutteye_packages_dependencies(seqref,distribution,patchlevel,domain_name,aeprovides)";
+                                        $sql.=" values(?,?,?,?,?)";
+                                        $sth = $dbh->prepare("$sql");
+                                        $sth->execute($pointer[0],$pkgdist,$plevel,$domain,$_);
+                                        $deps++;
+                                }
+
+                                undef $filedata;
+
+                        } else {
+                                print "[error] An invalid savemode specified:$savemode only db = Database fs = Filesystem are valid savemode types.\n";
+                                exit(1);
+                        }
+                }
+        }else {
+                print "[info] Running in verifymode.\n";
+        }
+        if($row[0] == 0) {
+                if($count == $count_print) {
+                        if(!$debug) {
+                                print "[info] $count packages loaded with $deps lines of dependencie info.\n";
+                        }
+                        $count_print=($count + $count_print_ident);
+                        $deps="0";
+                }
+                $count++;
+        } else {
+                if($alreadycount == $alreadycount_print) {
+                        if(!$debug) {
+                                print "[info] $alreadycount packages already loaded\n";
+                        }
+                        $alreadycount_print=($alreadycount + $alreadycount_print_ident);
+                }
+                $alreadycount++;
+        }
+
+}
+print "[info] $count packages loaded to Andutteye database.\n";
+
+# End of subfunction
+}
+
+# Parse of commandline arguments.
+for(@ARGV) {
+        if ( $_ =~/-config/ ) {
+                my @tmp=split("=","$_");
+                $config="$tmp[1]";
+        }
+        if ( $_ =~/-pkgrepo/ ) {
+                my @tmp=split("=","$_");
+                $pkgrepo="$tmp[1]";
+        }
+        if ( $_ =~/-pkgdist/ ) {
+                my @tmp=split("=","$_");
+                $pkgdist="$tmp[1]";
+        }
+        if ( $_ =~/-domain/ ) {
+                my @tmp=split("=","$_");
+                $domain="$tmp[1]";
+        }
+        if ( $_ =~/-revision/ ) {
+                my @tmp=split("=","$_");
+                $revision="$tmp[1]";
+        }
+        if ( $_ =~/-plevel=/ ) {
+                my @tmp=split("=","$_");
+                $plevel="$tmp[1]";
+        }
+        if ( $_ =~/-plevelinfo=/ ) {
+                my @tmp=split("=","$_");
+                $plevelinfo="$tmp[1]";
+        }
+        if ( $_ =~/-perms=/ ) {
+                my @tmp=split("=","$_");
+                $perms="$tmp[1]";
+        }
+        if ( $_ =~/-perm_owner=/ ) {
+                my @tmp=split("=","$_");
+                $perm_owner="$tmp[1]";
+        }
+        if ( $_ =~/-perm_group=/ ) {
+                my @tmp=split("=","$_");
+                $perm_group="$tmp[1]";
+        }
+        if ( $_ =~/-system=/ ) {
+                my @tmp=split("=","$_");
+                $system="$tmp[1]";
+        }
+        if ( $_ =~/-tagging=/ ) {
+                my @tmp=split("=","$_");
+                $tagging="$tmp[1]";
+        }
+        if ( $_ =~/-todir=/ ) {
+                my @tmp=split("=","$_");
+                $todir="$tmp[1]";
+        }
+        if ( $_ =~/-lockfile/ ) {
+                $lock_file="yes";
+        }
+        if ( $_ =~/-fileindex/ ) {
+                my @tmp=split("=","$_");
+                $fileindex="$tmp[1]";
+        }
+        if ( $_ =~/-savemode=/ ) {
+                my @tmp=split("=","$_");
+                $savemode="$tmp[1]";
+        }
+	if( $_ =~/^verify$/ ) {
+		$verify="1";
+	}
+	if( $_ =~/^nodelete$/ ) {
+		$nodelete="1";
+	}
+	if( $_ =~/^debug$/ ) {
+		$debug="1";
+	}
+}
+if(!defined($ARGV[0])) {
+        program_info();
+}
+if(!defined($config)) {
+	$config="/etc/andutteye/andutteyedsrv.conf";
+}
+parse_and_load_configuration();
+
+if("$ARGV[0]" eq "addbundle") {
+	add_bundle("$ARGV[1]");
+}
+if("$ARGV[0]" eq "extractbundle") {
+	extract_bundle("$ARGV[1]");
+}
+if("$ARGV[0]" eq "addspec") {
+	add_spec("$ARGV[1]");
+}
+if("$ARGV[0]" eq "addfile") {
+	add_file("$ARGV[1]");
+}
+if("$ARGV[0]" eq "baddpackage") {
+	badd_package();
+}
+if("$ARGV[0]" eq "regenerate") {
+	regenerate();
+}
+if("$ARGV[0]" eq "bextractpkg") {
+	bextract_package();
+}
+if("$ARGV[0]" eq "searchpkg") {
+	search_package("$ARGV[1]");
+}
+if("$ARGV[0]" eq "addpackage") {
+	add_package("$ARGV[1]");
+}
+if("$ARGV[0]" eq "showtag") {
+	show_tag();
+}
+if("$ARGV[0]" eq "showbundle") {
+	show_bundle();
+}
+if("$ARGV[0]" eq "crtbaserpm") {
+	crtbaserpm();
+}
+if("$ARGV[0]" eq "extractpkg") {
+	extract_package("$ARGV[1]");
+}
+if("$ARGV[0]" eq "delbundle") {
+	del_bundle("$ARGV[1]","$ARGV[2]");
+}
