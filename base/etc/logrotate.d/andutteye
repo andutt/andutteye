@@ -1,0 +1,31 @@
+#
+# $Id: andutteye 609 2008-03-11 19:24:58Z andutt $
+#
+/var/log/andutteye/andutteyedmon.log {
+        missingok
+        compress
+        daily
+        rotate 5
+        create 0644 andutteye andutteye
+}
+/var/log/andutteye/andutteyedman.log {
+        missingok
+        compress
+        daily
+        rotate 5
+        create 0644 andutteye andutteye
+}
+/var/log/andutteye/andutteyedsrv.log {
+        missingok
+        compress
+        daily
+        rotate 5
+        create 0644 andutteye andutteye
+}
+/var/log/andutteye/andutteyedprx.log {
+        missingok
+        compress
+        daily
+        rotate 5
+        create 0644 andutteye andutteye
+}

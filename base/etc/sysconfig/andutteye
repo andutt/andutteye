@@ -1,0 +1,35 @@
+#
+#    Copyright Andreas Utterberg Thundera (c) All rights Reserved 2008
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#    This file specifies which Andutteye modules that shall be enabled for this
+#    system. The Andutteye init program parses this configuration file to be 
+#    able to know which modules to start. Note! The modules will be started in 
+#    the order specified here, so the first to be started should be andutteyedsrv
+#    to be able to serve other components requests.
+#
+#    Services available to start:
+#
+#    andutteyedsrv	: The Andutteye server. Is used for centrelized management and monitoring of Andutteye functionality.
+#    andutteyedprx	: The Andutteye network proxy service. The proxy can act as a gateway for loadbalancing or as a Andutteye proxy frontsystem.
+#    andutteyedslg	: The Andutteye syslog server service. It provides central syslog utillities.
+#    andutteyedagt	: The Andutteye agent. Is used for system monitoring, management, statistics and assetmanagement.
+#
+#    $Id: andutteye 642 2008-04-23 17:24:38Z andutt $
+#
+andutteye_program_dir="/usr/bin"
+andutteye_config_dir="/etc/andutteye"
+run_andutteye_functionality="andutteyedsrv andutteyedagt"
+run_andutteye_as_user=root

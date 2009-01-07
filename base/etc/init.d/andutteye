@@ -1,0 +1,210 @@
+#!/bin/bash
+#
+# Copyright (C) 2004-2010 Andreas Utterberg Thundera AB.
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# version 2 as published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# For the complete GPL v2 license, visit http://www.fsf.org/licenses
+#
+# $Id: andutteye 669 2008-06-17 21:05:16Z andutt $
+#
+# chkconfig: 345 90 10
+# description: Andutteye Systems Management Solution
+#
+# processname: andutteyedprx, andutteyedagt, andutteyedsrv
+# pid: /var/run/processname.pid
+
+### BEGIN INIT INFO
+# Provides: andutteyedprx, andutteyedagt, andutteyedsrv
+# Required-Start: $network $remote_fs
+# Required-Stop: $network $remote_fs
+# Default-Start: 3 4 5
+# Short-Description: Andutteye
+# Description: Andutteye Systems Management Solution
+### END INIT INFO
+
+ERRVAL=0
+
+[ -f "/etc/rc.d/init.d/functions" ] && source /etc/rc.d/init.d/functions
+
+if [ ! -f "/etc/sysconfig/andutteye" ]
+       then
+       echo "ERROR Missconfigured system, couldnt locate andutteye init parameters."
+       exit 1
+else
+       source /etc/sysconfig/andutteye
+fi
+
+
+set_var() {
+       case $1
+       in
+       andutteyedprx)
+               program="andutteyedprx"
+               description="Andutteye proxy service"
+               config="$andutteye_config_dir/andutteydprx.conf"
+               LOCKFILE="/var/lock/subsys/$program"
+               PIDFILE="/var/run/$program.pid"
+       ;;
+       andutteyedagt)
+               program="andutteyedagt"
+               description="Andutteye agent"
+               config="$andutteye_config_dir/andutteyedagt.conf"
+               LOCKFILE="/var/lock/subsys/$program"
+               PIDFILE="/var/run/$program.pid"
+               ;;
+       andutteyedsrv)
+               program="andutteyedsrv"
+               description="Andutteye server"
+               config="$andutteye_config_dir/andutteyedsrv.conf"
+               LOCKFILE="/var/lock/subsys/$program"
+               PIDFILE="/var/run/$program.pid"
+               ;;
+       andutteyedslg)
+               program="andutteyedslg"
+               description="Andutteye syslog server"
+               config="$andutteye_config_dir/andutteyedslg.conf"
+               LOCKFILE="/var/lock/subsys/$program"
+               PIDFILE="/var/run/$program.pid"
+               ;;
+       *)
+               failure "ERROR Missconfigured Andutteye init configuration, $andutteye_program is not recognised."
+               echo "$1 is not a recognised andutteye service"
+               exit
+               ;;
+       esac
+}
+
+#
+# Start functions
+start_all() {
+       for andutteye_program in $run_andutteye_functionality
+       do
+               start $andutteye_program
+       done
+}
+start() {
+       set_var $1
+       PID="X`ps -efl | grep perl | grep $program | grep -v grep | awk '{ print $4 }'`"
+       if [ ${PID} = "X" ]
+               then
+               daemon --check $program --user $run_andutteye_as_user $andutteye_program_dir/$program \
+               -config=$config > /dev/null 2>&1
+               ERRVAL=$?
+
+               if [ $ERRVAL = 0 ]
+                       then
+                       echo -n -e "\tStarting $description:"
+                       echo `ps -efl | grep perl | grep $program | grep -v grep | awk '{ print $4 }'` > ${PIDFILE}
+                       success "startup"
+                       echo
+                       touch ${LOCKFILE}
+               else
+                       failure "ERROR Failed to start $i, check for errors in logfile /var/log/andutteye/$i.log"
+                       echo
+
+               fi
+       else
+               failure
+               echo -e "\t$description already started, pid exists"
+       fi
+}
+
+#
+# Stop functions
+stop_all(){
+       for andutteye_program in $run_andutteye_functionality
+       do
+               stop $andutteye_program
+       done
+}
+stop() {
+       set_var $1
+       echo -n -e "\tStopping $description:"
+       PID="X`ps -efl | grep perl | grep $program | grep -v grep | awk '{ print $4 }'`"
+       if [ ! ${PID} = "X" ]
+       then
+               killproc $program
+               ERRVAL=$?
+
+               if [ $ERRVAL = 0 ]
+               then
+                       success "stop"
+                       echo
+                       /bin/rm -f ${LOCKFILE}
+               else
+                       failure "stop"
+                       echo
+               fi
+
+       else
+               /bin/rm -f ${PIDFILE}
+               failure
+               echo
+       fi
+}
+#
+# Main
+case "$1" in
+start)
+  echo "Starting Andutteye Systems Management Solution:"
+  if [ ! -z $2 ]
+  then
+    start $2
+  else
+    start_all
+  fi
+  ;;
+stop)
+  echo "Stopping Andutteye Systems Management Solution:"
+  if [ ! -z $2 ]
+  then
+    stop $2
+  else
+    stop_all
+  fi
+  ;;
+restart)
+  if [ ! -z $2 ]
+  then
+    stop $2
+    sleep 2
+    start $2
+  else
+    stop_all
+    sleep 2
+    start_all
+  fi
+  ;;
+reload)
+  if [ ! -z $2 ]
+  then
+    stop $2
+    sleep 2
+    start $2
+  else
+    stop_all
+    sleep 2
+    start_all
+  fi
+  ;;
+status)
+       for andutteye_program in $run_andutteye_functionality
+               do
+               status $andutteye_program
+       done
+  ;;
+*)
+  echo "Usage: $0 {start|stop|restart|reload|status}"
+  exit 1
+  ;;
+esac
+
+exit $ERRVAL
