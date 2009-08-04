@@ -77,7 +77,8 @@ echo '<div id="MainMenu">
                                         $domain_name = $row['domain_name'];
                                         $domain_description = $row['domain_description'];
 
-                                        if(verify_role_object_permission($domain_name,'domain',1)) {
+
+                                        if(verify_role_object_permission($domain_name,'domain',1,'0','0')) {
 						echo '<li>
 						<a href="index.php?main=domain_overview&param1=' . $domain_name . '"/>
 						<img src="themes/' . $authNamespace->andutteye_theme . '/domains_1.png" alt="" title="" /> ' . $domain_name . '</a>';
@@ -88,7 +89,7 @@ echo '<div id="MainMenu">
                                         		$group_name = $row['group_name'];
                                         		$group_description = $row['group_description'];
 
-                                        		if(verify_role_object_permission($group_name,'group',1)) {
+                                        		if(verify_role_object_permission($group_name,'group',1,'0','0')) {
                                                 		echo '<li><a href="index.php?main=group_overview&param1=' .$domain_name. '&param2=' . $group_name . '"/>
 								<img src="themes/' . $authNamespace->andutteye_theme . '/groups_2.png" alt="" title="" /> ' . $group_name . '</a>';
 								echo '<ul>';
@@ -97,7 +98,7 @@ echo '<div id="MainMenu">
                                 				while ($row = $ssubsql->fetch()) {
                                         				$system_name = $row['system_name'];
 
-                                        				if(verify_role_object_permission($system_name,'system',1)) {
+                                        				if(verify_role_object_permission($system_name,'system',1,'0','0')) {
                                                 				echo '<li><a href="index.php?main=system_overview&param1='.$system_name.'&param2='.$domain_name.'&param3='.$group_name.'"/>
 										<img src="themes/' . $authNamespace->andutteye_theme . '/systems_2.png" alt="" title="" /> ' . $system_name . '</a>';
 										echo '
@@ -105,7 +106,7 @@ echo '<div id="MainMenu">
 
                                                                                         <li><a href="index.php?main=monitoring_front&param1=' . $system_name . '"><img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" /> Monitoring</a></li>';
 
-                                						 if(verify_role_object_permission($system_name,'system',2)) {
+                                						 if(verify_role_object_permission($system_name,'system',2,'0','0')) {
 
                                         						echo '
                                                         					<li><a href="index.php?main=system_specification&param1=' .$system_name. '"><img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" /> Pkgmanagement</a></li>
@@ -142,10 +143,18 @@ echo '
 			<li>
 				<a href="#sync">Actions</a>
 				<ul>
-					<li><a href="index.php?main=user_settings"> Settings</a></li>
-                			<li><a href="index.php?main=upload_documentation"> Upload.documentation</a></li>
-                			<li><a href="index.php?main=link_documentation"> Link.documentation</a></li>
-                			<li><a href="index.php?main=change_events_database"> Changeeventsdb</a></li>
+					<li><a href="index.php?main=user_settings"> 
+					   <img src="themes/' . $authNamespace->andutteye_theme . '/settings.png" alt="" title="" /> 
+					Settings</a></li>
+                			<li><a href="index.php?main=upload_documentation"> 
+					   <img src="themes/' . $authNamespace->andutteye_theme . '/upload_1.png" alt="" title="" /> 
+					Upload</a></li>
+                			<li><a href="index.php?main=link_documentation"> 
+					   <img src="themes/' . $authNamespace->andutteye_theme . '/link_1.png" alt="" title="" /> 
+					Link</a></li>
+                			<li><a href="index.php?main=change_events_database"> 
+					   <img src="themes/' . $authNamespace->andutteye_theme . '/changeevent_1.png" alt="" title="" /> 
+					Changeeventsdb</a></li>
 				</ul>
 			</li>
 			<li>
@@ -165,11 +174,23 @@ echo '
 					</li>
 					<li>
 					   <a href="index.php?main=create_role">
-                                           <img src="themes/' . $authNamespace->andutteye_theme . '/systems_2.png" alt="" title="" /> Role admin</a>
+                                           <img src="themes/' . $authNamespace->andutteye_theme . '/role_1.png" alt="" title="" /> Role admin</a>
 					</li>
 					<li>
 					   <a href="index.php?main=create_user">
 					   <img src="themes/' . $authNamespace->andutteye_theme . '/user_1.png" alt="" title="" /> User admin</a>
+					</li>
+					<li>
+					   <a href="index.php?main=fileadmin">
+					   <img src="themes/' . $authNamespace->andutteye_theme . '/file_1.png" alt="" title="" /> File admin</a>
+					</li>
+					<li>
+					   <a href="">
+					   <img src="themes/' . $authNamespace->andutteye_theme . '/package_1.png" alt="" title="" /> Package admin</a>
+					</li>
+					<li>
+					   <a href="index.php?main=create_front">
+                                           <img src="themes/' . $authNamespace->andutteye_theme . '/front_1.png" alt="" title="" /> Front admin</a>
 					</li>
 				</ul>
 			</li>
@@ -207,7 +228,7 @@ require_once 'Zend/Auth/Adapter/DbTable.php';
 require_once 'Zend/Session/Namespace.php';
 $authNamespace = new Zend_Session_Namespace('Zend_Auth');
 
-if(param4) {
+if($param4 && $param4 != 0) {
 	$sql = $db->query("select * from andutteye_rolepermissions where rolename = '$authNamespace->andutteye_role' and roleobject = '$param1' and objecttype = '$param2' and domain_name = '$param4' and distribution = '$param5'");
 	$res = $sql->fetchObject();
 } else {
@@ -374,10 +395,8 @@ verify_if_user_is_logged_in();
 require 'db.php';
 
 echo '
-<div class="ClearFloat"></div>
 <div id="content">
-	<div class="section content">
-        <h2 class="BigTitle"><span class="ColoredTxt">Enviroment</span> Status - <span class="SmallTitle">Andutteye enviroment status dashboard</span></h2>
+	<h2 class="BigTitle"><img src="themes/' . $authNamespace->andutteye_theme . '/overview_b.png" alt="" title="" /><span class="ColoredTxt">Andutteye system</span> status</h2>
 ';
 
                 $sql = $db->query("select system_name from andutteye_systems order by system_name asc");
@@ -422,65 +441,113 @@ echo '
 
 echo '
 <fieldset class="GroupField">
-	<legend>Andutteye controlcenter overview</legend>
+	<legend>Andutteye services status</legend>
+	<div class="leftcol">
+	                <table>
+                        	<th>Andutteye server</th></tr>';
 
-                <div class="leftcol">
-		<label>';
+                if(check_if_service_is_alive('andutteyedsrv')) {
+                        echo '<td><img src="themes/' . $authNamespace->andutteye_theme . '/started.png" alt="" title="" /> Andutteye server (andutteyedsrv) is running.</td><tr>';
+                } else {
+                        echo '<td><img src="themes/' . $authNamespace->andutteye_theme . '/stopped.png" alt="" title="" /> Andutteye server (andutteyedsrv) is down.</td><tr>';
+                }
+               	
+		echo '<th>Andutteye frontproxy relayer</th></tr>';
 
-		include_once 'graph/php-ofc-library/open_flash_chart_object.php';
-		open_flash_chart_object( '100%', 250, 'http://'. $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] ."/andutteye/graph/graph-alarmstatus-data.php", false );
+                if(check_if_service_is_alive('andutteyedfrt')) {
+                        echo '<td><img src="themes/' . $authNamespace->andutteye_theme . '/started.png" alt="" title="" /> Andutteye frontproxy relayer (andutteyedfrt) is running.</td><tr>';
+                } else {
+                        echo '<td><img src="themes/' . $authNamespace->andutteye_theme . '/stopped.png" alt="" title="" /> Andutteye frontproxy relayer (andutteyedfrt) is down.</td><tr>';
+                }
 
-		echo '
-		</label>
-                </div>
-                <div class="rightcol">
-		<label>';
+                echo "</table>
+	</div>";
 
-		include_once 'graph/php-ofc-library/open_flash_chart_object.php';
-		open_flash_chart_object( '100%', 250, 'http://'. $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] ."/andutteye/graph/graph-systemstypes-data.php", false );
+echo '<div class="rightcol">
+	<table>
+        	<th>Andutteye agent</th></tr>';
 
-		echo '
-		</label>
-                </div>
-
-</fieldset>
-';
+                if(check_if_service_is_alive('andutteyedagt')) {
+                        echo '<td><img src="themes/' . $authNamespace->andutteye_theme . '/started.png" alt="" title="" /> Andutteye agent (andutteyedagt) is running.</td><tr>';
+                } else {
+                        echo '<td><img src="themes/' . $authNamespace->andutteye_theme . '/stopped.png" alt="" title="" /> Andutteye agent (andutteyedagt) is down.</td><tr>';
+                }
 
 echo '
-<fieldset class="GroupField">
-	<legend>Syslog and changeevents overview</legend>
+	</table>
+    </div>
+</fieldset>
 
-                <div class="leftcol">
-                <label>';
+<fieldset class="GroupField">
+	<legend>Andutteye controlcenter overview</legend>';
+                echo '<div class="leftcol">';
+		echo '<label>';
+
 
 		include_once 'graph/php-ofc-library/open_flash_chart_object.php';
-		open_flash_chart_object( '100%', 250, 'http://'. $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] ."/andutteye/graph/graph-changeeventdatabase-data.php", false );
+		open_flash_chart_object( '100%', 250, 'http://'. $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] ."/$graph_tp_dir/graph/graph-alarmstatus-data.php", false );
 
-                echo '
-                </label>
+		echo '
+		</label>
                 </div>
                 <div class="rightcol">
-                <label>';
+		<label>';
 
 		include_once 'graph/php-ofc-library/open_flash_chart_object.php';
-		open_flash_chart_object( '100%', 250, 'http://'. $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] ."/andutteye/graph/graph-syslogdatabase-data.php", false );
+		open_flash_chart_object( '100%', 250, 'http://'. $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] ."/$graph_tp_dir/graph/graph-systemstypes-data.php", false );
 
-                echo '
-                </label>
+		echo '
+		</label>
                 </div>
 
 </fieldset>
 ';
 
-echo'
+$sql = $db->query("select distinct(domain_name) from andutteye_domains order by domain_name asc");
+while ($row = $sql->fetch()) {
+	$domain_name = $row['domain_name'];
+
+	echo '
+	<fieldset class="GroupField">
+		<legend><img src="themes/' . $authNamespace->andutteye_theme . '/domains_1.png" alt="" title="" /> Domain '.$domain_name.'</legend>
+		<table>
+			<th>System</th>
+			<th>Status</th>
+			<th>Date</th>
+			<th>Time</th>
+		</tr>';
+
+        $subsql = $db->query("select * from andutteye_systems where domain_name = '$domain_name'");
+	while ($subrow = $subsql->fetch()) {
+		$system_name = $subrow['system_name'];
+                        
+		$ssubsql = $db->query("select * from andutteye_serverlog where system_name = '$system_name' order by seqnr desc limit 0,1");
+		$res = $ssubsql->fetchObject();
+
+		$date = date("20ymd");
+
+		echo '<td><img src="themes/' . $authNamespace->andutteye_theme . '/systems_2.png" alt="" title="" /> '.$system_name.'</td>';
+		
+		if($date == $res->created_date) {
+			echo '<td><img src="themes/' . $authNamespace->andutteye_theme . '/started.png" alt="" title="" /> System is online</td>';
+		} else {
+			echo '<td><img src="themes/' . $authNamespace->andutteye_theme . '/stopped.png" alt="" title="" /> System is offline</td>';
+		}
+		echo "<td>$res->created_date</td>";
+		echo "<td>$res->created_time</td></tr>";
+	}
+
+
+	echo '</table></fieldset>';
+}
+
+echo '
 	</div>
 </div>
 ';
 
 // End of subfunction
 }
-
-
 
 function create_domain($param1,$param2,$param3,$param4,$param5,$param6,$param7,$param8,$param9,$param10) {
 
@@ -519,61 +586,51 @@ echo '
 	<div class="content">
 
 <fieldset class="GroupField">
-	<legend><span class="BigTitle"><span class="ColoredTxt">Create</span> New Domain</span></legend>
+	<legend><img src="themes/' . $authNamespace->andutteye_theme . '/domain_b.png" alt="" title="" /><span class="BigTitle"><span class="ColoredTxt">Create</span> New Domain</span></legend>
 
-			<form method="get" action="index.php">
-				<input type="hidden" name="main" value="create_domain">
+		<form method="get" action="index.php">
+			<input type="hidden" name="main" value="create_domain">
 
-					<label for="domainname">Domainname:</label>
-					<label><input tabindex="1" class="med" type="text" name="param1" id="param1" size="35" maxlength="255" value=""></label>
-					<br />
-					<label for="password"> Domain description:</label>
-					<label><input tabindex="2" class="med" type="text" name="param2" id="param1" size="35" maxlength="255" value=""></label>
+				<label for="domainname">Domainname:</label>
+				<label><input tabindex="1" class="med" type="text" name="param1" id="param1" size="35" maxlength="255" value=""></label>
 				<br />
-				<input tabindex="2" style="cursor:pointer;" class="button" type="submit" alt="Click Button to Submit Form" value="Submit" title="Click
- Button to Submit Form">
-
-			</form>
-
-</fieldset>
-
+				<label for="password"> Domain description:</label>
+				<label><input tabindex="2" class="med" type="text" name="param2" id="param1" size="35" maxlength="255" value=""></label>
+			<br />
+		<input tabindex="2" style="cursor:pointer;" class="button" type="submit" alt="Click Button to Submit Form" value="Submit" title="Click  Button to Submit Form">
+	</form>
+   </fieldset>
 </div>
 ';
 
 echo '
 <div class="content"">
-
 <fieldset class="GroupField">
 	<legend><span class="BigTitle"><span class="ColoredTxt">Change</span> Current Domains</span></legend>
-';
+	
+	<table>
+		<th>Domain</th>
+		<th>Submit</th>
+	</tr>';
 
-			$sql = $db->query("select * from andutteye_domains order by domain_name asc");
-                        while ($row = $sql->fetch()) {
-                                $seqnr = $row['seqnr'];
-                                $domain_name = $row['domain_name'];
-                                $domain_description = $row['domain_description'];
-
+	$sql = $db->query("select * from andutteye_domains order by domain_name asc");
+        	while ($row = $sql->fetch()) {
+                	$seqnr = $row['seqnr'];
+                        $domain_name = $row['domain_name'];
+                        $domain_description = $row['domain_description'];
+		
+			echo '
+				<td>
+					<img src="themes/' . $authNamespace->andutteye_theme . '/domains_1.png" alt="" title="" />
+					<a href="#" class="Tips2" title="Domain:' . $domain_name . ' Description:' . $domain_description . '">' . $domain_name . '</a>
+				</td>
+				<td>
+					<img src="themes/' . $authNamespace->andutteye_theme . '/delete_1.png" alt="" title="" />
+					<a href=index.php?main=remove_domain&param1=' . $seqnr . '" onclick="return confirm(\'Remove domain ' . $domain_name . '?\')">Remove</a>
+				</td></tr>';
+                 }
 echo '
-			<div class="table">
-				<div class="column70">
-					<label>
-						<img src="themes/' . $authNamespace->andutteye_theme . '/domains_1.png" alt="" title="" />
-						<a href="#" class="Tips2" title="Domain:' . $domain_name . ' Description:' . $domain_description . '">' . $domain_name . '</a>
-					</label>
-				</div>
-				<div class="column30">
-					<label>
-						<img src="themes/' . $authNamespace->andutteye_theme . '/delete_1.png" alt="" title="" />
-						<a href=index.php?main=remove_domain&param1=' . $seqnr . '" onclick="return confirm(\'Remove domain ' . $domain_name . '?\')">Remove</a>
-					</label>
-				</div>
-			</div>
-';
-
-                        }
-
-
-echo '
+</table>
 </fieldset>
 </div>
 ';
@@ -616,7 +673,7 @@ if($param1) {
 echo '<div id="content">
 		<div class="content">
 			<fieldset class="GroupField">
-				<legend><span class="BigTitle"><span class="ColoredTxt">Create</span> New Group</span></legend>
+				<legend><img src="themes/' . $authNamespace->andutteye_theme . '/group_b.png" alt="" title="" /><span class="BigTitle"><span class="ColoredTxt">Create</span> New Group</span></legend>
 
 					<form method="get" action="index.php">
 						<input type="hidden" name="main" value="create_group">
@@ -637,30 +694,31 @@ echo '<div id="content">
 
                 			while ($row = $sql->fetch()) {
                         			$domain_name = $row['domain_name'];
-echo '
-									<option value="' . $domain_name . '"> ' . $domain_name . '
-';
+						echo '
+						<option value="' . $domain_name . '"> ' . $domain_name . '
+						';
                 			}
 
-echo '
-								</select>
-							</label>
-						<br />
-						<input tabindex="2" style="cursor:pointer;" class="button" type="submit" alt="Click Button to Submit Form" value="Submit" title="Click
- Button to Submit Form">
+		echo '
+				</select>
+			    </label>
+			<br />
+			<input tabindex="2" style="cursor:pointer;" class="button" type="submit" alt="Click Button to Submit Form" value="Submit" title="Click  Button to Submit Form">
 
-					</form>
+		</form>
 
-</fieldset>
-				</div>
-				
-				<br />
+	</fieldset>
+     </div>
+<br />
 
 <div class="content">
 <fieldset class="GroupField">
 	<legend><span class="BigTitle"><span class="ColoredTxt">Change</span> Current Groups</span></legend>
-				
-';
+
+	<table>
+		<th>Group</th>
+		<th>Submit</th>
+		</tr>';
 
 			$sql = $db->query("select * from andutteye_groups order by group_name asc");
                         while ($row = $sql->fetch()) {
@@ -669,23 +727,21 @@ echo '
                                 $domain_name = $row['domain_name'];
                                 $group_description = $row['group_description'];
 
-echo '
-					<div class="table">
-						<div class="column70">
-							<label><img src="themes/' . $authNamespace->andutteye_theme . '/groups_2.png" alt="" title="" />
-							<a href="#" class="Tips2" title="Domain:' . $domain_name . ' Group:' . $group_name . ' Description:' . $group_description . '">' . $group_name . '</a></label>
-						</div>
-						<div class="column30">
-							<label><img src="themes/' . $authNamespace->andutteye_theme . '/delete_1.png" alt="" title="" />
-							<a href="index.php?main=remove_group&param1=' . $seqnr . '" onclick="return confirm(\'Remove group ' . $group_name . '?\')">Remove</a></label>
-						</div>
-					</div>
-';
-
+				echo '
+				<td>
+					<img src="themes/' . $authNamespace->andutteye_theme . '/groups_2.png" alt="" title="" />
+					<a href="#" class="Tips2" title="Domain:' . $domain_name . ' Group:' . $group_name . ' Description:' . $group_description . '">' . $group_name . '</a>
+				</td>
+				<td>
+					<img src="themes/' . $authNamespace->andutteye_theme . '/delete_1.png" alt="" title="" />
+					<a href="index.php?main=remove_group&param1=' . $seqnr . '" onclick="return confirm(\'Remove group ' . $group_name . '?\')">Remove</a>
+				</td>
+				</tr>';
                         }
 
 
 echo '
+</table>
 </fieldset>
 	</div>
 ';
@@ -730,7 +786,7 @@ if($param1) {
 echo '<div id="content">
       		<div class="content">
 			<fieldset class="GroupField">
-				<legend><span class="BigTitle"><span class="ColoredTxt">Create</span> New System</span></legend>
+				<legend><img src="themes/' . $authNamespace->andutteye_theme . '/system_b.png" alt="" title="" /><span class="BigTitle"><span class="ColoredTxt">Create</span> New System</span></legend>
 						<form method="get" action="index.php">
 							<input type="hidden" name="main" value="create_system">
 
@@ -760,34 +816,37 @@ echo '<div id="content">
 
 								<label>
 									<select name="param2" style="WIDTH: 260px">
-';
+								';
 
                                         $sql    = $db->query("select domain_name, group_name from andutteye_groups order by domain_name asc");
 
                                         while ($row = $sql->fetch()) {
                                                 $domain_name = $row['domain_name'];
                                                 $group_name = $row['group_name'];
-echo '
-										<option value="' . $domain_name . '#' . $group_name . '"> Domain ' . $domain_name . ' and group ' . $group_name . '
-';
+						echo '
+						<option value="' . $domain_name . '#' . $group_name . '"> Domain ' . $domain_name . ' and group ' . $group_name . '
+						';
                                         }
 
-echo '
+					echo '
 									</select>
 								</label>
-
 							<br />
 							<input class="button" type="submit" value="Submit">
 						</form>
-</fieldset>					
+					    </fieldset>					
 					</div>
-
 <br />
 
 <div class="content">
 	<fieldset class="GroupField">
 		<legend><span class="BigTitle"><span class="ColoredTxt">Change</span> Current Systems</span></legend>
-';
+		
+			<table>
+				<th>System</th>
+				<th>Install/Reinstall</th>
+				<th>Action</th>
+				</tr>';
 
 			$sql = $db->query("select * from andutteye_systems order by system_name asc");
                         while ($row = $sql->fetch()) {
@@ -797,28 +856,26 @@ echo '
                                 $group_name = $row['group_name'];
                                 $system_description = $row['system_description'];
 
-echo '
-						<div class="table">
-							<div class="column70">
-								<label>
-									<img src="themes/' . $authNamespace->andutteye_theme . '/systems_2.png" alt="" title="" />
-									<a href="index.php?main=install_new_system&param1=' .$system_name. '" class="Tips2" title="System:' . $system_name . ' Description:' . $system_description . ' Domain:' . $domain_name . ' Group:' . $group_name . '">' . $system_name . ' (Click to install)</a>
-								</label>
-							</div>
-							<div class="column30">
-								<label>
-									<img src="themes/' . $authNamespace->andutteye_theme . '/delete_1.png" alt="" title="" />
-									<a href="index.php?main=remove_system&param1=' . $seqnr . '" onclick="return confirm(\'Remove system ' . $system_name . '?\')">Remove</a>
-								</label>
-							</div>
-						</div>
-';
-
+				echo '
+				<td>
+				<img src="themes/' . $authNamespace->andutteye_theme . '/systems_2.png" alt="" title="" />
+				<a href="index.php?main=create_system&param1=' .$system_name. '&param2=modify" class="Tips2" title="System:' . $system_name . ' Description:' . $system_description . ' Domain:' . $domain_name . ' Group:' . $group_name . '">' . $system_name . '</a>
+				</td>
+				<td>
+					<img src="themes/' . $authNamespace->andutteye_theme . '/install_system_1.png" alt="" title="" />
+					<a href="index.php?main=install_new_system&param1=' .$system_name. '">Systemprovisioning</a>
+				
+				</td>
+				<td>
+				<img src="themes/' . $authNamespace->andutteye_theme . '/delete_1.png" alt="" title="" />
+				<a href="index.php?main=remove_system&param1=' . $system_name . '" onclick="return confirm(\'Remove system ' . $system_name . '? All saved information, documents, management information and configuration will be removed.\')">Remove</a>
+				</td>
+				</tr>
+				';
                         }
 
-
-
 echo '
+</table>
 </fieldset>
 </div>
 ';
@@ -830,7 +887,7 @@ function domain_overview($param1) {
 
 verify_if_user_is_logged_in();
 
-if(!verify_role_object_permission($param1,'domain',1)) {
+if(!verify_role_object_permission($param1,'domain',1,'0','0')) {
 	// Verify if domain is allowed to be read.
 	header("Location:index.php?main=enviroment_overview&status=Not%20allowed%20to%20access%20domain");
 	exit;
@@ -858,7 +915,7 @@ $nrd = count($nrd);
 echo '<div class="DivSpacer"></div>';
 echo '<div id="content">
 	<fieldset class="GroupField">
-		<legend><span class="BigTitle"><span class="ColoredTxt">Domain</span> information</span></legend>
+		<legend><img src="themes/' . $authNamespace->andutteye_theme . '/domain_b.png" alt="" title="" /><span class="BigTitle"><span class="ColoredTxt">Domain</span> information</span></legend>
 
                 <div class="leftcol">
 				<table>
@@ -899,14 +956,13 @@ echo '<div class="DivSpacer"></div>';
 echo '
 <fieldset class="GroupField">
 	<legend><span class="BigTitle"><span class="ColoredTxt">Domain</span> overview</span></legend>
-
 		<div class="leftcol">
 			<label>
 
 ';
 
 		include_once 'graph/php-ofc-library/open_flash_chart_object.php';
-		open_flash_chart_object( '100%', 250, 'http://'. $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] ."/andutteye/graph/graph-domainsystems-data.php?domain=$param1", false );
+		open_flash_chart_object( '100%', 250, 'http://'. $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] ."/$graph_tp_dir/graph/graph-domainsystems-data.php?domain=$param1", false );
 
 echo '
 			</label>
@@ -917,7 +973,7 @@ echo '
 ';
 
 		include_once 'graph/php-ofc-library/open_flash_chart_object.php';
-		open_flash_chart_object( '100%', 250, 'http://'. $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] ."/andutteye/graph/graph-domaingroups-data.php?domain=$param1", false );
+		open_flash_chart_object( '100%', 250, 'http://'. $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] ."/$graph_tp_dir/graph/graph-domaingroups-data.php?domain=$param1", false );
 
 
 echo '
@@ -949,7 +1005,14 @@ echo '
 			$bundle = count($bundle);
 			
 			if($bundle != "0") {
-				 echo '<label><img src="themes/' . $authNamespace->andutteye_theme . '/alert.png" alt="" title="" /> <a href="index.php?main=system_specification&param1=' . $system_name . '"><b>' . $bundle . '</b> pending management bundle changes on system ' . $system_name . '</a></label>';
+				 echo '<table>
+					<th>Message</th>
+					</tr>
+					<td>
+					<img src="themes/' . $authNamespace->andutteye_theme . '/alert.png" alt="" title="" /> <a href="index.php?main=system_specification&param1=' . $system_name . '"><b>' . $bundle . '</b> pending management bundle changes on system ' . $system_name . '</a>
+					</td>
+					</tr>
+					</table>';
 			}
 
 			$subsql = $db->query("select seqnr from andutteye_choosenpackages where system_name = '$system_name' and specaction != 'N'");
@@ -957,7 +1020,11 @@ echo '
 			$package = count($package);
 			
 			if($package != "0") {
-				echo '<label><img src="themes/' . $authNamespace->andutteye_theme . '/alert.png" alt="" title="" /> <b>' . $package . '</b> pending management package changes on system ' . $system_name . '</label>';
+				echo '<table>
+			 		<th>Message</th>
+					</tr>
+                                        <td>
+					<img src="themes/' . $authNamespace->andutteye_theme . '/alert.png" alt="" title="" /> <a href="index.php?main=system_specification&param1=' . $system_name . '"> <b>' . $package . '</b> pending management package changes on system ' . $system_name . '</a></td></tr></table>';
 			}
 			
                 }
@@ -980,7 +1047,7 @@ echo '<h3 class="BigTitle"><span class="ColoredTxt">Andutteye</span> Information
                         $created_by = $row['created_by'];
 
 
-			if(verify_role_object_permission($group_name,'group',1)) {
+			if(verify_role_object_permission($group_name,'group',1,'0','0')) {
 					echo '
 						<td>
 							<img src="themes/' . $authNamespace->andutteye_theme . '/groups_2.png" alt="" title="" />
@@ -1021,7 +1088,7 @@ echo'<h3 class="toggler">
                         $created_by = $row['created_by'];
                         $system_description = $row['system_description'];
 			
-			if(verify_role_object_permission($system_name,'system',1)) {
+			if(verify_role_object_permission($system_name,'system',1,'0','0')) {
 
 				  echo '<td>
 					<img src="themes/' . $authNamespace->andutteye_theme . '/systems_2.png" alt="" title="" />
@@ -1104,6 +1171,64 @@ echo '<h3 class="toggler">
                 }
 
 echo '</table></div>';
+
+echo '<h3 class="toggler">
+          <img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" />
+              <span class="InfoTitle"> DOMAIN COMMANDS</span></h3>
+                     <div class="element">
+
+                        <form method="post" action="index.php">
+                                <input type="hidden" name="main" value="submit_domain_command">
+                                <input type="hidden" name="param3" value="'.$param1.'">
+
+                                <table>
+                                        <th>Enable filemanagement</th>
+                                        <th>Disable filemanagement</th>
+                                        <th>Enable packagemanagement</th>
+                                        <th>Disable packagemanagement</th>
+                                        <th>Lock all monitors</th>
+                                        <th>Unlock all monitors</th>
+                                        </tr>
+
+                        <td><input type="radio" name="param1" value="EnableFilemanagment"></td>
+                        <td><input type="radio" name="param1" value="DisableFilemanagement"></td>
+                        <td><input type="radio" name="param1" value="EnablePackagemanagement"></td>
+                        <td><input type="radio" name="param1" value="DisablePackagemanagement"></td>
+                        <td><input type="radio" name="param1" value="LockAllMonitors"></td>
+                        <td><input type="radio" name="param1" value="UnlockAllMonitors"></td>
+                </tr>
+                <th colspan="2">System</th>
+                <th>Group</th>
+                <th>Packagemanagement</th>
+                <th>Filemanagement</th>
+                <th>Enforce</th>
+                </tr>
+';
+$gsql  = $db->query("select * from andutteye_systems where domain_name = '$param1' order by group_name asc, system_name desc");
+
+while ($row = $gsql->fetch()) {
+        $seqnr  = $row['seqnr'];
+        $system_name    = $row['system_name'];
+        $group_name    = $row['group_name'];
+
+	$filemanagement_status = get_current_filemanagement_status($system_name);
+	$packagemanagement_status = get_current_packagemanagement_status($system_name);
+
+        echo '<td colspan="2"> <img src="themes/' . $authNamespace->andutteye_theme . '/systems_2.png" alt="" title="" /> '.$system_name.'</td>
+	     <td> <img src="themes/' . $authNamespace->andutteye_theme . '/groups_2.png" alt="" title="" /> '.$group_name.'</td>
+	     <td>' .$packagemanagement_status.' </td>
+	     <td>' .$filemanagement_status.' </td>
+             <td><input type="checkbox" name="param2[]" value='.$system_name.'></td>
+              </tr>';
+}
+
+echo '
+        <td colspan="6"><input class="button" type="submit" value="Submit"></td>
+        </tr>
+        </form></table>
+   </div>
+</div>
+';
 
 echo '</div>
 ';
@@ -1317,7 +1442,7 @@ function group_overview($param1,$param2) {
 
 verify_if_user_is_logged_in();
 
-if(!verify_role_object_permission($param2,'group',1)) {
+if(!verify_role_object_permission($param2,'group',1,'0','0')) {
         // Verify if group is allowed to be read.
         header("Location:index.php?main=enviroment_overview&status=Not%20allowed%20to%20access%20group");
         exit;
@@ -1341,8 +1466,9 @@ $nrd = count($nrd);
 echo'<div class="DivSpacer"></div>';
 
 echo '<div id="content">
+
 	<fieldset class="GroupField">
-        	<legend><span class="BigTitle"><span class="ColoredTxt">Group</span> '.$param2.'</span></legend>
+        	<legend><img src="themes/' . $authNamespace->andutteye_theme . '/group_b.png" alt="" title="" /> <span class="BigTitle"><span class="ColoredTxt">Group</span> '.$param2.'</span></legend>
       		<div class="leftcol">
 
 		<table>
@@ -1388,7 +1514,7 @@ echo '<div>
 					<label>';
 
 			include_once 'graph/php-ofc-library/open_flash_chart_object.php';
-			open_flash_chart_object( '100%', 250, 'http://'. $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] ."/andutteye/graph/graph-alarmstatus-data.php", false );
+			open_flash_chart_object( '100%', 250, 'http://'. $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] ."/$graph_tp_dir/graph/graph-alarmstatus-data.php", false );
 
 echo '
 					</label>
@@ -1398,7 +1524,7 @@ echo '
 ';
 
 			include_once 'graph/php-ofc-library/open_flash_chart_object.php';
-			open_flash_chart_object( '100%', 250, 'http://'. $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] ."/andutteye/graph/graph-groupsystems-data.php?group=$res->group_name", false );
+			open_flash_chart_object( '100%', 250, 'http://'. $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] ."/$graph_tp_dir/graph/graph-groupsystems-data.php?group=$res->group_name", false );
 
 
 echo '
@@ -1432,7 +1558,12 @@ echo '
 
                         if($bundle != "0") {
 				echo '
-				<label><img src="themes/' . $authNamespace->andutteye_theme . '/alert.png" alt="" title="" /> <a href="index.php?main=system_specification&param1=' . $system_name . '"><b>' . $bundle . '</b> pending management bundle changes on system ' . $system_name . '</a></label>
+				<table>
+				<th>Message</th>
+				</tr>
+				<td><img src="themes/' . $authNamespace->andutteye_theme . '/alert.png" alt="" title="" /> <a href="index.php?main=system_specification&param1=' . $system_name . '"><b>' . $bundle . '</b> pending management bundle changes on system ' . $system_name . '</a></td>
+				</tr>
+				</table>
 				';
                         }
 
@@ -1442,7 +1573,12 @@ echo '
 
                         if($package != "0") {
 				echo '
-				<label><img src="themes/' . $authNamespace->andutteye_theme . '/alert.png" alt="" title="" /> <b>' . $package . '</b> pending management package changes on system ' . $system_name . '</label>
+				<table>
+                                <th>Message</th>
+                                </tr>
+				<td><img src="themes/' . $authNamespace->andutteye_theme . '/alert.png" alt="" title="" /> <b>' . $package . '</b> pending management package changes on system ' . $system_name . '</td>
+				</tr>
+				</table>
 				';
                         }
 
@@ -1476,7 +1612,7 @@ echo '
                         $created_by = $row['created_by'];
                         $system_description = $row['system_description'];
 
-			if(verify_role_object_permission($system_name,'system',1)) {
+			if(verify_role_object_permission($system_name,'system',1,'0','0')) {
 
 				echo '
 					<td>
@@ -1563,8 +1699,59 @@ echo '</table></div>
 
 echo '
     </table>
-  </div>
- </div>
+  </div>';
+
+
+echo '<h3 class="toggler">
+          <img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" />
+              <span class="InfoTitle"> GROUP COMMANDS</span></h3>
+                     <div class="element">
+
+			<form method="post" action="index.php">
+				<input type="hidden" name="main" value="submit_group_command">
+				<input type="hidden" name="param3" value="'.$param2.'">
+				<input type="hidden" name="param4" value="'.$param1.'">
+
+                                <table>
+                                        <th>Enable filemanagement</th>
+                                        <th>Disable filemanagement</th>
+                                        <th>Enable packagemanagement</th>
+                                        <th>Disable packagemanagement</th>
+                                        <th>Lock all monitors</th>
+                                        <th>Unlock all monitors</th>
+                                        </tr>
+
+			<td><input type="radio" name="param1" value="EnableFilemanagment"></td>
+			<td><input type="radio" name="param1" value="DisableFilemanagement"></td>
+			<td><input type="radio" name="param1" value="EnablePackagemanagement"></td>
+			<td><input type="radio" name="param1" value="DisablePackagemanagement"></td>
+			<td><input type="radio" name="param1" value="LockAllMonitors"></td>
+			<td><input type="radio" name="param1" value="UnlockAllMonitors"></td>
+		</tr>
+                <th colspan="2">System</th>
+                <th colspan="2">Group</th>
+                <th colspan="2">Enforce</th>
+		</tr>
+';
+$gsql  = $db->query("select * from andutteye_systems where group_name ='$param2' and domain_name = '$param1' order by system_name desc");
+
+while ($row = $gsql->fetch()) {
+	$seqnr	= $row['seqnr'];
+	$system_name	= $row['system_name'];
+	$group_name	= $row['group_name'];
+
+	echo '<td colspan="2"> <img src="themes/' . $authNamespace->andutteye_theme . '/systems_2.png" alt="" title="" /> '.$system_name.'</td>
+	      <td colspan="2"> <img src="themes/' . $authNamespace->andutteye_theme . '/groups_2.png" alt="" title="" /> '.$group_name.'</td>
+	      <td colspan="2"><input type="checkbox" name="param2[]" value='.$system_name.'></td>
+	      </tr>';
+}
+
+echo '
+	<td colspan="6"><input class="button" type="submit" value="Submit"></td>
+	</tr>
+	</form></table>
+   </div>
+</div>
 ';
 
 // End of subfunction
@@ -1574,7 +1761,7 @@ function system_overview($param1,$param2,$param3,$param4) {
 
 verify_if_user_is_logged_in();
 
-if(!verify_role_object_permission($param1,'system',1)) {
+if(!verify_role_object_permission($param1,'system',1,'0','0')) {
         // Verify if systems is allowed to be read.
         header("Location:index.php?main=enviroment_overview&status=Not%20allowed%20to%20access%20this%20system");
         exit;
@@ -1621,7 +1808,7 @@ if(is_dir("$Transfer_dir_location/$param1")) {
 echo '<div class="DivSpacer"></div>';
 echo '<div id="content">
         <fieldset class="GroupField">
-                <legend><span class="BigTitle"><span class="ColoredTxt">System</span> '.$param1.'</span></legend>
+                <legend><img src="themes/' . $authNamespace->andutteye_theme . '/system_b.png" alt="" title="" /> <span class="BigTitle"><span class="ColoredTxt">System</span> '.$param1.'</span></legend>
                 <div class="leftcol">
 				<table>
 					<td>
@@ -1692,7 +1879,7 @@ echo '<div class="DivSpacer"></div>
 				<label>';
 
 		include_once 'graph/php-ofc-library/open_flash_chart_object.php';
-		open_flash_chart_object( '100%', 250, 'http://'. $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] ."/andutteye/graph/graph-system-numberofprocs-data.php?system=$param1", false );
+		open_flash_chart_object( '100%', 250, 'http://'. $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] ."/$graph_tp_dir/graph/graph-system-numberofprocs-data.php?system=$param1", false );
 
 echo '
 				</label>
@@ -1702,7 +1889,7 @@ echo '
 				<label>';
 
 		include_once 'graph/php-ofc-library/open_flash_chart_object.php';
-		open_flash_chart_object( '100%', 250, 'http://'. $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] ."/andutteye/graph/graph-system-cpuusage-data.php?system=$param1", false );
+		open_flash_chart_object( '100%', 250, 'http://'. $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] ."/$graph_tp_dir/graph/graph-system-cpuusage-data.php?system=$param1", false );
 
 echo '
 				</label>
@@ -1770,7 +1957,7 @@ echo '
 				</td>
 				';
 			
-				if(verify_role_object_permission($param3,'group',3)) {
+				if(verify_role_object_permission($param3,'group',3,'0','0')) {
 					echo '<td><img src="themes/' . $authNamespace->andutteye_theme . '/delete_1.png" alt="" title="" /> <a href="index.php?main=remove_documentation&param1=' . $seqnr . '&param2=' . $param1 . '" onclick="return confirm(\'Remove content ' . $content_description . '?\')">Remove</a></td></tr>';
 				} else {
 						
@@ -1838,7 +2025,7 @@ echo '<h3 class="toggler">
 				<td>' . $created_date . '</td>
 				';
 
-				if(verify_role_object_permission($param1,'system',3)) {
+				if(verify_role_object_permission($param1,'system',3,'0','0')) {
 					echo '<td>
 						<img src="themes/' . $authNamespace->andutteye_theme . '/delete_1.png" alt="" title="" /> <a href="index.php?main=remove_documentation&param1=' . $seqnr . '&param2=' . $param1 . '" onclick="return confirm(\'Remove content ' . $content_description . '?\')">Remove</a>
 						</td></tr>';
@@ -2140,7 +2327,7 @@ if($param1) {
 echo '<div id="content">
 		<div class="content">
 			<fieldset class="GroupField">
-				<legend><span class="BigTitle"><span class="ColoredTxt">Create</span> New Role</span></legend>
+				<legend><img src="themes/' . $authNamespace->andutteye_theme . '/role_b.png" alt="" title="" /><span class="BigTitle"><span class="ColoredTxt">Create</span> New Role</span></legend>
 
 				<form method="get" action="index.php">
 					<input type="hidden" name="main" value="create_role">
@@ -2162,7 +2349,11 @@ echo '<div id="content">
 <div class="content">
 	<fieldset class="GroupField">
 		<legend><span class="BigTitle"><span class="ColoredTxt">Change</span> Current Roles</span></legend>
-';
+	
+			<table>
+				<th>Role</th>
+				<th>Action</th>
+				</tr>';
 
 			$sql = $db->query("select * from andutteye_roles order by rolename asc");
                         while ($row = $sql->fetch()) {
@@ -2170,30 +2361,26 @@ echo '<div id="content">
                                 $rolename = $row['rolename'];
                                 $description = $row['description'];
 
-echo '
-			<div class="table">
-				<div class="column70">
-					<label>
-						<img src="themes/' . $authNamespace->andutteye_theme . '/systems_2.png" alt="" title="" />
-						<a href="index.php?main=change_role_permissions&param1=' . $rolename . '" class="Tips2" title="Rolename:' . $rolename . ' Description:' . $description . '">' . $rolename . '</a>
-					</label>
-				</div>
-				<div class="column30">
-					<label>
-						<img src="themes/' . $authNamespace->andutteye_theme . '/delete_1.png" alt="" title="" />
-						<a href="index.php?main=remove_role&param1=' .$seqnr . '" onclick="return confirm(\'Remove role ' . $rolename . '?\')">Remove</a>
-					</label>
-				</div>
-			</div>
-';
+			echo '
+				<td>
+				<img src="themes/' . $authNamespace->andutteye_theme . '/role_1.png" alt="" title="" />
+				<a href="index.php?main=change_role_permissions&param1=' . $rolename . '" class="Tips2" title="Rolename:' . $rolename . ' Description:' . $description . '">' . $rolename . '</a>
+				</td>
+				<td>
+				<img src="themes/' . $authNamespace->andutteye_theme . '/delete_1.png" alt="" title="" />
+				<a href="index.php?main=remove_role&param1=' .$seqnr . '" onclick="return confirm(\'Remove role ' . $rolename . '?\')">Remove</a>
+				</td>
+				</tr>
+			';
 
                         }
 
 
 
 echo "
+</table>
 </fieldset>
-	</div>
+</div>
 ";
 
 
@@ -2239,7 +2426,7 @@ if($param1) {
 echo '<div id="content">
 		<div class="content">
 			<fieldset class="GroupField">
-				<legend><span class="BigTitle"><span class="ColoredTxt">Create</span> New User</span></legend>
+				<legend><img src="themes/' . $authNamespace->andutteye_theme . '/user_b.png" alt="" title="" /><span class="BigTitle"><span class="ColoredTxt">Create</span> New User</span></legend>
 				
 				<form method="get" action="index.php">
 					<input type="hidden" name="main" value="create_user">
@@ -2308,7 +2495,11 @@ echo '
 <div class="content">
 	<fieldset class="GroupField">
 		<legend><span class="BigTitle"><span class="ColoredTxt">Change</span> Current Users</span></legend>
-';
+
+			<table>
+				<th>User</th>
+				<th>Action</th>
+				</tr>';
 
 			$sql    = $db->query("select * from andutteye_users order by andutteye_username asc");
                 	while ($row = $sql->fetch()) {
@@ -2318,26 +2509,21 @@ echo '
                         	$andutteye_theme = $row['andutteye_theme'];
                         	$andutteye_role = $row['andutteye_role'];
 
-echo '
-				<div class="table">
-					<div class="column70">
-						<label>
-							<img src="themes/' . $authNamespace->andutteye_theme . '/user_1.png" alt="" title="" />
-							<a href="#" class="Tips2" title="User:' . $andutteye_username . ' Description:' . $andutteye_description . ' Theme:' . $andutteye_theme . ' Role:' . $andutteye_role . '">' . $andutteye_username . '</a>
-						</label>
-					</div>
-					<div class="column30">
-						<label>
-							<img src="themes/' . $authNamespace->andutteye_theme . '/delete_1.png" alt="" title="" />
-							<a href="index.php?main=remove_user&param1=' . $seqnr . '" onclick="return confirm(\'Remove user ' . $andutteye_username . '?\')">Remove</a>
-						</label>
-					</div>
-				</div>
+				echo '<td>
+					<img src="themes/' . $authNamespace->andutteye_theme . '/user_1.png" alt="" title="" />
+					<a href="#" class="Tips2" title="User:' . $andutteye_username . ' Description:' . $user_description . ' Theme:' . $andutteye_theme . ' Role:' . $andutteye_role . '">' . $andutteye_username . '</a>
+					</td>
+					<td>
+					<img src="themes/' . $authNamespace->andutteye_theme . '/delete_1.png" alt="" title="" />
+					<a href="index.php?main=remove_user&param1=' . $seqnr . '" onclick="return confirm(\'Remove user ' . $andutteye_username . '?\')">Remove</a>
+					</td>
+				</tr>
 ';
 					
 			}
 
 echo '
+</table>
 </fieldset>
 </div>
 ';
@@ -2356,30 +2542,32 @@ $count = $db->query("select seqnr from andutteye_software where system_name ='$p
 $count = $count->fetchAll();
 $count = count($count);
 
-echo '
-	<div id="content">
-		<div class="section content">
-
-			<h2 class="BigTitle"><span class="ColoredTxt">Software</span> Profile for ' . $param1 . '</h2>
+echo '<div id="content">
+	<div class="section content">
+		<h2 class="BigTitle"><span class="ColoredTxt">Software</span> Profile for ' . $param1 . '</h2>
 
 
 <fieldset class="GroupField">
 	<legend>Packages Installed</legend>
-
-				<label>' . $count . ' packages currently installed</label>
+	<label>' . $count . ' packages currently installed</label>
 
 </fieldset>
 
+		<label>
+			<img src="themes/' . $authNamespace->andutteye_theme . '/back.png" alt="" title="" />
+			<a href="index.php?main=system_overview&param1=' . $param1 . '">&nbsp;Back to ' . $param1 . ' system overview</a>
+		</label>
 
-			<label>
-				<img src="themes/' . $authNamespace->andutteye_theme . '/back.png" alt="" title="" />
-				<a href="index.php?main=system_overview&param1=' . $param1 . '">&nbsp;Back to ' . $param1 . ' system overview</a>
-			</label>
-
-			<div class="DivSpacer"></div>
-
-<fieldset class="GroupField">
-			<h2 class="BigTitle"><span class="ColoredTxt">Package</span> View</h2>
+<div class="DivSpacer"></div>
+	<fieldset class="GroupField">
+		<h2 class="BigTitle"><span class="ColoredTxt">Package</span> View</h2>
+		<table>
+			<th>Package</th>
+			<th>Version</th>
+			<th>Release</th>
+			<th>Archtype</th>
+			<th>Status</th>
+		</tr>
 ';
 
 $sql    = $db->query("select * from andutteye_software where system_name = '$param1' order by aepackage asc, status desc");
@@ -2399,45 +2587,31 @@ $sql    = $db->query("select * from andutteye_software where system_name = '$par
                         $res    = $subsql->fetchAll();
 
 
-echo '
-			<div class="table">
-				<div class="column40">
-					<label>
+			echo '
+				<td>
 						<a href="#" class="Tips2" title="Package included in bundle:' . $res->bundle . ' Created date:' . $created_date . ' Last verified date:' . $reported_date . '">' . $aepackage . '</a>
-					</label>
-				</div>
-				<div class="column">
-					<label>' . $aeversion . '</label>
-				</div>
-				<div class="column">
-					<label>' . $aerelease . '</label>
-				</div>
-				<div class="column">
-					<label>' . $aearchtype . '</label>
-				</div>
-';
+					</td>
+				<td>' . $aeversion . '</td>
+				<td>' . $aerelease . '</td>
+				<td>' . $aearchtype . '</td>
+			';
 
 				if($status == "DELETED") {
-echo '
-				<div class="column">
-					<label>
+					echo '
+					<td>
 						<img src="themes/' . $authNamespace->andutteye_theme . '/delete_1.png" alt="" title="" />
-					</label>
-				</div>
-';
+					</td>
+					';
 				} else {
-echo '
-				<div class="column">
-					<label>' . $status . '</label>
-				</div>
-';
+					echo '
+					<td>' . $status . '</td>
+					';
 				}
-echo '
-			</div>
-';
+		echo '</tr>';
                 }
 
 echo '
+</table>
 </fieldset>
 
 		</div>
@@ -2447,8 +2621,6 @@ echo '
 // End of subfunction
 }
 
-
-
 function show_server_transactions($param1,$param2) {
 
 verify_if_user_is_logged_in();
@@ -2456,48 +2628,51 @@ require 'db.php';
 require_once 'Zend/Session/Namespace.php';
 $authNamespace = new Zend_Session_Namespace('Zend_Auth');
 
-echo '
-	<div id="content">
-		<div class="section content">
-
-			<h2 class="BigTitle">' . $param1 . ' Server <span class="ColoredTxt">Transactions</span></h2>
-
-<fieldset class="GroupField">
-	<legend>Transactions</legend>
-';
-
-echo '
-			<label>
-';
-			include_once 'graph/php-ofc-library/open_flash_chart_object.php';
-			open_flash_chart_object( '100%', 250, 'http://'. $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] ."/andutteye/graph/graph-serverlog-data.php?system=$param1", false );
-echo '
-			</label>
+echo '<div id="content">
+	<h2 class="BigTitle">' . $param1 . ' Server <span class="ColoredTxt">Transactions</span></h2>
+		<fieldset class="GroupField">
+			<legend>Transactions</legend>';
+echo '<label>';
+	include_once 'graph/php-ofc-library/open_flash_chart_object.php';
+	open_flash_chart_object( '100%', 250, 'http://'. $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] ."/$graph_tp_dir/graph/graph-serverlog-data.php?system=$param1", false );
+echo '</label>
 </fieldset>
 ';
 
-echo '
-			<h3 class="toggler" style="cursor:pointer;"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" />&nbsp;<b>Select other dates</b></h3>
-			<div class="element">
-';
+echo '<h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle"> Select other dates</span></h3>
+	<div class="element">
+		<table>
+			<th>Transaction dates</th>
+		</tr>';
 
                 $sql = $db->query("select distinct created_date from andutteye_serverlog where system_name = '$param1' order by seqnr desc limit 0,100");
                 while ($row = $sql->fetch()) {
                         $created_date = $row['created_date'];
-echo '
-				<label>
+			echo '
+				<td>
 					<img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" />&nbsp;
 					<a href="index.php?main=show_server_transactions&param1=' . $param1 . '&param2=' . $created_date . '">' . $created_date . '</a>
-				</label>
-';
+				</td>
+				</tr>
+			';
                 }
 
+echo '</table>
+    </div> 
+     <h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle"> Server transactions('.$param2.')</span></h3>
+	 <div class="element">';
 echo '
-			</div>
-
+<br>
 <fieldset class="GroupField">
 	<legend>Incoming agent requests to Andutteye services</legend>
-';
+	
+	<table>
+		<th>Time</th>
+		<th>Date</th>
+		<th>Msgtype</th>
+		<th width="70%">Message</th>
+		<th>System</th>
+	</tr>';
 
 if($param2) {
 	$sql    = $db->query("select * from andutteye_serverlog where system_name = '$param1' and created_date = '$param2' order by seqnr desc limit 100");
@@ -2511,28 +2686,28 @@ if($param2) {
                         $created_date= $row['created_date'];
                         $created_time= $row['created_time'];
 
-echo '
-			<div class="table">
-				<div class="column"><label>' . $system_name . '</label></div>
-				<div class="column"><label>' . $created_date . '</label></div>
-				<div class="column"><label>' . $created_time . '</label></div>
-				<div class="column"><label style="padding-left:0; padding-right:0;">' . $messagetype . '</label></div>
-				<div class="column40"><label style="font-size:10px; padding-left:0; padding-right:0;">' . $logentry . '</label></div>
-			</div>
-';
+		echo '
+		      <td>' . $created_time . '</td>
+		      <td>' . $created_date . '</td>
+		      <td>' . $messagetype . '</td>
+		      <td>' . $logentry . '</td>
+		      <td>' . $system_name . '</td>
+		</tr>
+		';
 	}
 
 echo '
+	</table>
 </fieldset>
+</div>
 
-			<div class="ClearFloat"></div>
-			<br />
-			<label><img src="themes/' . $authNamespace->andutteye_theme . '/back.png" alt="" title="" /><a href="index.php?main=system_overview&param1=' . $param1 . '">&nbsp;Back to ' . $param1 . ' system overview</a></label>
+<div class="ClearFloat"></div>
+	<br />
+	<label><img src="themes/' . $authNamespace->andutteye_theme . '/back.png" alt="" title="" /><a href="index.php?main=system_overview&param1=' . $param1 . '">&nbsp;Back to ' . $param1 . ' system overview</a></label>
 ';
 echo '
-
-		</div>
 	</div>
+</div>
 ';
 
 // End of subfunction
@@ -2573,11 +2748,9 @@ if($param2) {
 	}
 }
 
-echo '
-	<div id="content">
-		<div class="section content">
-
-			<h2 class="BigTitle"><span class="ColoredTxt">Alarm Details</span> on Alarm ' . $param1 . '</h2>
+echo '<div id="content">
+	<div class="section content">
+		<h2 class="BigTitle"><span class="ColoredTxt">Alarm Details</span> on Alarm ' . $param1 . '</h2>
 
 <fieldset class="GroupField">
 	<legend>Alarm Information</legend>
@@ -2597,14 +2770,12 @@ echo '
 			<div>
 				<label>Shortinformation ' . $res->shortinformation . '</label>
 				<label>Longinformation ' . $res->longinformation . '</label>
-				<label>
 ';
 		
 			include_once 'graph/php-ofc-library/open_flash_chart_object.php';
-			open_flash_chart_object( '100%', 250, 'http://'. $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] ."/andutteye/graph/graph-alarm-trend-data.php?system=$res->system_name&alarm=$res->shortinformation", false );
+			open_flash_chart_object( '100%', 250, 'http://'. $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] ."/$graph_tp_dir/graph/graph-alarm-trend-data.php?system=$res->system_name&alarm=$res->shortinformation", false );
 
 echo '
-				</label>
 			</div>
 </fieldset>
 
@@ -3403,7 +3574,7 @@ elseif($param2 == "disable") {
 
 echo "
 <div id='content'>
-                <div class='section content'>
+    <div class='section content'>
 
 		<fieldset class='GroupField'>
         	<legend><span class='BigTitle'><span class='ColoredTxt'>Andutteye configuration</span> for system  $param1 </span></legend>
@@ -3411,10 +3582,7 @@ echo "
 		<h3>Monitortype graph</h3>";
 
 		include_once 'graph/php-ofc-library/open_flash_chart_object.php';
-		open_flash_chart_object( '100%', 350, 'http://'. $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] ."/andutteye/graph/graph-monitortypes.php?system=$param1", false );
-
-		echo "<h3>Information</h3>
-                <label>Andutteye has a prebuildt monitor framework with defined parameters thar are easely changed by the administrator. The monitorframework can be altered and changed both on the system on from the webinterface. On completed changes the Andutteye agent will notice the change and implement it on the system. All parameters must have a value, otherhise set it to no.</label>";
+		open_flash_chart_object( '100%', 350, 'http://'. $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] ."/$graph_tp_dir/graph/graph-monitortypes.php?system=$param1", false );
 
 		$subsql = $db->query("select seqnr from andutteye_base_agentconfiguration where system_name = '$param1' and underchange = 'yes'");
                 $base = $subsql->fetchAll();
@@ -3436,6 +3604,14 @@ echo "
 			<label><input class='button' type='submit' value='Submit'></label>
 			</form>";
 		}
+
+echo '
+<h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle"> Configuration information</span></h3>
+	<div class="element">
+';
+ echo "
+<label>Andutteye has a prebuildt monitor framework with defined parameters thar are easely changed by the administrator. The monitorframework can be altered and changed bothon the system on from the webinterface. On completed changes the Andutteye agent will notice the change and implement it on the system. All parameters must have a value, otherhise set it tono.</label>
+</div>";
 
 echo '
 <!-- start Base configuration slider -->
@@ -3710,11 +3886,20 @@ echo '
 
 echo '
 <!-- start Process slider -->
-                        <h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle"> PS Process monitor configuration</span></h3>
-
-                                <div class="element">
+<h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle"> PS Process monitor configuration</span></h3>
+	<div class="element">
+		<table>
+			<th>Monitor name</th>
+			<th>Status</th>
+			<th>Overrideble</th>
+			<th>Created</th>
+			<th>Delete</th>
+			<th>Disable</th>
+			<th>Override</th>
+			<th>Settings</th>
+			<th>Change</th>
+		</tr>
 ';
-
 
 			$sql = $db->query("select * from andutteye_monitor_configuration where system_name = '$param1' and monitortype = 'PS' order by seqnr desc");
                         while ($row = $sql->fetch()) {
@@ -3732,13 +3917,12 @@ echo '
                         	$created_by = $row['created_by'];
 
 					echo "
-                        		<div class='table'>
-                        		<div class='column40'><label><img src='themes/$authNamespace->andutteye_theme/actions.png' alt='' title='' /> <a href='#' class='Tips2' title='Process monitor, schedule:$schedule message:$message email:$sendemail runprogram:$runprogram Created by:$created_by on $created_date $created_time Override:$override'>$monitorname</a></label></div>
-                        		<div class='column'><label>$status</label></div>
-                        		<div class='column'><label>Override $override</label></div>
-                        		<div class='column'><label>$created_date</label></div>
-                        		<div class='column'><label>$created_by</label></div>
-                       			 </div>
+                        		<td>
+					<img src='themes/$authNamespace->andutteye_theme/actions.png' alt='' title='' /> <a href='#' class='Tips2' title='Process monitor, schedule:$schedule message:$message email:$sendemail runprogram:$runprogram Created by:$created_by on $created_date $created_time Override:$override'>$monitorname</a>
+					</td>
+                        		<td>$status</td>
+                        		<td>$override</td>
+                        		<td>$created_date</td>
                         		";
 
                         		echo "
@@ -3746,29 +3930,38 @@ echo '
                         			<input type='hidden' name='main' value='system_configuration'>
                         			<input type='hidden' name='param1' value='$param1'>
                         			<input type='hidden' name='param3' value='$seqnr'>
-					<div class='table'>
-                        			<div class='column40'><label>Change monitor characteristics here</a></label></div>
-				  		<div class='column'><label>Delete<input type='radio' name='param2' value='delete'></label></div>
-				  		<div class='column'><label>Disable<input type='radio' name='param2' value='disable'></label></div>
-                                		<div class='column'><label>Toggle override<input type='radio' name='param2' value='override'></label></div>
-                                		<div class='column'><label>Settings<input type='radio' checked='yes' name='param2' value='settings'></label></div>
-				        </div>
-					<label><input class='button' type='submit' value='Change monitor settings'></label>
-					<br />
+
+				  		<td><input type='radio' name='param2' value='delete'></td>
+				  		<td><input type='radio' name='param2' value='disable'></td>
+                                		<td><input type='radio' name='param2' value='override'></td>
+                                		<td><input type='radio' checked='yes' name='param2' value='settings'></td>
+						<td><input class='button' type='submit' value='Change'></td>
+					</tr>
 					</form>
 					";
 
                          }
-			print "<label><img src='themes/$authNamespace->andutteye_theme/new_1.png' alt='' title='' /><a href='index.php?main=new_ps_fm_monitor&param1=$param1'> Create a new processmonitor.</a></label>";
+			print "<td colspan='9'><img src='themes/$authNamespace->andutteye_theme/new_1.png' alt='' title='' /><a href='index.php?main=new_ps_fm_monitor&param1=$param1'> Create a new processmonitor.</a></td></tr>";
 
 		echo "
+		</table>
 		</div>";
 
 echo '
-<!-- start Filesystem slider -->
-                        <h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle"> FS Filesystem monitor configuration</span></h3>
+ <h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle"> FS Filesystem monitor configuration</span></h3>
+	<div class="element">
+		<table>
+                        <th>Monitor name</th>
+                        <th>Status</th>
+                        <th>Overrideble</th>
+                        <th>Created</th>
+                        <th>Delete</th>
+                        <th>Disable</th>
+                        <th>Override</th>
+                        <th>Settings</th>
+                        <th>Change</th>
+                </tr>
 
-                                <div class="element">
 ';
 
 
@@ -3788,14 +3981,12 @@ echo '
                                 $created_by = $row['created_by'];
 
                                         echo "
-                                        <div class='table'>
-                                        <div class='column40'><label><img src='themes/$authNamespace->andutteye_theme/actions.png' alt='' title='' /> <a href='#' class='Tips2' title='Filesystem monitor, schedule:$schedule message:$message email:$sendemail runprogram:$runprogram Cr
-eated by:$created_by on $created_date $created_time Override:$override'>$monitorname</a></label></div>
-                                        <div class='column'><label>$status</label></div>
-                                        <div class='column'><label>Override $override</label></div>
-                                        <div class='column'><label>$created_date</label></div>
-                                        <div class='column'><label>$created_by</label></div>
-                                         </div>
+                                        <td>
+					<img src='themes/$authNamespace->andutteye_theme/actions.png' alt='' title='' /> <a href='#' class='Tips2' title='Filesystem monitor, schedule:$schedule message:$message email:$sendemail runprogram:$runprogram Created by:$created_by on $created_date $created_time Override:$override'>$monitorname</a>
+					</td>
+                                        <td>$status</td>
+                                        <td>$override</td>
+                                        <td>$created_date</td>
                                         ";
 
                                         echo "
@@ -3804,29 +3995,39 @@ eated by:$created_by on $created_date $created_time Override:$override'>$monitor
                                                 <input type='hidden' name='param1' value='$param1'>
                                                 <input type='hidden' name='param3' value='$seqnr'>
 
-                                        <div class='table'>
-                                                <div class='column40'><label>Change monitor characteristics here</a></label></div>
-                                                <div class='column'><label>Delete<input type='radio' name='param2' value='delete'></label></div>
-                                                <div class='column'><label>Disable<input type='radio' name='param2' value='disable'></label></div>
-                                                <div class='column'><label>Toggle override<input type='radio' name='param2' value='override'></label></div>
-                                                <div class='column'><label>Settings<input type='radio' checked='yes' name='param2' value='settings'></label></div>
-                                        </div>
-                                        <label><input class='button' type='submit' value='Change monitor settings'></label>
-                                        <br />
+                                                <td><input type='radio' name='param2' value='delete'></td>
+                                                <td><input type='radio' name='param2' value='disable'></td>
+                                                <td><input type='radio' name='param2' value='override'></td>
+                                                <td><input type='radio' checked='yes' name='param2' value='settings'></td>
+                                        <td><input class='button' type='submit' value='Change'></td>
+                                        </td>
                                         </form>
+					</tr>
                                         ";
 
                          }
-			print "<label><img src='themes/$authNamespace->andutteye_theme/new_1.png' alt='' title='' /><a href='index.php?main=new_fs_monitor&param1=$param1'> Create a new filesystemmonitor.</a></label>";
+			print "<td colspan='9'>
+				<img src='themes/$authNamespace->andutteye_theme/new_1.png' alt='' title='' /><a href='index.php?main=new_fs_monitor&param1=$param1'> Create a new filesystemmonitor.</a></td>";
 
 		echo "
+		</tr>
+		</table
 		</div>";
 
 echo '
-<!-- start Filemodification slider -->
-                        <h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle"> FM Filemodification monitor configuration</span></h3>
-
-                                <div class="element">
+<h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle"> FM Filemodification monitor configuration</span></h3>
+	<div class="element">
+		<table>
+                        <th>Monitor name</th>
+                        <th>Status</th>
+                        <th>Overrideble</th>
+                        <th>Created</th>
+                        <th>Delete</th>
+                        <th>Disable</th>
+                        <th>Override</th>
+                        <th>Settings</th>
+                        <th>Change</th>
+                </tr>
 ';
 
 
@@ -3847,14 +4048,12 @@ echo '
                                 $created_by = $row['created_by'];
 
                                         echo "
-                                        <div class='table'>
-                                        <div class='column40'><label><img src='themes/$authNamespace->andutteye_theme/actions.png' alt='' title='' /> <a href='#' class='Tips2' title='Filemodification monitor, schedule:$schedule message:$message email:$sendemail runprogram:$runprogram Cr
-eated by:$created_by on $created_date $created_time Override:$override'>$monitorname</a></label></div>
-                                        <div class='column'><label>$status</label></div>
-                                        <div class='column'><label>Override $override</label></div>
-                                        <div class='column'><label>$created_date</label></div>
-                                        <div class='column'><label>$created_by</label></div>
-                                         </div>
+                                        <td>
+					<img src='themes/$authNamespace->andutteye_theme/actions.png' alt='' title='' /> <a href='#' class='Tips2' title='Filemodification monitor, schedule:$schedule message:$message email:$sendemail runprogram:$runprogram Created by:$created_by on $created_date $created_time Override:$override'>$monitorname</a>
+					</td>
+                                        <td>$status</td>
+                                        <td>$override</td>
+                                        <td>$created_date</td>
                                         ";
 
                                         echo "
@@ -3863,30 +4062,38 @@ eated by:$created_by on $created_date $created_time Override:$override'>$monitor
                                                 <input type='hidden' name='param1' value='$param1'>
 						<input type='hidden' name='param3' value='$seqnr'>
 
-                                        <div class='table'>
-                                                <div class='column40'><label>Change monitor characteristics here</a></label></div>
-                                                <div class='column'><label>Delete<input type='radio' name='param2' value='delete'></label></div>
-                                                <div class='column'><label>Disable<input type='radio' name='param2' value='disable'></label></div>
-                                                <div class='column'><label>Toggle override<input type='radio' name='param2' value='override'></label></div>
-                                                <div class='column'><label>Settings<input type='radio' checked='yes' name='param2' value='settings'></label></div>
-                                        </div>
-                                        <label><input class='button' type='submit' value='Change monitor settings'></label>
-                                        <br />
+                                                <td><input type='radio' name='param2' value='delete'></td>
+                                                <td><input type='radio' name='param2' value='disable'></td>
+                                                <td><input type='radio' name='param2' value='override'></td>
+                                                <td><input type='radio' checked='yes' name='param2' value='settings'></td>
+
+                                        <td><input class='button' type='submit' value='Change'></td>
+                                        </tr>
                                         </form>
                                         ";
 
                          }
-			print "<label><img src='themes/$authNamespace->andutteye_theme/new_1.png' alt='' title='' /><a href='index.php?main=new_ps_fm_monitor&param1=$param1'> Create a new filemodification monitor.</a></label>";
+			print "<td colspan='9'><img src='themes/$authNamespace->andutteye_theme/new_1.png' alt='' title='' /><a href='index.php?main=new_ps_fm_monitor&param1=$param1'> Create a new filemodification monitor.</a></td></tr>";
 
 
 		echo "
+		</table>
 		</div>";
 
 echo '
-<!-- start Filetrace slider -->
-                        <h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle"> FT filetrace pattern monitor configuration</span></h3>
-
-                                <div class="element">
+<h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle"> FT Filetrace pattern monitor configuration</span></h3>
+	<div class="element">
+		<table>
+                        <th>Monitor name</th>
+                        <th>Searchpattern</th>
+                        <th>Overrideble</th>
+                        <th>Created</th>
+                        <th>Delete</th>
+                        <th>Disable</th>
+                        <th>Override</th>
+                        <th>Settings</th>
+                        <th>Change</th>
+                </tr>
 ';
 
 
@@ -3906,14 +4113,12 @@ echo '
                                 $created_by = $row['created_by'];
 
                                         echo "
-                                        <div class='table'>
-                                        <div class='column40'><label><img src='themes/$authNamespace->andutteye_theme/actions.png' alt='' title='' /> <a href='#' class='Tips2' title='Filetrace patternmatch monitor, schedule:$schedule message:$message email:$sendemail runprogram:$runprogram Cr
-eated by:$created_by on $created_date $created_time Override:$override'>$monitorname</a></label></div>
-                                        <div class='column'><label>$searchpattern</label></div>
-                                        <div class='column'><label>Override $override</label></div>
-                                        <div class='column'><label>$created_date</label></div>
-                                        <div class='column'><label>$created_by</label></div>
-                                         </div>
+                                        <td>
+					<img src='themes/$authNamespace->andutteye_theme/actions.png' alt='' title='' /> <a href='#' class='Tips2' title='Filetrace patternmatch monitor, schedule:$schedule message:$message email:$sendemail runprogram:$runprogram Created by:$created_by on $created_date $created_time Override:$override'>$monitorname</a>
+					</td>
+                                        <td>$searchpattern</td>
+                                        <td>$override</td>
+                                        <td>$created_date</td>
                                         ";
 
                                         echo "
@@ -3922,29 +4127,37 @@ eated by:$created_by on $created_date $created_time Override:$override'>$monitor
                                                 <input type='hidden' name='param1' value='$param1'>
 						<input type='hidden' name='param3' value='$seqnr'>
 
-                                        <div class='table'>
-                                                <div class='column40'><label>Change monitor characteristics here</a></label></div>
-                                                <div class='column'><label>Delete<input type='radio' name='param2' value='delete'></label></div>
-                                                <div class='column'><label>Disable<input type='radio' name='param2' value='disable'></label></div>
-                                                <div class='column'><label>Toggle override<input type='radio' name='param2' value='override'></label></div>
-                                                <div class='column'><label>Settings<input type='radio' checked='yes' name='param2' value='settings'></label></div>
-                                        </div>
-                                        <label><input class='button' type='submit' value='Change monitor settings'></label>
-                                        <br />
+                                                <td><input type='radio' name='param2' value='delete'></td>
+                                                <td><input type='radio' name='param2' value='disable'></td>
+                                                <td><input type='radio' name='param2' value='override'></td>
+                                                <td><input type='radio' checked='yes' name='param2' value='settings'></td>
+                                        	<td><input class='button' type='submit' value='Change'></td>
+                                        </tr>
                                         </form>
                                         ";
 
                          }
-			print "<label><img src='themes/$authNamespace->andutteye_theme/new_1.png' alt='' title='' /><a href='index.php?main=new_ft_monitor&param1=$param1'> Create a new filepatternmatch monitor.</a></label>";
+			print "<td colspan='9'><img src='themes/$authNamespace->andutteye_theme/new_1.png' alt='' title='' /><a href='index.php?main=new_ft_monitor&param1=$param1'> Create a new filepatternmatch monitor.</a></td></tr>";
 
 		echo "
+		</table>
 		</div>";
 
 echo '
-<!-- start Every slider -->
-                        <h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle"> EV Every execution monitor configuration</span></h3>
+<h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle"> EV Every execution monitor configuration</span></h3>
+<div class="element">
+	<table>
+        	<th>Monitor name</th>
+                <th>Status</th>
+                <th>Overrideble</th>
+                <th>Created</th>
+                <th>Delete</th>
+                <th>Disable</th>
+                <th>Override</th>
+                <th>Settings</th>
+                <th>Change</th>
+        </tr>
 
-                                <div class="element">
 ';
 
 
@@ -3964,14 +4177,12 @@ echo '
                                 $created_by = $row['created_by'];
 
                                         echo "
-                                        <div class='table'>
-                                        <div class='column40'><label><img src='themes/$authNamespace->andutteye_theme/actions.png' alt='' title='' /> <a href='#' class='Tips2' title='Every program monitor, schedule:$schedule message:$message email:$sendemail runprogram:$runprogram Cr
-eated by:$created_by on $created_date $created_time Override:$override'>$monitorname</a></label></div>
-                                        <div class='column'><label>$status</label></div>
-                                        <div class='column'><label>Override $override</label></div>
-                                        <div class='column'><label>$created_date</label></div>
-                                        <div class='column'><label>$created_by</label></div>
-                                         </div>
+                                        <td>
+					<img src='themes/$authNamespace->andutteye_theme/actions.png' alt='' title='' /> <a href='#' class='Tips2' title='Every program monitor, schedule:$schedule message:$message email:$sendemail runprogram:$runprogram Created by:$created_by on $created_date $created_time Override:$override'>$monitorname</a>
+					</td>
+                                        <td>$status</td>
+                                        <td>$override</td>
+                                        <td>$created_date</td>
                                         ";
 
                                         echo "
@@ -3980,29 +4191,36 @@ eated by:$created_by on $created_date $created_time Override:$override'>$monitor
                                                 <input type='hidden' name='param1' value='$param1'>
 						<input type='hidden' name='param3' value='$seqnr'>
 
-                                        <div class='table'>
-                                                <div class='column40'><label>Change monitor characteristics here</a></label></div>
-                                                <div class='column'><label>Delete<input type='radio' name='param2' value='delete'></label></div>
-                                                <div class='column'><label>Disable<input type='radio' name='param2' value='disable'></label></div>
-                                                <div class='column'><label>Toggle override<input type='radio' name='param2' value='override'></label></div>
-                                                <div class='column'><label>Settings<input type='radio' checked='yes' name='param2' value='settings'></label></div>
-                                        </div>
-                                        <label><input class='button' type='submit' value='Change monitor settings'></label>
-                                        <br />
+                                                <td><input type='radio' name='param2' value='delete'></td>
+                                                <td><input type='radio' name='param2' value='disable'></td>
+                                                <td><input type='radio' name='param2' value='override'></td>
+                                                <td><input type='radio' checked='yes' name='param2' value='settings'></td>
+                                        	<td><input class='button' type='submit' value='Change monitor settings'></td>
+                                        </tr>
                                         </form>
                                         ";
 
                          }
-			print "<label><img src='themes/$authNamespace->andutteye_theme/new_1.png' alt='' title='' /> <a href='index.php?main=new_every_monitor&param1=$param1'>Create a new every execution monitor.</a></label>";
+			print "<td colspan='9̈́'><img src='themes/$authNamespace->andutteye_theme/new_1.png' alt='' title='' /> <a href='index.php?main=new_every_monitor&param1=$param1'>Create a new every execution monitor.</a></td></tr>";
 
 		echo "
+		</table>
 		</div>";
 
 echo '
-<!-- start Pinghost slider -->
-                        <h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle"> PH Communication monitor configuration</span></h3>
-
-                                <div class="element">
+<h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle"> PH Communication monitor configuration</span></h3>
+	<div class="element">
+		<table>
+                        <th>Monitor name</th>
+                        <th>Status</th>
+                        <th>Overrideble</th>
+                        <th>Created</th>
+                        <th>Delete</th>
+                        <th>Disable</th>
+                        <th>Override</th>
+                        <th>Settings</th>
+                        <th>Change</th>
+                </tr>
 ';
 
 			$sql = $db->query("select * from andutteye_monitor_configuration where system_name = '$param1' and monitortype = 'PH' order by seqnr desc");
@@ -4021,14 +4239,11 @@ echo '
                                 $created_by = $row['created_by'];
 
                                         echo "
-                                        <div class='table'>
-                                        <div class='column40'><label><img src='themes/$authNamespace->andutteye_theme/actions.png' alt='' title='' /> <a href='#' class='Tips2' title='Communication monitor, schedule:$schedule message:$message email:$sendemail runprogram:$runprogram Cr
-eated by:$created_by on $created_date $created_time Override:$override'>$monitorname</a></label></div>
-                                        <div class='column'><label>$status</label></div>
-                                        <div class='column'><label>Override $override</label></div>
-                                        <div class='column'><label>$created_date</label></div>
-                                        <div class='column'><label>$created_by</label></div>
-                                         </div>
+                                        <td>
+					<img src='themes/$authNamespace->andutteye_theme/actions.png' alt='' title='' /> <a href='#' class='Tips2' title='Communication monitor, schedule:$schedule message:$message email:$sendemail runprogram:$runprogram Created by:$created_by on $created_date $created_time Override:$override'>$monitorname</a></td>
+                                        <td>$status</td>
+                                        <td>$override</td>
+                                        <td>$created_date</td>
                                         ";
 
                                         echo "
@@ -4037,29 +4252,36 @@ eated by:$created_by on $created_date $created_time Override:$override'>$monitor
                                                 <input type='hidden' name='param1' value='$param1'>
 						<input type='hidden' name='param3' value='$seqnr'>
 
-                                        <div class='table'>
-                                                <div class='column40'><label>Change monitor characteristics here</a></label></div>
-                                                <div class='column'><label>Delete<input type='radio' name='param2' value='delete'></label></div>
-                                                <div class='column'><label>Disable<input type='radio' name='param2' value='disable'></label></div>
-                                                <div class='column'><label>Toggle override<input type='radio' name='param2' value='override'></label></div>
-                                                <div class='column'><label>Settings<input type='radio' checked='yes' name='param2' value='settings'></label></div>
-                                        </div>
-                                        <label><input class='button' type='submit' value='Change monitor settings'></label>
-                                        <br />
+                                                <td><input type='radio' name='param2' value='delete'></td>
+                                                <td><input type='radio' name='param2' value='disable'></td>
+                                                <td><input type='radio' name='param2' value='override'></td>
+                                                <td><input type='radio' checked='yes' name='param2' value='settings'></td>
+                                        	<td><input class='button' type='submit' value='Change'></td>
+                                        </tr>
                                         </form>
                                         ";
 
                          }
-			print "<label><img src='themes/$authNamespace->andutteye_theme/new_1.png' alt='' title='' /> <a href='index.php?main=new_la_sa_ma_ph_monitor&param1=$param1'>Create a new communication monitor.</a></label>";
+			print "<td colspan='9'><img src='themes/$authNamespace->andutteye_theme/new_1.png' alt='' title='' /> <a href='index.php?main=new_la_sa_ma_ph_monitor&param1=$param1'>Create a new communication monitor.</a></td></tr>";
 
 		echo "
+		</table>
 		</div>";
 
 echo '
-<!-- start Load averege slider -->
-                        <h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle"> LA Loadaverege monitor configuration</span></h3>
-
-                                <div class="element">
+<h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle"> LA Loadaverege monitor configuration</span></h3>
+	<div class="element">
+		<table>
+                        <th>Monitor name</th>
+                        <th>Status</th>
+                        <th>Overrideble</th>
+                        <th>Created</th>
+                        <th>Delete</th>
+                        <th>Disable</th>
+                        <th>Override</th>
+                        <th>Settings</th>
+                        <th>Change</th>
+                </tr>
 ';
 
 			$sql = $db->query("select * from andutteye_monitor_configuration where system_name = '$param1' and monitortype = 'LA' order by seqnr desc");
@@ -4078,14 +4300,11 @@ echo '
                                 $created_by = $row['created_by'];
 
                                         echo "
-                                        <div class='table'>
-                                        <div class='column40'><label><img src='themes/$authNamespace->andutteye_theme/actions.png' alt='' title='' /> <a href='#' class='Tips2' title='Load averege monitor, schedule:$schedule message:$message email:$sendemail runprogram:$runprogram Cr
-eated by:$created_by on $created_date $created_time Override:$override'>$monitorname</a></label></div>
-                                        <div class='column'><label>$status</label></div>
-                                        <div class='column'><label>Override $override</label></div>
-                                        <div class='column'><label>$created_date</label></div>
-                                        <div class='column'><label>$created_by</label></div>
-                                         </div>
+                                        <td>
+					<img src='themes/$authNamespace->andutteye_theme/actions.png' alt='' title='' /> <a href='#' class='Tips2' title='Load averege monitor, schedule:$schedule message:$message email:$sendemail runprogram:$runprogram Created by:$created_by on $created_date $created_time Override:$override'>$monitorname</a></td>
+                                        <td>$status</td>
+                                        <td>$override</td>
+                                        <td>$created_date</td>
                                         ";
 
                                         echo "
@@ -4094,29 +4313,36 @@ eated by:$created_by on $created_date $created_time Override:$override'>$monitor
                                                 <input type='hidden' name='param1' value='$param1'>
 						<input type='hidden' name='param3' value='$seqnr'>
 
-                                        <div class='table'>
-                                                <div class='column40'><label>Change monitor characteristics here</a></label></div>
-                                                <div class='column'><label>Delete<input type='radio' name='param2' value='delete'></label></div>
-                                                <div class='column'><label>Disable<input type='radio' name='param2' value='disable'></label></div>
-                                                <div class='column'><label>Toggle override<input type='radio' name='param2' value='override'></label></div>
-                                                <div class='column'><label>Settings<input type='radio' checked='yes' name='param2' value='settings'></label></div>
-                                        </div>
-                                        <label><input class='button' type='submit' value='Change monitor settings'></label>
-                                        <br />
+                                                <td><input type='radio' name='param2' value='delete'></td>
+                                                <td><input type='radio' name='param2' value='disable'></td>
+                                                <td><input type='radio' name='param2' value='override'></td>
+                                                <td><input type='radio' checked='yes' name='param2' value='settings'></td>
+                                        	<td><input class='button' type='submit' value='Change'></td>
+                                        </tr>
                                         </form>
                                         ";
 
                          }
-			print "<label><img src='themes/$authNamespace->andutteye_theme/new_1.png' alt='' title='' /> <a href='index.php?main=new_la_sa_ma_ph_monitor&param1=$param1'>Create a new communication monitor.</a></label>";
+			print "<td colspan='9'><img src='themes/$authNamespace->andutteye_theme/new_1.png' alt='' title='' /> <a href='index.php?main=new_la_sa_ma_ph_monitor&param1=$param1'>Create a new loadaverege monitor.</a></td></tr>";
 
 		echo "
+		</table>
 		</div>";
 
 echo '
-<!-- start Memoryaverege slider -->
-                        <h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle"> MA Memoryaverege monitor configuration</span></h3>
-
-                                <div class="element">
+<h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle"> MA Memoryaverege monitor configuration</span></h3>
+	<div class="element">
+		<table>
+                        <th>Monitor name</th>
+                        <th>Status</th>
+                        <th>Overrideble</th>
+                        <th>Created</th>
+                        <th>Delete</th>
+                        <th>Disable</th>
+                        <th>Override</th>
+                        <th>Settings</th>
+                        <th>Change</th>
+                </tr>
 ';
 
 			$sql = $db->query("select * from andutteye_monitor_configuration where system_name = '$param1' and monitortype = 'MA' order by seqnr desc");
@@ -4135,14 +4361,11 @@ echo '
                                 $created_by = $row['created_by'];
 
                                         echo "
-                                        <div class='table'>
-                                        <div class='column40'><label><img src='themes/$authNamespace->andutteye_theme/actions.png' alt='' title='' /> <a href='#' class='Tips2' title='Memory averege monitor, schedule:$schedule message:$message email:$sendemail runprogram:$runprogram Cr
-eated by:$created_by on $created_date $created_time Override:$override'>$monitorname</a></label></div>
-                                        <div class='column'><label>$status</label></div>
-                                        <div class='column'><label>Override $override</label></div>
-                                        <div class='column'><label>$created_date</label></div>
-                                        <div class='column'><label>$created_by</label></div>
-                                         </div>
+                                        <td>
+					<img src='themes/$authNamespace->andutteye_theme/actions.png' alt='' title='' /> <a href='#' class='Tips2' title='Memory averege monitor, schedule:$schedule message:$message email:$sendemail runprogram:$runprogram Created by:$created_by on $created_date $created_time Override:$override'>$monitorname</a></td>
+                                        <td>$status</td>
+                                        <td>$override</td>
+                                        <td>$created_date</td>
                                         ";
 
                                         echo "
@@ -4151,30 +4374,37 @@ eated by:$created_by on $created_date $created_time Override:$override'>$monitor
                                                 <input type='hidden' name='param1' value='$param1'>
 						<input type='hidden' name='param3' value='$seqnr'>
 
-                                        <div class='table'>
-                                                <div class='column40'><label>Change monitor characteristics here</a></label></div>
-                                                <div class='column'><label>Delete<input type='radio' name='param2' value='delete'></label></div>
-                                                <div class='column'><label>Disable<input type='radio' name='param2' value='disable'></label></div>
-                                                <div class='column'><label>Toggle override<input type='radio' name='param2' value='override'></label></div>
-                                                <div class='column'><label>Settings<input type='radio' checked='yes' name='param2' value='settings'></label></div>
-                                        </div>
-                                        <label><input class='button' type='submit' value='Change monitor settings'></label>
-                                        <br />
+                                                <td><input type='radio' name='param2' value='delete'></td>
+                                                <td><input type='radio' name='param2' value='disable'></td>
+                                                <td><input type='radio' name='param2' value='override'></td>
+                                                <td><input type='radio' checked='yes' name='param2' value='settings'></td>
+                                        	<td><input class='button' type='submit' value='Change'></td>
+                                        </tr>
                                         </form>
                                         ";
 
                          }
-			print "<label><img src='themes/$authNamespace->andutteye_theme/new_1.png' alt='' title='' /> <a href='index.php?main=new_la_sa_ma_ph_monitor&param1=$param1'>Create a new memoryaverege monitor.</a></label>";
+			print "<td colspan='9'><img src='themes/$authNamespace->andutteye_theme/new_1.png' alt='' title='' /> <a href='index.php?main=new_la_sa_ma_ph_monitor&param1=$param1'>Create a new memoryaverege monitor.</a></td></tr>";
 
 
 		echo "
+		</table>
 		</div>";
 
 echo '
-<!-- start Swap slider -->
-                        <h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle"> SA Swapaverege monitor configuration</span></h3>
-
-                                <div class="element">
+<h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle"> SA Swapaverege monitor configuration</span></h3>
+	<div class="element">
+		<table>
+                        <th>Monitor name</th>
+                        <th>Status</th>
+                        <th>Overrideble</th>
+                        <th>Created</th>
+                        <th>Delete</th>
+                        <th>Disable</th>
+                        <th>Override</th>
+                        <th>Settings</th>
+                        <th>Change</th>
+                </tr>
 ';
 
 			$sql = $db->query("select * from andutteye_monitor_configuration where system_name = '$param1' and monitortype = 'SA' order by seqnr desc");
@@ -4193,14 +4423,10 @@ echo '
                                 $created_by = $row['created_by'];
 
                                         echo "
-                                        <div class='table'>
-                                        <div class='column40'><label><img src='themes/$authNamespace->andutteye_theme/actions.png' alt='' title='' /> <a href='#' class='Tips2' title='Swap averege monitor, schedule:$schedule message:$message email:$sendemail runprogram:$runprogram Cr
-eated by:$created_by on $created_date $created_time Override:$override'>$monitorname</a></label></div>
-                                        <div class='column'><label>$status</label></div>
-                                        <div class='column'><label>Override $override</label></div>
-                                        <div class='column'><label>$created_date</label></div>
-                                        <div class='column'><label>$created_by</label></div>
-                                         </div>
+                                        <td><img src='themes/$authNamespace->andutteye_theme/actions.png' alt='' title='' /> <a href='#' class='Tips2' title='Swap averege monitor, schedule:$schedule message:$message email:$sendemail runprogram:$runprogram Created by:$created_by on $created_date $created_time Override:$override'>$monitorname</a></label></div>
+                                        <td>$status</td>
+                                        <td>$override</td>
+                                        <td>$created_date</td>
                                         ";
 
                                         echo "
@@ -4209,33 +4435,40 @@ eated by:$created_by on $created_date $created_time Override:$override'>$monitor
                                                 <input type='hidden' name='param1' value='$param1'>
 						<input type='hidden' name='param3' value='$seqnr'>
 
-                                        <div class='table'>
-                                                <div class='column40'><label>Change monitor characteristics here</a></label></div>
-                                                <div class='column'><label>Delete<input type='radio' name='param2' value='delete'></label></div>
-                                                <div class='column'><label>Disable<input type='radio' name='param2' value='disable'></label></div>
-                                                <div class='column'><label>Toggle override<input type='radio' name='param2' value='override'></label></div>
-                                                <div class='column'><label>Settings<input type='radio' checked='yes' name='param2' value='settings'></label></div>
-                                        </div>
-                                        <label><input class='button' type='submit' value='Change monitor settings'></label>
-                                        <br />
+                                                <td><input type='radio' name='param2' value='delete'></td>
+                                                <td><input type='radio' name='param2' value='disable'></td>
+                                                <td><input type='radio' name='param2' value='override'></td>
+                                                <td><input type='radio' checked='yes' name='param2' value='settings'></td>
+                                        	<td><input class='button' type='submit' value='Change'></td>
+                                        </tr>
                                         </form>
                                         ";
 
                          }
-			print "<label><img src='themes/$authNamespace->andutteye_theme/new_1.png' alt='' title='' /> <a href='index.php?main=new_la_sa_ma_ph_monitor&param1=$param1'>Create a new swapaverege monitor.</a></label>";
+			print "<td colspan='9'><img src='themes/$authNamespace->andutteye_theme/new_1.png' alt='' title='' /> <a href='index.php?main=new_la_sa_ma_ph_monitor&param1=$param1'>Create a new swapaverege monitor.</a></td></tr>";
 
 
 		echo "
+		</table>
 		</div>";
 
 echo '
-<!-- start Assetmanagement slider -->
-                        <h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle"> AM Assetmanaegment monitor configuration</span></h3>
-
-                                <div class="element">
+<h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle"> AM Assetmanaegment monitor configuration</span></h3>
+	<div class="element">
+		<table>
+                        <th>Monitor name</th>
+                        <th>Status</th>
+                        <th>Overrideble</th>
+                        <th>Created</th>
+                        <th>Delete</th>
+                        <th>Disable</th>
+                        <th>Override</th>
+                        <th>Settings</th>
+                        <th>Change</th>
+                </tr>
 ';
 
-				$sql = $db->query("select * from andutteye_monitor_configuration where system_name = '$param1' and monitortype = 'AM' order by seqnr desc");
+			$sql = $db->query("select * from andutteye_monitor_configuration where system_name = '$param1' and monitortype = 'AM' order by seqnr desc");
                         while ($row = $sql->fetch()) {
                                 $seqnr = $row['seqnr'];
                                 $monitorname = $row['monitorname'];
@@ -4251,14 +4484,11 @@ echo '
                                 $created_by = $row['created_by'];
 
                                         echo "
-                                        <div class='table'>
-                                        <div class='column40'><label><img src='themes/$authNamespace->andutteye_theme/actions.png' alt='' title='' /> <a href='#' class='Tips2' title='Assetmanagement monitor, schedule:$schedule message:$message email:$sendemail runprogram:$runprogram Cr
-eated by:$created_by on $created_date $created_time Override:$override'>$monitorname</a></label></div>
-                                        <div class='column'><label>$status</label></div>
-                                        <div class='column'><label>Override $override</label></div>
-                                        <div class='column'><label>$created_date</label></div>
-                                        <div class='column'><label>$created_by</label></div>
-                                         </div>
+                                        <td><img src='themes/$authNamespace->andutteye_theme/actions.png' alt='' title='' /> <a href='#' class='Tips2' title='Assetmanagement monitor, schedule:$schedule message:$message email:$sendemail runprogram:$runprogram Created by:$created_by on $created_date $created_time Override:$override'>$monitorname</a>
+					</td>
+                                        <td>$status</td>
+                                        <td>Override $override</td>
+                                        <td>$created_date</td>
                                         ";
 
                                         echo "
@@ -4267,29 +4497,36 @@ eated by:$created_by on $created_date $created_time Override:$override'>$monitor
                                                 <input type='hidden' name='param1' value='$param1'>
 						<input type='hidden' name='param3' value='$seqnr'>
 
-                                        <div class='table'>
-                                                <div class='column40'><label>Change monitor characteristics here</a></label></div>
-                                                <div class='column'><label>Delete<input type='radio' name='param2' value='delete'></label></div>
-                                                <div class='column'><label>Disable<input type='radio' name='param2' value='disable'></label></div>
-                                                <div class='column'><label>Toggle override<input type='radio' name='param2' value='override'></label></div>
-                                                <div class='column'><label>Settings<input type='radio' checked='yes' name='param2' value='settings'></label></div>
-                                        </div>
-                                        <label><input class='button' type='submit' value='Change monitor settings'></label>
-                                        <br />
+                                                <td><input type='radio' name='param2' value='delete'></td>
+                                                <td><input type='radio' name='param2' value='disable'></td>
+                                                <td><input type='radio' name='param2' value='override'></td>
+                                                <td><input type='radio' checked='yes' name='param2' value='settings'></td>
+                                        	<td><input class='button' type='submit' value='Change'></td>
+                                        </tr>
                                         </form>
                                         ";
 
                          }
-			print "<label><img src='themes/$authNamespace->andutteye_theme/new_1.png' alt='' title='' /><a href='index.php?main=new_am_st_monitor&param1=$param1'> Create a new assetmanagement monitor.</a></label>";
+			print "<td colspan='9'><img src='themes/$authNamespace->andutteye_theme/new_1.png' alt='' title='' /><a href='index.php?main=new_am_st_monitor&param1=$param1'> Create a new assetmanagement monitor.</a></td></tr>";
 
 		echo "
+		</table>
 		</div>";
 
 echo '
-<!-- start Statistics slider -->
-                        <h3 class="toggler""><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle"> ST Statistics monitor configuration</span></h3>
-
-                                <div class="element">
+<h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle"> ST Statistics monitor configuration</span></h3>
+	<div class="element">
+		<table>
+                        <th>Monitor name</th>
+                        <th>Status</th>
+                        <th>Overrideble</th>
+                        <th>Created</th>
+                        <th>Delete</th>
+                        <th>Disable</th>
+                        <th>Override</th>
+                        <th>Settings</th>
+                        <th>Change</th>
+                </tr>
 ';
 
 			$sql = $db->query("select * from andutteye_monitor_configuration where system_name = '$param1' and monitortype = 'ST' order by seqnr desc");
@@ -4308,13 +4545,11 @@ echo '
                                 $created_by = $row['created_by'];
 
                                         echo "
-                                        <div class='table'>
-                                        <div class='column40'><label><img src='themes/$authNamespace->andutteye_theme/actions.png' alt='' title='' /> <a href='#' class='Tips2' title='Statistics monitor, schedule:$schedule message:$message email:$sendemail runprogram:$runprogram Created by:$created_by on $created_date $created_time Override:$override'>$monitorname</a></label></div>
-                                        <div class='column'><label>$status</label></div>
-                                        <div class='column'><label>Override $override</label></div>
-                                        <div class='column'><label>$created_date</label></div>
-                                        <div class='column'><label>$created_by</label></div>
-                                         </div>
+                                        <td>
+					<img src='themes/$authNamespace->andutteye_theme/actions.png' alt='' title='' /> <a href='#' class='Tips2' title='Statistics monitor, schedule:$schedule message:$message email:$sendemail runprogram:$runprogram Created by:$created_by on $created_date $created_time Override:$override'>$monitorname</a></td>
+                                        <td>$status</td>
+                                        <td>$override</td>
+                                        <td>$created_date</td>
                                         ";
 
                                         echo "
@@ -4323,24 +4558,21 @@ echo '
                                                 <input type='hidden' name='param1' value='$param1'>
                                                 <input type='hidden' name='param3' value='$seqnr'>
 
-                                        <div class='table'>
-                                                <div class='column40'><label>Change monitor characteristics here</a></label></div>
-                                                <div class='column'><label>Delete<input type='radio' name='param2' value='delete'></label></div>
-                                                <div class='column'><label>Disable<input type='radio' name='param2' value='disable'></label></div>
-                                                <div class='column'><label>Toggle override<input type='radio' name='param2' value='override'></label></div>
-                                                <div class='column'><label>Settings<input type='radio' checked='yes' name='param2' value='settings'></label></div>
+                                                <td><input type='radio' name='param2' value='delete'></td>
+                                                <td><input type='radio' name='param2' value='disable'></td>
+                                                <td><input type='radio' name='param2' value='override'></td>
+                                                <td><input type='radio' checked='yes' name='param2' value='settings'></td>
                                         </div>
-                                        <label><input class='button' type='submit' value='Change monitor settings'></label>
-                                        <br />
+                                        <td><input class='button' type='submit' value='Change'></td>
+                                        </tr>
                                         </form>
                                         ";
 
                          }
-			print "<label><img src='themes/$authNamespace->andutteye_theme/new_1.png' alt='' title='' /><a href='index.php?main=new_am_st_monitor&param1=$param1'> Create a new statistics monitor.</a></label>";
+			print "<td colspan='9'><img src='themes/$authNamespace->andutteye_theme/new_1.png' alt='' title='' /><a href='index.php?main=new_am_st_monitor&param1=$param1'> Create a new statistics monitor.</a></td></tr>";
 	
-	echo "
-		</div>
-		<label><img src='themes/$authNamespace->andutteye_theme/back.png' alt='' title='' /><a href='index.php?main=system_overview&param1=$param1'>&nbsp;Back to $param1 system overview</a></label>
+	echo "</table></div>
+	      <label><img src='themes/$authNamespace->andutteye_theme/back.png' alt='' title='' /><a href='index.php?main=system_overview&param1=$param1'>&nbsp;Back to $param1 system overview</a></label>
 	</fieldset>
 	</div>
 </div>";
@@ -4357,31 +4589,33 @@ require 'db.php';
 require_once 'Zend/Session/Namespace.php';
 $authNamespace = new Zend_Session_Namespace('Zend_Auth');
 
-echo '
-	<div id="content">
-		<div class="section content">
+echo '<div id="content">
+	<h2 class="BigTitle">System <span class="ColoredTxt">Snapshot</span> ' . $param1 . '</h2>
+		<h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle"> Select other dates</span></h3>
+        		<div class="element">
+			<table>
+				<th>Transaction dates</th>
+			</tr>';
 
-			<h2 class="BigTitle">System <span class="ColoredTxt">Snapshot</span> ' . $param1 . '</h2>
-
-			<h3 class="toggler">&nbsp;<img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" />&nbsp;<b>Select other dates</b></h3>
-			<div class="element">
-';
-	
 		$sql = $db->query("select distinct created_date, created_time from andutteye_snapshot where system_name = '$param1' order by seqnr desc limit 0,100");
 		while ($row = $sql->fetch()) {
                 	$created_date = $row['created_date'];
                 	$created_time = $row['created_time'];
-echo '
-				<label>
+			echo '
+				<td>
 					<img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" />&nbsp;
 					<a href="index.php?main=show_system_snapshot&param1=' . $param1 . '&param2=' . $created_date . '&param3=' . $created_time . '">' . $created_date . ' ' . $created_time . '</a>
-				</label>
+				</td>
+				</tr>
 ';
 		}
 		
 echo '
-			</div>
+	</table>
+</div>
 ';
+echo '<h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle"> System snapshot</span></h3>
+     	<div class="element">';
 
 if($param2 && $param3) {
 	$sql = $db->query("select * from andutteye_snapshot where system_name = '$param1' and created_date = '$param2' and created_time = '$param3' order by seqnr desc limit 0,1");
@@ -4471,6 +4705,7 @@ foreach($formatted as $i) {
 echo '
 			</label>
 </fieldset>
+</div>
 ';
 echo '
 			<br/ >
@@ -4479,8 +4714,7 @@ echo '
 				<a href="index.php?main=system_overview&param1=' . $param1 . '">&nbsp;Back to ' . $param1 . ' system overview</a>
 			</label>
 
-		</div>
-  </div>
+</div>
 ';
 
 // End of subfunction
@@ -4652,7 +4886,12 @@ echo '
 
 				 <fieldset class="GroupField">
                                         <legend>Set domain permissions for the role</legend>
-                                                <div>';
+
+						<table>
+							<th>Permission</th>
+							<th>Domain</th>
+							<th>Submit</th>
+							</tr>';
 
                                                  $sql = $db->query("select distinct(domain_name) from andutteye_domains order by domain_name asc");
                                                  while ($row = $sql->fetch()) {
@@ -4684,8 +4923,7 @@ echo '
                                                         }
 
                                                         echo '
-                                                        <div class="table">
-                                                        <div class="column40"><label>
+							     	<td>
                                                                 <select name="param3" style="WIDTH: 200px">
                                                                         <option value="$res->role_permission">Set now: ' . $current . '
                                                                         <option value="0"> None (Hidden)
@@ -4693,20 +4931,26 @@ echo '
                                                                         <option value="2"> Read-Write permission
                                                                         <option value="3"> Read-Write-Delete permission
                                                                 </select>
-                                                        </label></div>
-                                                        <div class="column40"><label>
-							<img src="themes/' . $authNamespace->andutteye_theme . '/domains_1.png" alt="" title="" />&nbsp;
-							<a href="#" class="Tips2" title="Permission set by:' . $res->created_by . ' Date:' . $res->created_date . ' Time:' . $res->created_time . '">' . $domain_name . '</a></label></div>
-                                                        <div class="column"><label><input class="button" type="submit" value="Set permission"></label></div>
-                                                        </div></form>';
+                                                        	</td>
+                                                        	<td>
+								<img src="themes/' . $authNamespace->andutteye_theme . '/domains_1.png" alt="" title="" />&nbsp;
+								<a href="#" class="Tips2" title="Permission set by:' . $res->created_by . ' Date:' . $res->created_date . ' Time:' . $res->created_time . '">' . $domain_name . '</a></td>
+                                                        	<td><input class="button" type="submit" value="Set permission">
+								</td>
+                                                        </tr></form>';
                                                 }
 
-                                                echo '</div>
+                                                echo '</table>
                                 </fieldset>
 
 				<fieldset class="GroupField">
                                         <legend>Set group permissions for the role</legend>
-                                                <div>';
+
+						<table>
+							<th>Permission</th>
+							<th>Group</th>
+							<th>Submit</th>
+							</tr>';
 
                                                  $sql = $db->query("select distinct(group_name) from andutteye_groups order by group_name asc");
                                                  while ($row = $sql->fetch()) {
@@ -4738,8 +4982,7 @@ echo '
                                                         }
 
                                                         echo '
-                                                        <div class="table">
-                                                        <div class="column40"><label>
+                                                        	<td>
                                                                 <select name="param3" style="WIDTH: 200px">
                                                                         <option value="$res->role_permission">Set now: ' . $current . '
                                                                         <option value="0"> None (Hidden)
@@ -4747,20 +4990,28 @@ echo '
                                                                         <option value="2"> Read-Write permission
                                                                         <option value="3"> Read-Write-Delete permission
                                                                 </select>
-                                                        </label></div>
-                                                        <div class="column40"><label>
+                                                        	</td>
+                                                        	<td>
 							<img src="themes/' . $authNamespace->andutteye_theme . '/groups_2.png" alt="" title="" />&nbsp;
-							<a href="#" class="Tips2" title="Permission set by:' . $res->created_by . ' Date:' . $res->created_date . ' Time:' . $res->created_time . '">' . $group_name . '</a></label></div>
-                                                        <div class="column"><label><input class="button" type="submit" value="Set permission"></label></div>
-                                                        </div></form>';
+							<a href="#" class="Tips2" title="Permission set by:' . $res->created_by . ' Date:' . $res->created_date . ' Time:' . $res->created_time . '">' . $group_name . '</a>
+								</td>
+                                                        	<td>
+								<input class="button" type="submit" value="Set permission">
+								</td>
+                                                        </tr></form>';
                                                 }
 
-                                                echo '</div>
+                                                echo '</table>
                                 </fieldset>
 
 				<fieldset class="GroupField">
         				<legend>Set system permissions for the role</legend>
-                                		<div>';
+
+						<table>
+							<th>Permission</th>
+							<th>System</th>
+							<th>Submit</th>
+							</tr>';
 
 						 $sql = $db->query("select distinct(system_name) from andutteye_systems order by system_name asc");
                 				 while ($row = $sql->fetch()) {
@@ -4792,8 +5043,7 @@ echo '
 							}
 					
 							echo '
-                                			<div class="table">
-                                        		<div class="column40"><label>
+                                        		<td>
 								<select name="param3" style="WIDTH: 200px">
                                                 			<option value="$res->role_permission">Set now: ' . $current . '
                                                 			<option value="0"> None (Hidden)
@@ -4801,19 +5051,26 @@ echo '
                                                 			<option value="2"> Read-Write permission
                                                 			<option value="3"> Read-Write-Delete permission
                                         			</select>
-							</label></div>
-                                        		<div class="column40"><label>
+							</td>
+                                        		<td>
 							<img src="themes/' . $authNamespace->andutteye_theme . '/systems_2.png" alt="" title="" />&nbsp;
-							<a href="#" class="Tips2" title="Permission set by:' . $res->created_by . ' Date:' . $res->created_date . ' Time:' . $res->created_time . '">' . $system_name . '</a></label></div>
-                                        		<div class="column"><label><input class="button" type="submit" value="Set permission"></label></div>
-                                			</div></form>';
+							<a href="#" class="Tips2" title="Permission set by:' . $res->created_by . ' Date:' . $res->created_date . ' Time:' . $res->created_time . '">' . $system_name . '</a></td>
+                                        		<td>
+							<input class="button" type="submit" value="Set permission">
+							</td>
+                                			</tr></form>';
                 				}
 
-						echo '</div>
+						echo '</table>
 				</fieldset>
 				<fieldset class="GroupField">
                                         <legend>Set file permissions for the role</legend>
-                                                <div>';
+
+						<table>
+							<th>Permission</th>
+							<th>Domain</th>
+							<th>Submit</th>
+							</tr>';
 
                                                  $sql = $db->query("select distinct domain_name from andutteye_files");
                                                  while ($row = $sql->fetch()) {
@@ -4829,25 +5086,32 @@ echo '
                                                         $res = $subsql->fetchObject();
 
                                                 echo '
-                                                        <div class="table">
-                                                        <div class="column40"><label>
+                                                        <td>
                                                                 <select name="param3" style="WIDTH: 200px">
                                                                         <option value="'.$res->distribution.'">' . $res->distribution . '
                                                                 </select>
-                                                        </label></div>
-                                                        <div class="column40"><label>
+                                                        </td>
+                                                        <td>
                                                         <img src="themes/' . $authNamespace->andutteye_theme . '/file_1.png" alt="" title="" />&nbsp;
-                                                        <a href="#" class="Tips2" title="Domain:' .$domain_name.' Distribution:'.$res->distribution.'">Domain:' . $domain_name .'</a></label></div>
-                                                        <div class="column"><label><input class="button" type="submit" value="Set permission"></label></div>
-                                                        </div></form>';
+                                                        <a href="#" class="Tips2" title="Domain:' .$domain_name.' Distribution:'.$res->distribution.'">' . $domain_name .'</a>
+							</td>
+                                                        <td>
+							<input class="button" type="submit" value="Set permission">
+							</td>
+                                                        </tr></form>';
                                                 }
 
-                                                echo '</div>
+                                                echo '</table>
                                 </fieldset>
 
 				<fieldset class="GroupField">
                                         <legend>Set package permissions for the role</legend>
-                                                <div>';
+
+						<table>
+							<th>Permission</th>
+							<th>Domain</th>
+							<th>Submit</th>
+							</tr>';
 
                                                  $sql = $db->query("select distinct domain_name from andutteye_packages");
                                                  while ($row = $sql->fetch()) {
@@ -4863,20 +5127,23 @@ echo '
                                                         $res = $subsql->fetchObject();
 
                                                 echo '
-                                                        <div class="table">
-                                                        <div class="column40"><label>
+                                                        <td>
                                                                 <select name="param3" style="WIDTH: 200px">
                                                                         <option value="'.$res->distribution.'">' . $res->distribution . '
                                                                 </select>
-                                                        </label></div>
-                                                        <div class="column40"><label>
+                                                        </td>
+                                                        <td>
 							<img src="themes/' . $authNamespace->andutteye_theme . '/package_1.png" alt="" title="" />&nbsp;
-							<a href="#" class="Tips2" title="Domain:' .$domain_name.' Distribution:'.$res->distribution.'">Domain:' . $domain_name .'</a></label></div>
-                                                        <div class="column"><label><input class="button" type="submit" value="Set permission"></label></div>
-                                                        </div></form>';
+							<a href="#" class="Tips2" title="Domain:' .$domain_name.' Distribution:'.$res->distribution.'">' . $domain_name .'</a></label>
+							</td>
+
+                                                        <td>
+							<input class="button" type="submit" value="Set permission">
+							</td>
+                                                        </tr></form>';
                                                 }
 
-                                                echo '</div>
+                                                echo '</table>
                                 </fieldset>
 		</div>
 	</div>
@@ -5029,14 +5296,19 @@ $data = array(
         $db->insert('andutteye_choosenbundles', $data);
 }
 
-echo '
-	<div id="content">
-		<div class="section content">
-
-			<h2 class="BigTitle">Choosen <span class="ColoredTxt">Software Bundles</span> for ' . $param1 . ' Revision ' . $param3 . '</h2>
-
+echo '<div id="content">
+	<div class="section content">
+		<h2 class="BigTitle">Choosen <span class="ColoredTxt">Software Bundles</span> for ' . $param1 . ' Revision ' . $param3 . '</h2>
 			<div>
-';
+			
+			<table>
+				<th>Bundlename</th>
+				<th>Package(s)</th>
+				<th>Revision</th>
+				<th>Date</th>
+				<th>Delete</th>
+				</tr>
+			';
 
                 $sql = $db->query("select * from andutteye_choosenbundles where system_name = '$param1' and specid = '$param3 ' and specaction = 'N' order by specaction asc");
                 while ($row = $sql->fetch()) {
@@ -5051,24 +5323,31 @@ echo '
                         $packages = $subsql->fetchAll();
                         $packages = count($packages);
 
-echo '
-				<div class="table">
-					<div class="column40"><label><a href="#" class="Tips2" title="Bundle:' . $bundle . ' Revision:' . $revision . ' Created by:' . $created_by . '">' . $bundle . '</a></label></div>
-					<div class="column"><label>' . $packages . '</label></div>
-					<div class="column"><label>' . $revision . '</label></div>
-					<div class="column"><label>' . $created_date . '</label></div>
-					<div class="column"><label><img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" /> <a href="index.php?main=show_bundles&param1=' . $param1 . '&param3=' . $param3 . '&param4=' . $seqnr . '">Delete</a></label></div>
-				</div>
-';
+
+			echo '<td><a href="#" class="Tips2" title="Bundle:' . $bundle . ' Revision:' . $revision . ' Created by:' . $created_by . '">' . $bundle . '</a></td>
+			      <td>' . $packages . '</td>
+			      <td>' . $revision . '</td>
+			      <td>' . $created_date . '</td
+			      <td><img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" /> <a href="index.php?main=show_bundles&param1=' . $param1 . '&param3=' . $param3 . '&param4=' . $seqnr . '">Delete</a></td>
+				</tr>';
                 }
 echo '
-				<br />
-			</div>
+	</table>
+	<br />
+	</div>
 ';
-echo '
-<fieldset class="GroupField">
+
+echo '<fieldset class="GroupField">
 	<legend>Pending bundle transactions</legend>
-';
+	
+		<table>
+			<th>Bundlename</th>
+			<th>Package(s)</th>
+			<th>Revision</th>
+			<th>Date</th>
+			<th>Status</th>
+			</tr>
+		';
 
                 $sql = $db->query("select * from andutteye_choosenbundles where system_name = '$param1' and specid = '$param3' and specaction != 'N'");
                 while ($row = $sql->fetch()) {
@@ -5084,17 +5363,17 @@ echo '
                         $packages = $subsql->fetchAll();
                         $packages = count($packages);
 
-echo '
-			<div class="table">
-				<div class="column40"><label><a href="#" class="Tips2" title="Package:' . $aepackage . ' Version:' . $aeversion . ' Release:' . $aerelease . ' Arch:' . $aearchtype . ' Action:' . $aeaction . '">' . $bundle . '</a></label></div>
-				<div class="column"><label>' . $packages . '</label></div>
-				<div class="column"><label>' . $revision . '</label></div>
-				<div class="column"><label>' . $created_date . '</label></div>
-				<div class="column"><label><img src="themes/' . $authNamespace->andutteye_theme . '/alert.png" alt="" title="" /> <a href="#" class="Tips2" title="Bundle is in pending state until you save the specification. State A means add State R means remove."> Pending (' . $specaction . ')</a></label></div>
-			</div>
+			echo '
+				<td><a href="#" class="Tips2" title="Package:' . $aepackage . ' Version:' . $aeversion . ' Release:' . $aerelease . ' Arch:' . $aearchtype . ' Action:' . $aeaction . '">' . $bundle . '</a></td>
+				<td>' . $packages . '</td>
+				<td>' . $revision . '</td>
+				<td>' . $created_date . '</td>
+				<td><img src="themes/' . $authNamespace->andutteye_theme . '/alert.png" alt="" title="" /> <a href="#" class="Tips2" title="Bundle is in pending state until you save the specification. State A means add State R means remove."> Pending (' . $specaction . ')</a></td>
+			</tr>
 ';
                 }
 echo '
+</table>
 </fieldset>
 
 <fieldset class="GroupField">
@@ -5115,7 +5394,16 @@ echo '
 echo '
 <fieldset class="GroupField">
 	<legend>Available software bundles in ' . $res->distribution . ' for domain ' . $dom->domain_name . '</legend>
-';
+
+	<table>
+		<th>Bundle</th>
+		<th>Package(s)</th>
+		<th>Revision</th>
+		<th>Distribution</th>
+		<th>Add</th>
+		<th>Submit</th>
+		<th>Remove</th>
+	</tr>';
 
                 if($param2) {
                         $sql = $db->query("select distinct bundle, revision, created_date, created_time from andutteye_bundles where bundle like '%$param2%' and distribution = '$res->distribution' and domain_name = '$dom->domain_name' order by bundle asc limit 0,20")
@@ -5129,7 +5417,6 @@ echo '
                         $revision    = $row['revision'];
                         $created_date    = $row['created_date'];
                         $created_time    = $row['created_time'];
-                        $created_by    = $row['created_by'];
 
                         $subsql  = $db->query("select bundle from andutteye_choosenbundles where system_name = '$param1' and specid = '$param3' and specaction = 'N' and bundle = '$bundle' and revision = '$revision'");
                         $choosen = $subsql->fetchObject();
@@ -5150,28 +5437,22 @@ echo '
 				<input type="hidden" name="param8" value="' . $revision . '">
 
 
-				<div class="table">
-					<div class="column40">
-						<label>Bundle: <a href="#" class="Tips2" title="Bundle:' . $bundle . ' Revision:' . $revision . ' Distribution:' . $distribution . '"><b>' . $bundle . '</b></a></label>
-					</div>
-					<div class="column"><label>' . $packages . '</label></div>
-					<div class="column"><label>' . $revision . '</label></div>
-					<div class="column"><label>' . $res->distribution . '</label></div>
-					<div class="column"><label>Add<input type="radio" name="param9" value="add"></label></div>
-				</div>
-
-				<label><input class="button" type="submit" value="Submit bundle change"></label>
-				<label>
+				<td><a href="#" class="Tips2" title="Bundle:' . $bundle . ' Revision:' . $revision . ' Distribution:' . $distribution . '"><b>' . $bundle . '</b></a></td>
+				<td>' . $packages . '</td>
+				<td>' . $revision . '</td>
+				<td>' . $res->distribution . '</td>
+				<td>Add<input type="radio" name="param9" value="add"></td>
+				<td><input class="button" type="submit" value="Submit bundle change"></td>
+				<td>
 					<img src="themes/' . $authNamespace->andutteye_theme . '/delete_1.png" alt="" title="" />
 					<a href="index.php?main=remove_bundle&param1=' . $bundle . '&param2=' . $revision . '&param3=' . $res->distribution . '&param4=' . $dom->domain_name . '&param5=' . $param1 . '&param6=' . $param3 . '" onclick="return confirm(\'Remove bundle ' . $bundle . ' revision ' . $revision . ' for domain ' . $dom->domain_name . ' that contains ' . $packages . ' packages?\')">Remove</a>
-				</label>
+				</td>
 			</form>
-
-			<br />
-';
+			</tr>';
                 }
 
 echo '
+</table>
 </fieldset>
 
 			<div class="DivSpacer"></div>
@@ -5220,13 +5501,16 @@ if($param5) {
 
 echo '<div id="content">
         <div class="section content">
-
         <h2 class="BigTitle">File permissions for role <span class="ColoredTxt">'.$param1.'</span> Domain ' . $param2 . ' Distribution ' . $param3 . '</h2>
-        <div>
-';
+        <div>';
 echo '
 <fieldset class="GroupField">
-        <legend>Available files</legend>';
+        <legend>Available files</legend>
+		<table>
+			<th>Permission</th>
+			<th>File</th>
+			<th>Submit</th>
+		</tr>';
 
 $sql = $db->query("select distinct(filename) from andutteye_files");
  while ($row = $sql->fetch()) {
@@ -5256,24 +5540,22 @@ $sql = $db->query("select distinct(filename) from andutteye_files");
                         $current="None (Hidden)";
                 }
 
-                echo '
-                <div class="table">
-                        <div class="column40"><label>
-                                <select name="param6" style="WIDTH: 200px">
-                                        <option value="$res->role_permission">Set now: ' . $current . '
-                                        <option value="0"> None (Hidden)
-                                        <option value="1"> Available (Full control)
-                                </select>
-                        </label></div>
-                        <div class="column40"><label>
-                                <img src="themes/' . $authNamespace->andutteye_theme . '/file_1.png" alt="" title="" />&nbsp;
-                                <a href="#" class="Tips2" title="Permission set by:' . $res->created_by . ' Date:' . $res->created_date . ' Time:' . $res->created_time . '">' .$ressql->directory.'/'.$ressql->filename.''.$ressql->tagging.'</a></label></div>
-                                <div class="column"><label><input class="button" type="submit" value="Set permission"></label></div>
-                </div></form>';
+                echo '<td>
+                         <select name="param6" style="WIDTH: 200px">
+                         	<option value="$res->role_permission">Set now: ' . $current . '
+                                <option value="0"> None (Hidden)
+                                <option value="1"> Available (Full control)
+                         </select>
+                        </td>
+                     <td>
+                            <img src="themes/' . $authNamespace->andutteye_theme . '/file_1.png" alt="" title="" />&nbsp;
+                             <a href="#" class="Tips2" title="Permission set by:' . $res->created_by . ' Date:' . $res->created_date . ' Time:' . $res->created_time . '">' .$ressql->directory.'/'.$ressql->filename.'--'.$ressql->tagging.'</a></td>
+                            <td><input class="button" type="submit" value="Set permission"></label></td>
+                </tr></form>';
 	}
 
 
-echo '</div></div></div>';
+echo '</table></div></div>';
 
 
 // End of function
@@ -5310,7 +5592,6 @@ if($param5) {
 
 echo '<div id="content">
 	<div class="section content">
-
 	<h2 class="BigTitle">Add package permissions for role <span class="ColoredTxt">'.$param1.'</span> Domain ' . $param2 . ' Distribution ' . $param3 . '</h2>
         <div>
 ';
@@ -5339,7 +5620,12 @@ if($param4) {
 }
 echo '
 <fieldset class="GroupField">
-        <legend>Search software packages</legend>';
+        <legend>Software packages</legend>
+		<table>
+			<th>Permission</th>
+			<th>Package</th>
+			<th>Submit</th>
+		</tr>';
 
 	while ($row = $sql->fetch()) {
         	$aepackage  = $row['aepackage'];
@@ -5365,24 +5651,23 @@ echo '
                         $current="None (Hidden)";
                 }
 
-                echo '
-                <div class="table">
-                	<div class="column40"><label>
+                echo '<td>
                         	<select name="param6" style="WIDTH: 200px">
                                 	<option value="$res->role_permission">Set now: ' . $current . '
                                         <option value="0"> None (Hidden)
                                         <option value="1"> Available (Full control)
                                 </select>
-                        </label></div>
-                        <div class="column40"><label>
+                      </td>
+                      <td>
                         	<img src="themes/' . $authNamespace->andutteye_theme . '/package_1.png" alt="" title="" />&nbsp;
-                                <a href="#" class="Tips2" title="Permission set by:' . $res->created_by . ' Date:' . $res->created_date . ' Time:' . $res->created_time . '">' . $aepackage . '</a></label></div>
-                                <div class="column"><label><input class="button" type="submit" value="Set permission"></label></div>
+                                <a href="#" class="Tips2" title="Permission set by:' . $res->created_by . ' Date:' . $res->created_date . ' Time:' . $res->created_time . '">' . $aepackage . '</a></td>
+                      <td><input class="button" type="submit" value="Set permission"></td>
+		</tr>
                 </div></form>';
 }
 
 
-echo '</div></div></div>
+echo '</table></div></div>
 ';
 
 // End of subfunction
@@ -5431,12 +5716,17 @@ $data = array(
 	$db->insert('andutteye_choosenpackages', $data);
 }
 
-echo '
-	<div id="content">
-		<div class="section content">
-
-			<h2 class="BigTitle">Choosen <span class="ColoredTxt">Individual Packages</span> for ' . $param1 . ' Revision ' . $param3 . '</h2>
+echo '<div id="content">
+	<div class="section content">
+		<h2 class="BigTitle">Choosen <span class="ColoredTxt">Individual Packages</span> for ' . $param1 . ' Revision ' . $param3 . '</h2>
 			<div>
+				<table>
+					<th>Package</th>
+					<th>Package(s)</th>
+					<th>Revision</th>
+					<th>Action</th>
+					<th>Delete</th>
+				</tr>
 ';
 
                 $sql = $db->query("select * from andutteye_choosenpackages where system_name = '$param1' and specid = '$param3 ' and specaction = 'N' order by aeaction asc");
@@ -5449,27 +5739,30 @@ echo '
                         $aearchtype   = $row['aearchtype'];
                         $aeaction     = $row['aeaction'];
 
-echo '
-				<div class="table">
-					<div class="column40"><label><a href="#" class="Tips2" title="Package:' . $aepackage . ' Version:' . $aeversion . '  Release:' . $aerelease . ' Arch:' . $aearchtype . ' Action:' . $aeaction . '">' . $aepackage . '</a></label></div>
-					<div class="column"><label>' . $aeversion . '</label></div>
-					<div class="column"><label>' . $aerelease . '</label></div>
-					<div class="column"><label>' . $aeaction . '</label></div>
-					<div class="column"><label><img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" /> <a href="index.php?main=show_packages&param1=' . $param1 . '&param3=' . $param3 . '&param4=' . $seqnr . '">Delete</a></label></div>
-				</div>
+			echo '
+				<td>
+				<a href="#" class="Tips2" title="Package:' . $aepackage . ' Version:' . $aeversion . '  Release:' . $aerelease . ' Arch:' . $aearchtype . ' Action:' . $aeaction . '">' . $aepackage . '</a></td>
+				<td>'.$aeversion.'</td>
+				<td>'. $aerelease.'</td>
+				<td>'.$aeaction.'</td>
+				<td><img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" /> <a href="index.php?main=show_packages&param1=' . $param1 . '&param3=' . $param3 . '&param4=' . $seqnr . '">Delete</a></td>
+				</tr>
 ';
                 }
+echo '</table></div>';
+
 echo '
-				<br />
-			</div>
-';
-echo '
-			<br />
-			<br />
+	<br />
 
 <fieldset class="GroupField">
 	<legend>Pending package transactions</legend>
-';
+		<table>
+			<th>Package</th>
+			<th>Version</th>
+			<th>Release</th>
+			<th>Action</th>
+			<th>Status</th>
+		</tr>';
 
 		$sql = $db->query("select * from andutteye_choosenpackages where system_name = '$param1' and specid = '$param3' and specaction != 'N'");
                 while ($row = $sql->fetch()) {
@@ -5482,17 +5775,17 @@ echo '
                         $aeaction     = $row['aeaction'];
                         $specaction   = $row['specaction'];
 
-echo '
-			<div class="table">
-				<div class="column40"><label><a href="#" class="Tips2" title="Package:' . $aepackage . ' Version:' . $aeversion . ' Release:' . $aerelease . ' Arch:' . $aearchtype . ' Action:' . $aeaction . '">' . $aepackage . '</a></label></div>
-				<div class="column"><label>' . $aeversion . '</label></div>
-				<div class="column"><label>' . $aerelease . '</label></div>
-				<div class="column"><label>' . $aeaction . '</label></div>
-				<div class="column"><label><img src="themes/' . $authNamespace->andutteye_theme . '/alert.png" alt="" title="" /> <a href="#" class="Tips2" title="Package is in pending state until you save the specification. State A means add State R means remove.">Pending (' . $specaction . ')</a></label></div>
-			</div>
+			echo '
+				<td><a href="#" class="Tips2" title="Package:' . $aepackage . ' Version:' . $aeversion . ' Release:' . $aerelease . ' Arch:' . $aearchtype . ' Action:' . $aeaction . '">' . $aepackage . '</a></td>
+				<td>'.$aeversion.'</td>
+				<td>'.$aerelease.'</td>
+				<td>'.$aeaction.'</td>
+				<td><img src="themes/' . $authNamespace->andutteye_theme . '/alert.png" alt="" title="" /> <a href="#" class="Tips2" title="Package is in pending state until you save the specification. State A means add State R means remove.">Pending (' . $specaction . ')</a></td>
+			</tr>
 ';
                 }
 echo '
+</table>
 </fieldset>
 ';
 
@@ -5515,7 +5808,16 @@ echo '
 echo '
 <fieldset class="GroupField">
 	<legend>Available software packages in ' . $res->distribution . '</legend>
-';
+		<table>
+			<th>Package</th>
+			<th>Arch</th>
+			<th>Distribution</th>
+			<th>Add</th>
+			<th>Exclude</th>
+			<th>Version</th>
+			<th>Release</th>
+			<th>Submit</th>
+		</tr>';
 
 		if($param2) {
                 	$sql = $db->query("select aepackage,aeversion,aerelease,aearchtype,distribution from andutteye_packages where aepackage like '%$param2%' and distribution = '$res->distribution' order by aepackage asc limit 0,20");
@@ -5548,41 +5850,30 @@ echo '
 				<input type="hidden" name="param8" value="' . $aearchtype . '">
 			
 
-				<div class="table">
-					<div class="column40"><label>Package: <a href="#" class="Tips2" title="Package:' . $aepackage . ' Version:' . $aeversion . ' Release:' . $aerelease . ' Archtype:' . $aearchtype . ' Distribution:' . $distribution . '"><b>' . $aepackage .'</b></a></label></div>
-					<div class="column"><label>' . $aearchtype . '</label></div>
-					<div class="column"><label>' . $distribution . '</label></div>
-					<div class="column"><label>Add<input type="radio" name="param9" value="add"></label></div>
-					<div class="column"><label>Exclude<input type="radio" name="param9" value="exclude"></label></div>
-					<br />
-				</div>
-
-				<div class="leftcol">
-					<label>Package version:&nbsp;&nbsp;&nbsp;
-					<select name="param6" style="WIDTH: 260px">
+				<td><a href="#" class="Tips2" title="Package:' . $aepackage . ' Version:' . $aeversion . ' Release:' . $aerelease . ' Archtype:' . $aearchtype . ' Distribution:' . $distribution . '"><b>' . $aepackage .'</b></a></td>
+			        <td>' . $aearchtype . '</td>
+				<td>' . $distribution . '</td>
+				<td><input type="radio" name="param9" value="add"></td>
+				<td><input type="radio" name="param9" value="exclude"></td>
+				<td><select name="param6">
 						<option value="0"> Auto version 0
-						<option value="$aeversion"> ' . $aeversion . '
+						<option value="'.$aeversion.'"> ' . $aeversion . '
 					</select>
-					</label>
-				</div>
-
-				<div class="rightcol">
-					<label>Package release:&nbsp;&nbsp;&nbsp;
-						<select name="param7" style="WIDTH: 260px">
-							<option value="0"> Auto release 0
-							<option value="' . $aerelease . '"> ' . $aerelease . '
-						</select>
-					</label>
-				</div>
-
-				<label><input class="button" type="submit" value="Submit package change"></label>
+				</td>
+				<td><select name="param7">
+					<option value="0"> Auto release 0
+					<option value="'.$aerelease.'"> ' . $aerelease . '
+				    </select>
+				</td>
+				<td><input class="button" type="submit" value="Submit"></td>
 			</form>
-			<br />
+			</tr>
 			';
 			// End of package access
 			}
                 }
 echo '
+</table>
 </fieldset>
 ';
 echo '
@@ -5606,24 +5897,24 @@ $authNamespace = new Zend_Session_Namespace('Zend_Auth');
 
 $sql = $db->query("select * from andutteye_changeevent order by seqnr desc limit 0,50");
 
-echo '
-	<div id="content">
+echo '<div id="content">
 		<div class="section content">
-
-			<h2 class="BigTitle"><span class="ColoredTxt">Change</span> Events Database</h2>
+		<h2 class="BigTitle"><span class="ColoredTxt">Change</span> Events Database</h2>
 
 <fieldset class="GroupField">
 	<legend>Search for event</legend>
-			<form method="get" action="index.php">
-				<input type="hidden" name="main" value="change_events_database">
-				<label>
-					<input type="text" name="param1" value="" size="70"> <input class="button" type="submit" value="Search">
-				</label>
-			</form>
-</fieldset>
-<fieldset class="GroupField">
-	<legend>Create new changeevent</legend>
-	<label><img src="themes/$authNamespace->andutteye_theme/new_1.png" alt="" title="" /><a href="index.php?main=create_new_changeevent"> Create a new changeevent.</a></label>
+		<table>
+			<th>Search</th>
+			<th>Create new</th>
+		</tr>
+		<td><form method="get" action="index.php">
+			<input type="hidden" name="main" value="change_events_database">
+			<input type="text" name="param1" value="" size="70"> <input class="button" type="submit" value="Search">
+		</td>
+		</form>
+	<td><img src="themes/$authNamespace->andutteye_theme/new_1.png" alt="" title="" /> <a href="index.php?main=create_new_changeevent"> Create a new changeevent.</a></td>
+	</tr>
+   </table>
 </fieldset>
 ';
 
@@ -5631,6 +5922,14 @@ echo '
 echo '
 <fieldset class="GroupField">
 	<legend>Search results</legend>
+		<table>
+			<th>System</th>
+			<th>Date</th>
+			<th>Time</th>
+			<th>Event</th>
+			<th>Severity</th>
+			<th>Creator</th>
+		</tr>
 ';
 
 			$subsql = $db->query("select * from andutteye_changeevent where description like '%$param1%' or information like '%$param1%' or solution like '%$param1%' or workaround like '%$param1%' order by seqnr desc limit 0,50");
@@ -5650,32 +5949,21 @@ echo '
                         	if(!$system_name) {
                                 	$system_name="No specific";
                         	}
+			echo '
+				<td>'.$system_name.'</td>
+				<td>'.$created_date.'</td>
+				<td>'.$created_time.'</td>
+				<td><a href="index.php?main=create_new_changeevent&param1=' . $seqnr . '&param9=update" class="Tips2" title="Information:' . $information . ' Solution:' . $solution . ' Workaround:' . $workaround . ' Created:' . $created_date . ' ' . $created_time . ' by:' . $created_by . '">' . $description . '</a>
+				</td>
+				<td>'.$severity.'</td>
+				<td>'.$created_by.'</td>
+			</tr>
+			';
 
-echo '
-			<div class="table">
-				<div class="column">
-					<label>' . $system_name . '</label>
-				</div>
-				<div class="column40">
-					<label style="padding-left:0; padding-right:0; font-size:10px;">
-						<a href="index.php?main=create_new_changeevent&param1=$seqnr" class="Tips2" title="Information:' . $information . ' Solution:' . $solution . ' Workaround:' . $workaround . ' Created:' . $created_date . ' ' . $created_time . ' by:' . $created_by . '">' . $description . '</a>
-					</label>
-				</div>
-				<div class="column">
-					<label>' . $severity . '</label>
-				</div>
-				<div class="column">
-					<label>' . $created_date . '</label>
-				</div>
-				<div class="column">
-					<label>' . $created_by . '</label>
-				</div>
-			</div>
-			<br />
-';
 
                 	}
 echo '
+</table>
 </fieldset>
 ';
 		}
@@ -5684,6 +5972,14 @@ echo '
 			<br />
 <fieldset class="GroupField">
 	<legend>Changeevents</legend>
+		<table>
+			<th>System</th>
+			<th>Date</th>
+			<th>Time</th>
+			<th>Event</th>
+			<th>Severity</th>
+			<th>Creator</th>
+		</tr>
 ';
 
 		while ($row = $sql->fetch()) {
@@ -5702,31 +5998,21 @@ echo '
 				$system_name="No specific";
 			}
 
-echo '
-			<div class="table">
-				<div class="column">
-					<label>' . $system_name . '</label>
-				</div>
-				<div class="column40">
-					<label style="padding-left:0; padding-right:0; font-size:10px;">
-						<a href="index.php?main=create_new_changeevent&param1=' . $seqnr . '&param9=update" class="Tips2" title="Information:' . $information . ' Solution:' . $solution . ' Workaround:' . $workaround . ' Created:' . $created_date . ' ' . $created_time . ' by:' . $created_by . '">' . $description . '</a>
-					</label>
-				</div>
-				<div class="column">
-					<label>' . $severity . '</label>
-				</div>
-				<div class="column">
-					<label>' . $created_date . '</label>
-				</div>
-				<div class="column">
-					<label>' . $created_by . '</label>
-				</div>
-			</div>
-';
+			echo '
+				<td>'.$system_name.'</td>
+				<td>'.$created_date.'</td>
+				<td>'.$created_time.'</td>
+				<td><a href="index.php?main=create_new_changeevent&param1=' . $seqnr . '&param9=update" class="Tips2" title="Information:' . $information . ' Solution:' . $solution . ' Workaround:' . $workaround . ' Created:' . $created_date . ' ' . $created_time . ' by:' . $created_by . '">' . $description . '</a>
+				</td>
+				<td>'.$severity.'</td>
+				<td>'.$created_by.'</td>
+			</tr>
+			';
 
 		}
 
 echo '
+</table>
 </fieldset>
 		</div>
 	</div>
@@ -5911,26 +6197,35 @@ echo '
 
 <fieldset class="GroupField">
 	<legend><span class="BigTitle"><span class="ColoredTxt">System Specification</span> for ' . $param1 . '</span></legend>
-			<h3 class="InfoTitle">System management settings</h3>
 
 			<form method="get" action="index.php">
 				<div class="leftcol">
+					<table>
+					<th>System management settings</th>
+					</tr>
+
 					<input type="hidden" name="main" value="system_specification">
 					<input type="hidden" name="param1" value="' . $param1 . '">
 					<input type="hidden" name="param2" value="' . $param2 . '">
-
-					<label>System ' . $res->system_name . '</label>
-					<label>Package type</label>
-					<label>
+				
+					<td>
+					System ' . $res->system_name . '</td>
+					</tr>
+					<td>
+					Package type</td>
+					</tr>
+					<td>
 						<select name="param5" style="WIDTH: 260px">
 							<option value="' . $res->packagetype . '"> ' . $res->packagetype . '
 							<option value="rpm"> rpm
 							<option value="apt"> apt
 							<option value="andutteye"> andutteye
 						</select>
-					</label>
-					<label>System patchlevel</label>
-					<label>
+					</td>
+					</tr>
+					<td>System patchlevel</td>
+					</tr>
+					<td>
 						<select name="param13" style="WIDTH: 260px">';
 
         				$sql2 = $db->query("select distinct(patchlevelinfo) from andutteye_packages where distribution = '$res->distribution' and patchlevel = '$res->patchlevel' and patchlevelinfo is not NULL");
@@ -5949,52 +6244,80 @@ echo '
 
 echo '
 						</select>
-					</label>
+					</td>
+					</tr>
 
-					<h3 class="InfoTitle">Packagemanagement status</h3>
-';
+					<th>Packagemanagement status</th>
+					</tr>';
 
                         if("$res->package_update" == "Active") {
-echo '
-					<label><input type="radio" checked="This" name="param12" value="Active"> Active</label>
-					<label><input type="radio" name="param12" value="Disabled"> Disabled</label>
-';
+					echo '
+					<td>
+						<input type="radio" checked="This" name="param12" value="Active"> Active
+					</td>
+					</tr>
+					<td>
+						<input type="radio" name="param12" value="Disabled"> Disabled
+					</td>
+					</tr>
+					';
                         } else {
-echo '
-					<label><input type="radio" name="param12" value="Active"> Active</label>
-					<label><input type="radio" checked="This" name="param12" value="Disabled"> Disabled</label>
-';
+					echo '
+					<td>
+						<input type="radio" name="param12" value="Active"> Active
+					</td>
+					</tr>
+					<td>
+						<input type="radio" checked="This" name="param12" value="Disabled"> Disabled
+					</td>
+					</tr>
+					';
 			}
-echo '
-					<h3 class="InfoTitle">Filemanagement status</h3>
-';
+				echo '
+					<th>Filemanagement status</th>
+					</tr>';
 
                         if("$res->config_update" == "Active") {
-echo '
-					<label><input type="radio" checked="This" name="param14" value="Active"> Active</label>
-					<label><input type="radio" name="param14" value="Disabled"> Disabled</label>
-';
+					echo '
+					<td><input type="radio" checked="This" name="param14" value="Active"> Active</td>
+					</tr>
+					<td><input type="radio" name="param14" value="Disabled"> Disabled</td>
+					</tr>
+					';
                         } else {
-echo '
-					<label><input type="radio" name="param14" value="Active"> Active</label>
-					<label><input type="radio" checked="This" name="param14" value="Disabled"> Disabled</label>
-';
+					echo '
+					<td><input type="radio" name="param14" value="Active"> Active</td>
+					</tr>
+					<td><input type="radio" checked="This" name="param14" value="Disabled"> Disabled</td>
+					</tr>
+					';
 			}
-			echo '<h3 class="InfoTitle">Autoinstall system</h3>';
+			echo '
+				<th>Systemprovisioning</th>
+				</tr>';
 
 			if("$res->revision" > "0") {
-					echo '<label><a href="index.php?main=install_new_system&param1=' .$param1. '">Autoinstall system</a></label>';
+					echo '<td><a href="index.php?main=install_new_system&param1=' .$param1. '">
+					<img src="themes/' . $authNamespace->andutteye_theme . '/install_system_1.png" alt="" title="" />
+					Autoinstall system</a></td></tr>';
 			}
 			
 
-echo '
-					<br />
+				echo '
+				</table>
 				</div>
 
 				<div class="rightcol">
-					<label>Specification revision:' . $res->revision . ' Created by:' . $res->created_by . ' On:' . $res->created_date . ' ' . $res->created_time . '</label>
-					<label>System archtype</label>
-					<label>
+					<table>
+						<th>System management settings</th>
+						</tr>	
+					<td>
+					Specification revision:' . $res->revision . ' Created by:' . $res->created_by . ' On:' . $res->created_date . ' ' . $res->created_time . 'i
+					</td>
+					</tr>
+					<td>System archtype</td>
+					</tr>
+					<td>
 						<select name="param7" style="WIDTH: 260px">
 							<option value="' . $res->archtype . '"> ' . $res->archtype . '
 							<option value="i386"> i386
@@ -6002,10 +6325,12 @@ echo '
 							<option value="sparc"> sparc
 							<option value="power"> power
 						</select>
-					</label>
+					</td>
+					</tr>
 
-					<label>System distribution</label>
-					<label>
+					<td>System distribution</td>
+					</tr>
+					<td>
 						<select name="param8" style="WIDTH: 260px">
 							<option value="' . $res->distribution . '"> ' . $res->distribution . '
 ';
@@ -6013,31 +6338,32 @@ echo '
                           $sql = $db->query("select distinct(distribution) from andutteye_packages order by distribution asc");
                           while ($row = $sql->fetch()) {
                           	$distribution = $row['distribution'];
-echo '
-							<option value="' . $distribution . '"> ' . $distribution . '
-';
+					echo '<option value="' . $distribution . '"> ' . $distribution . '';
 			}
 
-echo '
-						</select>
-					</label>
+			echo'</select>
+				</td>
+				</tr>
+				<th>Pending changes</th>
+				</tr>';
 
-					<h3 class="InfoTitle">Pending changes:</h3>
-';
                         if($bundle != "0") {
-echo '
-					<label><img src="themes/' . $authNamespace->andutteye_theme . '/alert.png" alt="" title="" /> <b>' . $bundle . '</b> pending management bundle changes</label>
+					echo '
+					<td>
+					<img src="themes/' . $authNamespace->andutteye_theme . '/alert.png" alt="" title="" /> <b>' . $bundle . '</b> pending management bundle changes
+					</td>
+					</tr>
 ';
                         }
                         if($package != "0") {
-echo '
-					<label><img src="themes/' . $authNamespace->andutteye_theme . '/alert.png" alt="" title="" /> <b>' . $package . '</b> pending management package changes</label>
-';
+					echo '
+					<td>
+					<img src="themes/' . $authNamespace->andutteye_theme . '/alert.png" alt="" title="" /> <b>' . $package . '</b> pending management package changes
+					</td>
+					</tr>';
                         }
                         
-echo "
-				</div>
-";
+			echo "</table></div>";
 
 echo '
 				<h3 class="InfoTitle">Submit changes:</h3>
@@ -6052,39 +6378,43 @@ echo '
 			<br />
 
 <fieldset class="GroupField">
-	<legend><span class="BigTitle"><span class="ColoredTxt">Load Older</span> Specification Revision:</span></legend>
+	<legend><span class="BigTitle"><span class="ColoredTxt">Load other</span> specification revision</span></legend>
+		<table>
+			<th>Load older revision</th>
+			</tr>
+
 			<form method="get" action="index.php">
 				<input type="hidden" name="main" value="system_specification">
 				<input type="hidden" name="param1" value="'.$param1.'">
-
-				<label>
-					<select name="param2" style="WIDTH: 260px">
-';
+				<td>
+					<select name="param2" style="WIDTH: 260px">';
 
                                  $sql = $db->query("select distinct(revision) from andutteye_specifications where system_name = '$param1' order by seqnr desc");
                                  while ($row = $sql->fetch()) {
                                         $revision = $row['revision'];
-echo '
-						<option value="' . $revision . '"> ' . $revision . '
-';
+					echo '<option value="' . $revision . '"> ' . $revision . '';
                                  }
-
-echo '
+				echo '
 					</select>
 					<input class="button" type="submit" value="Load">
-				</label>
+				</td>
 			</form>
+</tr>
+</table>
 </fieldset>
 ';
 
-echo '
-			<br />
+echo '<h3 class="BigTitle"><span class="ColoredTxt">Andutteye</span> Information</h3>
 
-			<h3 class="BigTitle"><span class="ColoredTxt">Andutteye</span> Information</h3>
-
-			<h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle">&nbsp;Individual package selection (<span class="ColoredTxt">' . $packages . '</span>)</span></h3>
-				<div class="element">
-';
+<h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle">&nbsp;Individual package selection (<span class="ColoredTxt">' . $packages . '</span>)</span></h3>
+        <div class="element">
+                <table>
+                        <th>Package</th>
+                        <th>Version</th>
+                        <th>Release</th>
+                        <th>Action</th>
+                        <th>Change</th>
+                        </tr>';
 
 
                         $sql = $db->query("select * from andutteye_choosenpackages where system_name = '$param1'  and specid = '$res->revision' and specaction = 'N' order by aeaction asc");
@@ -6099,36 +6429,46 @@ echo '
                         	$created_time  = $row['created_time'];
                         	$created_by    = $row['created_by'];
 
-echo '
-					<div class="table">
-						<div class="column40"><label><a href="#" class="Tips2" title="Package:' . $aepackage . ' Version:' . $aeversion . ' Release:' . $aerelease . ' Archtype:' . $aearchtype . ' Aeaction:' . $aeaction . ' Created:' . $created_date . ' ' . $created_time . ' by:' . $created_by . '">' . $aepackage . '</a></label></div>
-						<div class="column"><label>' . $aeversion . '</label></div>
-						<div class="column"><label>' . $aerelease . '</label></div>
-						<div class="column"><label>' . $aeaction . '</label></div>
-						<div class="column"><label><img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" /> <a href="index.php?main=show_packages&param1=' . $param1 . '&param3=' . $res->revision . '">Change</a></label></div>
-					</div>
+				echo '
+					<td>
+					<a href="#" class="Tips2" title="Package:' . $aepackage . ' Version:' . $aeversion . ' Release:' . $aerelease . ' Archtype:' . $aearchtype . ' Aeaction:' . $aeaction . ' Created:' . $created_date . ' ' . $created_time . ' by:' . $created_by . '">' . $aepackage . '</a>
+					</td>
+					<td>' . $aeversion . '</td>
+					<td>' . $aerelease . '</td>
+					<td>' . $aeaction . '</td>
+					<td><img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" /> <a href="index.php?main=show_packages&param1=' . $param1 . '&param3=' . $res->revision . '">Change</a></td>
+					</tr>
 ';
                         }
 			if($packages == 0) {
 				if(!$res->revision) {
-print '
-					<label><img src="themes/' . $authNamespace->andutteye_theme . '/alert.png" alt="" title="" /> Specify base configuration above and save an intial management revision to be able to choose software.</label>
-';
+					print '
+					<td colspan="5">
+					<img src="themes/' . $authNamespace->andutteye_theme . '/alert.png" alt="" title="" /> Specify base configuration above and save an intial management revision to be able to choose software.</td>
+					</tr>
+					';
 				} else {
-echo '
-					<label><img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" /> <a href="index.php?main=show_packages&param1=' . $param1 . '&param3=' . $res->revision . '"> Add packages</a></label>
+					echo '
+					<td colspan="5">
+					<img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" /> <a href="index.php?main=show_packages&param1=' . $param1 . '&param3=' . $res->revision . '"> Add packages</a></td>
+					</tr>
 ';
 				}
 			}
 
 
 echo '
-					<br />
-				</div>
-
-			<h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle">&nbsp;Choosen software bundles (<span class="ColoredTxt">' . $bundles . '</span>)</span></h3>
-				<div class="element">
-';
+</table>
+</div>
+<h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle">&nbsp;Choosen software bundles (<span class="ColoredTxt">' . $bundles . '</span>)</span></h3>
+	<div class="element">
+		<table>
+			<th>Bundle</th>
+			<th>Package(s)</th>
+			<th>Revision</th>
+			<th>Date</th>
+			<th>Change</th>
+			</tr>';
 
 
 			$sql = $db->query("select * from andutteye_choosenbundles where system_name = '$param1' and specid = '$res->revision' order by bundle asc");
@@ -6144,35 +6484,46 @@ echo '
                         	$packages = $subsql->fetchAll();
                         	$packages = count($packages);
 
-echo '
-					<div class="table">
-						<div class="column40"><label><a href="#" class="Tips2" title="Bundle:' . $bundle . ' contains ' . $packages . ' packages Created:' . $created_date . ' ' . $created_time . ' by:' . $created_by . '">' . $bundle . '</a></label></div>
-						<div class="column"><label>' . $packages . '</label></div>
-						<div class="column"><label>' . $revision . '</label></div>
-						<div class="column"><label>' . $created_date . '</label></div>
-						<div class="column"><label><img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" /> <a href="index.php?main=show_bundles&param1=' . $param1 . '&param3=' . $res->revision. '">Change</a></label></div>
-					</div>
-';
+				echo '
+					<td>
+					<a href="#" class="Tips2" title="Bundle:' . $bundle . ' contains ' . $packages . ' packages Created:' . $created_date . ' ' . $created_time . ' by:' . $created_by . '">' . $bundle . '</a>
+					</td>
+					<td>' . $packages . '</td>
+					<td>' . $revision . '</td>
+					<td>' . $created_date . '</td>
+					<td>
+					<img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" /> <a href="index.php?main=show_bundles&param1=' . $param1 . '&param3=' . $res->revision. '">Change</a>
+					</td>
+					</tr>';
         		}
 			if($bundles == 0) {
 				if(!$res->revision) {
-print '
-				<label><img src="themes/' . $authNamespace->andutteye_theme . '/alert.png" alt="" title="" /> Specify base configuration above and save an intial management revision to be able to choose software.</label>
-';
+					echo '
+						<td colspan="5">
+						<img src="themes/' . $authNamespace->andutteye_theme . '/alert.png" alt="" title="" /> Specify base configuration above and save an intial management revision to be able to choose software.</td>
+						</tr>';
 				} else {
-echo '
-				<label><img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" /> <a href="index.php?main=show_bundles&param1=' . $param1 . '&param3=' . $res->revision . '"> Add bundles</a></label>
-';
+					echo '
+						<td colspan="5">
+						<img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" /> <a href="index.php?main=show_bundles&param1=' . $param1 . '&param3=' . $res->revision . '"> Add bundles</a>
+						</td>
+						</tr>';
 				}
 			}
 
 echo '
-					<br />
-				</div>
+	</table>
+</div>
 
-			<h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle">&nbsp;Patchlevel management</span></h3>
-				<div class="element">
-';
+<h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle">&nbsp;Patchlevel management</span></h3>
+	<div class="element">
+		<table>
+			<th>Distribution</th>
+			<th>Patchlevel</th>
+			<th>Status</th>
+			<th>Log</th>
+			<th>By</th>
+			</tr>';
 
 			 $sql = $db->query("select * from andutteye_patchlevel where distribution = '$res->distribution' order by patchlevel desc");
                        	 while ($row = $sql->fetch()) {
@@ -6184,17 +6535,15 @@ echo '
                                 $created_time  = $row['created_time'];
                                 $created_by    = $row['created_by'];
 
-echo '
-					<div class="table">
-						<div class="column40"><label>' . $distribution . '</label></div>
-						<div class="column"><label>' . $patchlevel . '</label></div>
-						<div class="column"><label>' . $status . '</label></div>
-						<div class="column"><label>' . $log . '</label></div>
-						<div class="column"><label>' . $created_by . '</label></div>
-					</div>
-';
+				echo '
+					<td>' . $distribution . '</td>
+					<td>' . $patchlevel . '</td>
+					<td>' . $status . '</td>
+					<td>' . $log . '</td>
+					<td>' . $created_by . '</td>
+					</tr>';
 
-echo '
+				echo '
 					<form method="get" action="index.php">
 						<input type="hidden" name="main" value="system_configuration">
 						<input type="hidden" name="param1" value="' . $param1 . '">
@@ -6215,40 +6564,43 @@ echo '
 
 
 echo '
-				</div>
+</table>
+</div>
 
-			<h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle">&nbsp;System management logs</span></h3>
-				<div class="element">
-';
+<h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle">&nbsp;System management logs</span></h3>
+	<div class="element">
+		<table>
+			<th>Managementlog id</th>
+			<th>Date</th>
+		</tr>';
 
 				
-                         $sql = $db->query("select distinct runid,created_date from andutteye_managementlog where system_name = '$res->system_name' order by seqnr desc limit 0,20");
-                         while ($row = $sql->fetch()) {
-                                $runid  = $row['runid'];
-                                $created_date  = $row['created_date'];
-                                $created_time  = $row['created_time'];
-echo '
-				<label><img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" /><a href="index.php?main=show_managementlog&param1=' . $param1 . '&param2=' . $runid . '">Management log RunId ' . $runid . ' Created ' . $created_date . ' ' . $created_time . '</a></label>
+                        $sql = $db->query("select distinct runid,created_date from andutteye_managementlog where system_name = '$res->system_name' order by seqnr desc limit 0,20");
+                        while ($row = $sql->fetch()) {
+                               $runid  = $row['runid'];
+                               $created_date  = $row['created_date'];
+				
+				echo '
+				<td><img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" /><a href="index.php?main=show_managementlog&param1=' . $param1 . '&param2=' . $runid . '">Management log RunId ' . $runid . '</a></td>
+				<td>'.$created_date.'</td>
+				</tr>
 ';
 			}
 
 
-			
-
 
 echo '
-				</div>
+</table>
+</div>
 			
-			<div class="DivSpacer"></div>
-			<label><img src="themes/' . $authNamespace->andutteye_theme . '/back.png" alt="" title="" /> <a href="index.php?main=system_overview&param1=' . $param1 . '">&nbsp;Back to ' . $param1 . ' system overview</a></label>
+<div class="DivSpacer"></div>
+	<label><img src="themes/' . $authNamespace->andutteye_theme . '/back.png" alt="" title="" /> <a href="index.php?main=system_overview&param1=' . $param1 . '">&nbsp;Back to ' . $param1 . ' system overview</a></label>
 
-			</div>
 	</div>
+</div>
 ';
 // End of subfunction
 }
-
-
 
 function monitoring_front($param1,$param2,$param3) {
 
@@ -6275,23 +6627,18 @@ $subsql = $db->query("select seqnr from andutteye_alarm where system_name = '$pa
 $closed = $subsql->fetchAll();
 $closed = count($closed);
 
-echo '
-	<div id="content">
-		<div class="section content">
-
-			<p class="BigTitle">
-				<span class="ColoredTxt">Monitoring Alarms</span> for ' . $param1 . '</span>
-			</p>
-
+echo '<div id="content">
+		<p class="BigTitle">
+			<span class="ColoredTxt">Monitoring Alarms</span> for ' . $param1 . '</span>
+		</p>
 ';
 
 echo '
 <fieldset class="GroupField">
-	<legend>Alarm trend for ' . $param1 . '</legend>
-';
+	<legend>Alarm trend for ' . $param1 . '</legend>';
 
 	include_once 'graph/php-ofc-library/open_flash_chart_object.php';
-	open_flash_chart_object( '100%', 250, 'http://'. $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] ."/andutteye/graph/graph-system-alarm-data.php?system=$param1", false );
+	open_flash_chart_object( '100%', 250, 'http://'. $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] ."/$graph_tp_dir/graph/graph-system-alarm-data.php?system=$param1", false );
 
 echo '
 </fieldset>
@@ -6300,6 +6647,14 @@ echo '
 echo '
 <fieldset class="GroupField">
 	<legend>Open alarms</legend>
+	
+	<table>
+		<th>Alert</th>
+		<th>Repeatcount</th>
+		<th>Status</th>
+		<th>Severity</th>
+		<th>Message</th>
+	</tr>
 ';
 
 $sql    = $db->query("select * from andutteye_alarm where system_name = '$param1' and status = 'OPEN' or status = 'ACK' order by seqnr desc");
@@ -6316,32 +6671,28 @@ $sql    = $db->query("select * from andutteye_alarm where system_name = '$param1
                         $last_date              = $row['lastdate'];
                         $last_time              = $row['lasttime'];
 
-echo '
-			<div class="table">
-				<div class="column">
-					<label>
-						<img src="themes/' . $authNamespace->andutteye_theme . '/alert.png" alt="" title="" />
-					</label>
-				</div>
-				<div class="column">
-					<label>' . $repeatcount . '</label>
-				</div>
-				<div class="column">
-					<label>' . $status . '</label>
-				</div>
-				<div class="column">
-					<label>' . $severity . '</label>
-				</div>
-				<div class="column40">
-					<label>
-						<a href="index.php?main=change_alarm&param1=' . $seqnr . '" class="Tips2" title="System:' . $system_name . ' Repeatcounts:' . $repeatcount . ' Recieved:' . $created_date.$created_time . ' Lastrecived:' . $last_date.$last_time . ' Detailedinfo:' . $longinformation . '"> ' . $shortinformation . '</a>
-					</label>
-				</div>
-			</div>
-';
+			echo '
+				<td>
+					<img src="themes/' . $authNamespace->andutteye_theme . '/alert.png" alt="" title="" />
+				</td>
+				<td>
+					' . $repeatcount . '
+				</td>
+				<td>
+					' . $status . '
+				</td>
+				<td>
+					' . $severity . '
+				</td>
+				<td>
+					<a href="index.php?main=change_alarm&param1=' . $seqnr . '" class="Tips2" title="System:' . $system_name . ' Repeatcounts:' . $repeatcount . ' Recieved:' . $created_date.$created_time . ' Lastrecived:' . $last_date.$last_time . ' Detailedinfo:' . $longinformation . '"> ' . $shortinformation . '</a>
+				</td>
+				</tr>
+				';
         }
 
 echo '
+</table>
 </fieldset>
 ';
 
@@ -6349,8 +6700,15 @@ echo '
 
 	echo '<h3 class="toggler">
 		<img src="themes/' . $authNamespace->andutteye_theme . '/group_docu.png" alt="" title="" /><span class="InfoTitle"> MONITOR STATUS </span>
-		 </h3>
-		 <div class="element">';
+		 </h3> <div class="element">
+
+			<table>
+				<th>Historytrend</th>
+				<th>Type</th>
+				<th>Message</th>
+				<th>Date</th>
+				<th>Time</th>
+			</tr>';
 
 			$sql = $db->query("select distinct(monitorname) from andutteye_monitor_status where system_name = '$param1' order by monitortype desc");
                         while ($row = $sql->fetch()) {
@@ -6372,22 +6730,33 @@ echo '
                                                  $lastdate_notok   = $row['lastdate_notok'];
                                                  $lasttime_notok   = $row['lasttime_notok'];
 
-                                                echo "<div class='table'>";
-                                                echo "<div class='column'><label><img src='themes/$authNamespace->andutteye_theme/revision_1.png' alt='' title='' /> <a href='index.php?main=show_monitor_status&param1=$param1&param2=$monitorname&param3=$monitortype'>[History]</a> $monitortype</label></div>";
-                                                echo "<div class='column'><label>$monitorstatus</label></div>";
-                                                echo "<div class='column40'><label><a href=''  class='Tips2' title='System:$system_name Monitor:$monitorname Type:$monitortype Status:$monitorstatus NrOk:$number_ok LastdateOk:$lastdate_ok LasttimeOk:$lasttime_ok NrNotOk:$number_notok LastdateNotOk:$lastdate_notok LasttimeNotOk:$lasttime_notok'>$monitormessage</a></label></div>";
-                                                echo "<div class='column'><label>$created_date</label></div>";
-                                                echo "<div class='column'><label>$created_time</label></div>";
-                                                echo "</div>";
+                                                echo "<td>
+							<img src='themes/$authNamespace->andutteye_theme/revision_1.png' alt='' title='' /> <a href='index.php?main=show_monitor_status&param1=$param1&param2=$monitorname&param3=$monitortype'>[History]</a> $monitortype
+						</td>";
+                                                echo "<td>$monitorstatus</td>";
+                                                echo "<td>
+							<a href=''  class='Tips2' title='System:$system_name Monitor:$monitorname Type:$monitortype Status:$monitorstatus NrOk:$number_ok LastdateOk:$lastdate_ok LasttimeOk:$lasttime_ok NrNotOk:$number_notok LastdateNotOk:$lastdate_notok LasttimeNotOk:$lasttime_notok'>$monitormessage</a>
+						     </td>";
+                                                echo "<td>$created_date</td>";
+                                                echo "<td>$created_time</td>";
+                                                echo "</tr>";
                                         }
                         }
 
+		echo "</table>";
 		echo '</div>';
 
 		echo '<h3 class="toggler">
 			<img src="themes/' . $authNamespace->andutteye_theme . '/freezed_alarms.png" alt="" title="" /><span class="InfoTitle"> FREEZED ALARMS (<span class="ColoredTxt">' . $freeze .'</span>)</span>
 			</h3>
-			<div class="element">';
+			<div class="element">
+			<table>
+				<th>System</th>
+				<th>Repeatcount</th>
+				<th>Messagetype</th>
+				<th>Severity</th>
+				<th>Message</th>
+			</tr>';
 
 $sql    = $db->query("select * from andutteye_alarm where system_name = '$param1' and status = 'FREEZE' order by seqnr desc");
         while ($row = $sql->fetch()) {
@@ -6403,40 +6772,36 @@ $sql    = $db->query("select * from andutteye_alarm where system_name = '$param1
                         $last_date              = $row['lastdate'];
                         $last_time              = $row['lasttime'];
 
-echo '
-				<div class="table">
-					<div class="column">
-						<label>' . $system_name . '</label>
-					</div>
-					<div class="column">
-						<label>' . $repeatcount . '</label>
-					</div>
-					<div class="column">
-						<label>' . $status . '</label>
-					</div>
-					<div class="column">
-						<label>' . $severity . '</label>
-					</div>
-					<div class="column40">
-						<label>
-						<a href="index.php?main=change_alarm&param1=' . $seqnr . '" class="Tips2" title="Repeatcounts:' . $repeatcount . ' Recieved:' . $created_date.$created_time . ' Lastrecived:' . $last_date.$last_time . ' Detailedinfo:' . $longinformation . '">' . $shortinformation . '</a>
-						</label>
-					</div>
-				</div>
+			echo '
+				<td>' . $system_name . '</td>
+				<td>' . $repeatcount . '</td>
+				<td>' . $status . '</td>
+				<td>' . $severity . '</td>
+				<td>
+				<a href="index.php?main=change_alarm&param1=' . $seqnr . '" class="Tips2" title="Repeatcounts:' . $repeatcount . ' Recieved:' . $created_date.$created_time . ' Lastrecived:' . $last_date.$last_time . ' Detailedinfo:' . $longinformation . '">' . $shortinformation . '</a>
+				</td>
+				</tr>
 ';
         }
 
 echo '
+			</table>
 			</div>
 ';
 
 echo '
-			<h3 class="toggler">
-				<img src="themes/' . $authNamespace->andutteye_theme . '/closed_alarms.png" alt="" title="" /><span class="InfoTitle"> CLOSED ALARMS (<span class="ColoredTxt">' . $closed . '</span>)</span>
+	<h3 class="toggler">
+		<img src="themes/' . $authNamespace->andutteye_theme . '/closed_alarms.png" alt="" title="" /><span class="InfoTitle"> CLOSED ALARMS (<span class="ColoredTxt">' . $closed . '</span>)</span>
 			</h3>
 
 			<div class="element">
-';
+			<table>
+				<th>Historytrend</th>
+				<th>Type</th>
+				<th>Message</th>
+				<th>Date</th>
+				<th>Time</th>
+			</tr>';
 
 $sql    = $db->query("select * from andutteye_alarm where system_name = '$param1' and status = 'CLOSED' order by seqnr desc limit 0,100");
         while ($row = $sql->fetch()) {
@@ -6451,30 +6816,20 @@ $sql    = $db->query("select * from andutteye_alarm where system_name = '$param1
                         $last_date              = $row['lastdate'];
                         $last_time              = $row['lasttime'];
 
-echo '
-				<div class="table">
-					<div class="column">
-						<label>' . $system_name . '</label>
-					</div>
-					<div class="column">
-						<label>' . $repeatcount . '</label>
-					</div>
-					<div class="column">
-						<label>' . $status . '</label>
-					</div>
-					<div class="column">
-						<label>' . $severity . '</label>
-					</div>
-					<div class="column40">
-						<label>' . $shortinformation . '</label>
-					</div>
-				</div>
+			echo '
+				<td>' . $system_name . '</td>
+				<td>' . $repeatcount . '</td>
+				<td>' . $status . '</td>
+				<td>' . $severity . '</td>
+				<td>' . $shortinformation . '</td>
+				</tr>
 ';
         }
 
 
 echo '		
-			</div>
+</table>
+</div>
 ';
 
 echo '
@@ -6484,7 +6839,6 @@ echo '
 				<img src="themes/' . $authNamespace->andutteye_theme . '/back.png" alt="" title="" /><a href="index.php?main=system_overview&param1=' . $param1 . '">&nbsp;Back to ' . $param1 . ' system overview</a>
 			</label>
 		</div>
-	</div>
 ';
 
 // End of subfunction
@@ -6503,7 +6857,13 @@ echo "<div id='content'>
                 <div class='section content'>
 
 		<fieldset class='GroupField'>
-        	<legend><span class='BigTitle'><span class='ColoredTxt'>Management log </span> for RunId $param2</span> on system $param1</legend>";
+        	<legend><span class='BigTitle'><span class='ColoredTxt'>Management log </span> for RunId $param2</span> on system $param1</legend>
+
+		<table>
+			<th>Date</th>
+			<th>Status</th>
+			<th>Message</th>
+		</tr>";
 
 		$sql = $db->query("select * from andutteye_managementlog where system_name = '$param1' and runid = '$param2' order by seqnr asc");
         	while ($row = $sql->fetch()) {
@@ -6515,15 +6875,15 @@ echo "<div id='content'>
 
 		
                         echo "
-                        <div class='table'>
-                        <div class='column'><label>$messagetype</label></div>
-                        <div class='column70'><label>$logentry&nbsp;</label></div>
-                        <div class='column'><label><a href='#' class='Tips2' title='Messagetype:$messagetype Date:$created_date Time:$created_time '>$created_date</a></label></div>
-                        </div>
+                        <td>$created_date</td>
+                        <td>$messagetype</td>
+                        <td><a href='#' class='Tips2' title='Messagetype:$messagetype Date:$created_date Time:$created_time '>$logentry&nbsp;</a></td>
+                        </tr>
                         ";
         }
 
-echo " <label><img src='themes/$authNamespace->andutteye_theme/back.png' alt='' title='' /><a href='index.php?main=system_specification&param1=$param1'>&nbsp;Back to $param1 system overview</a></label>
+echo "</table>
+ <label><img src='themes/$authNamespace->andutteye_theme/back.png' alt='' title='' /><a href='index.php?main=system_specification&param1=$param1'>&nbsp;Back to $param1 system overview</a></label>
 	</fieldset>
      </div>
 </div>
@@ -6535,8 +6895,6 @@ echo " <label><img src='themes/$authNamespace->andutteye_theme/back.png' alt='' 
 
 // End of subfunction
 }
-
-
 
 function system_files($param1,$param2) {
 require 'db.php';
@@ -6560,62 +6918,65 @@ $man = $man->fetchObject();
 echo '
 	<div id="content">
 		<div class="section content">
-
 			<h2 class="BigTitle"><span class="ColoredTxt">Managment Files</span> for System ' . $res->system_name . ' Distribution ' . $man->distribution . ' Domain ' . $res->domain_name . '</h2>
 ';
 
 echo '
 <fieldset class="GroupField">
 	<legend>Select directory</legend>
-';
+
+	<table>
+		<th>Directory</th>
+		<th>Select</th>
+		</tr>';
 			$sql = $db->query("select distinct directory from andutteye_files where distribution = '$man->distribution' and domain_name = '$res->domain_name'");
 			while ($row = $sql->fetch()) {
 				$dir = $row['directory'];
 
-echo '
-			<div class="leftcol">
-				<label>
-					<img src="themes/' . $authNamespace->andutteye_theme . '/folder_1.png" alt="" title="" />&nbsp;' . $dir . '
-				</label>
-			</div>
-			<div class="rightcol">
-				<label>
-					<img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" /> <a href="index.php?main=system_files&param1=' . $param1 . '&param2=' . $dir . '">Show files</a>
-				</label>
-			</div>
+			echo '<td>
+				<img src="themes/' . $authNamespace->andutteye_theme . '/folder_1.png" alt="" title="" />&nbsp;' . $dir . '
+			      </td>
+			      <td>
+				<img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" /> <a href="index.php?main=system_files&param1=' . $param1 . '&param2=' . $dir . '">Show files</a>
+				</td>
+			</tr>
 ';
 		}
 
+echo "</table>";
+
 		if($param2) {
-echo '
-			<br /><br /><br />
+			echo '
 			<h3 class="InfoTitle">&nbsp;&nbsp;&nbsp;Files under directory ' . $param2 . '</h3>
-';
+
+				<table>
+					<th>File</th>
+					<th>Select</th>
+				</tr>';
+
 			$sql = $db->query("select distinct directory, filename, tagging from andutteye_files where distribution = '$man->distribution' and directory = '$param2' and domain_name = '$res->domain_name'");
 			while ($row = $sql->fetch()) {
 				$directory = $row['directory'];
-       			$filename = $row['filename'];
-       			$tagging = $row['tagging'];
+       				$filename = $row['filename'];
+       				$tagging = $row['tagging'];
 
 			if(verify_role_object_permission("$directory/$filename$tagging",'file',1,$res->domain_name,$man->distribution)) {
 				echo '
-				<div class="leftcol">
-					<label>
-						<img src="themes/' . $authNamespace->andutteye_theme . '/file_1.png" alt="" title="" />&nbsp;' . $directory . '/' . $filename.$tagging. '
-					</label>
-				</div>
-				<div class="rightcol">
-					<label>
+					<td>
+						<img src="themes/' . $authNamespace->andutteye_theme . '/file_1.png" alt="" title="" />&nbsp;' . $directory . '/'.$filename.''.$tagging.'
+					</td>
+					<td>
 						<img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" />
 						<a href="index.php?main=open_file&param1=' . $filename . '&param2=' . $directory . '&param3=' . $man->distribution . '&param4=' . $tagging . '&param5=' . $param1 . '">Change file</a>
-					</label>
-				</div>
+					</td>
+				</tr>
 				';
 			}
 		   }
 		}
 		
 echo '
+</table>
 			<label>
 				<img src="themes/' . $authNamespace->andutteye_theme . '/back.png" alt="" title="" />
 				<a href="index.php?main=system_overview&param1=' . $param1 . '">&nbsp;Back to ' . $param1 . ' system overview</a>
@@ -6645,8 +7006,13 @@ $autodir = $autodir->fetchObject();
 $sql = $db->query("select * from andutteye_specifications where system_name = '$param1' order by seqnr desc limit 0,1");
 $spec = $sql->fetchObject();
 
-$sql = $db->query("select * from andutteye_provisioning where system_name = '$param1' order by seqnr desc limit 0,1");
-$res = $sql->fetchObject();
+if($param3) {
+	$sql = $db->query("select * from andutteye_provisioning where system_name = '$param1' and revision = '$param3'");
+	$res = $sql->fetchObject();
+} else {
+	$sql = $db->query("select * from andutteye_provisioning where system_name = '$param1' order by seqnr desc limit 0,1");
+	$res = $sql->fetchObject();
+}
 
 if($param2 == "manual") {
 	$macaddress="$param3";
@@ -6666,14 +7032,43 @@ echo '<div id="content">
         	<h2 class="BigTitle">Install and reinstall configuration for <span class="ColoredTxt">' .$param1. '</span></h2>
 ';
 
-echo '<form method="get" action="index.php">
+echo '
+<fieldset class="GroupField">
+        <legend><span class="ColoredTxt">Load other</span> provisioning configuration revision</span></legend>
+                <table>
+                        <th>Load older revision</th>
+                        </tr>
+
+                        <form method="get" action="index.php">
+                                <input type="hidden" name="main" value="prepare_new_system">
+                                <input type="hidden" name="param1" value="'.$param1.'">
+                                <input type="hidden" name="param2" value="'.$param2.'">
+                                <td>
+                                        <select name="param3" style="WIDTH: 260px">';
+
+                                 $sql = $db->query("select distinct(revision) from andutteye_provisioning where system_name = '$param1' order by seqnr desc");
+                                 while ($row = $sql->fetch()) {
+                                        $revision = $row['revision'];
+                                        echo '<option value="' . $revision . '"> ' . $revision . '';
+                                 }
+                                echo '
+                                        </select>
+                                        <input class="button" type="submit" value="Load">
+                                </td>
+                        </form>
+</tr>
+</table>
+</fieldset>';
+
+
+echo '<form method="post" action="index.php">
       	<input type="hidden" name="main" value="save_autoinstall">
         <input type="hidden" name="param1" value="' . $param1 . '">
         <input type="hidden" name="param4" value="' . $pxefilename . '">
         <input type="hidden" name="param5" value="' . $macaddress . '">
 
 <fieldset class="GroupField">
-        <legend>File Overview</legend>
+        <legend><span class="ColoredTxt">Provisioning</span> fileoverview</span></legend>
                                 <div class="leftcol">
                                         <label>Current loaded revision <b>' . $res->revision . '.0</b></label>
                                         <label>Created on ' . $res->created_date . ' ' . $res->created_time . '</label>';
@@ -6699,15 +7094,15 @@ echo '<form method="get" action="index.php">
 </fieldset>
 
 <fieldset class="GroupField">
-        <legend>System PXE configuration</legend>
+        <legend><span class="ColoredTxt">System</span> PXE configuration</span></legend>
                                 <label><textarea cols="100" rows="10" name="param2">' . $res->pxefile . '</textarea></label>
 </fieldset>
 <fieldset class="GroupField">
-        <legend>Autoinstall configuration</legend>
+        <legend><span class="ColoredTxt">Autoinstall</span> configuration</span></legend>
                                 <label><textarea cols="100" rows="30" name="param3">' . $res->autoinstfile . '</textarea></label>
 </fieldset>
 <fieldset class="GroupField">
-        <legend>Ready to install?</legend>
+        <legend><span class="ColoredTxt">Ready</span> to install?</span></legend>
 	<label>By pressing install the autoinstall configuration and PXE configuration will be saved and a install command will be sent to the Andutteye agent. The system will reboot and be installed according to your configurations and settings.</label>
 	<label><input class="button" type="submit" value="Install system"></label>
 </fieldset>';
@@ -6744,14 +7139,11 @@ if(!verify_role_object_permission("$res->directory/$res->filename$res->tagging",
 	exit;
 }
 
-echo '
-	<div id="content">
-		<div class="section content">
+echo '<div id="content">
+	<div class="section content">
+		<h2 class="BigTitle">Review or <span class="ColoredTxt">Change File</span> ' . $res->directory . '/' . $res->filename. ' </h2>';
 
-			<h2 class="BigTitle">Review or <span class="ColoredTxt">Change File</span> ' . $res->directory . '/' . $res->filename. ' </h2>
-';
-
-echo '
+		echo '
 			<form method="get" action="index.php">
 
 				<input type="hidden" name="main" value="save_file">
@@ -6763,14 +7155,28 @@ echo '
 <fieldset class="GroupField">
 	<legend>File Overview</legend>
 				<div class="leftcol">
-					<label>Current loaded revision <b>' . $res->revision . '.0</b></label>
-					<label>Tagging ' . $res->tagging . '</label>
-					<label>Domain '.$res->domain_name.' Distribution ' . $res->distribution . '</label>
+					<table>
+					<th>Fileinformation</th>
+					</tr>
+					<td>Current loaded revision <b>' . $res->revision . '.0</b></td>
+					</tr>
+					<td>Tagging ' . $res->tagging . '</td>
+					</tr>
+					<td>Domain '.$res->domain_name.' Distribution ' . $res->distribution . '</td>
+					</tr>
+					</table>
 				</div>
 				<div class="rightcol">
-					<label>Created by ' . $res->created_by . '</label>
-					<label>Created on ' . $res->created_date . ' ' . $res->created_time . '</label>
-					<label>Sequence number of last revision ' . $seq->seqnr . '</label>
+					<table>
+					<th>Fileinformation</th>
+					</tr>
+					<td>Created by ' . $res->created_by . '</td>
+					</tr>
+					<td>Created on ' . $res->created_date . ' ' . $res->created_time . '</td>
+					</tr>
+					<td>Sequence number of last revision ' . $seq->seqnr . '</td>
+					</tr>
+					</table>
 				</div>
 </fieldset>
 
@@ -6789,20 +7195,34 @@ echo '</fieldset>
 <fieldset class="GroupField">
 	<legend>File related</legend>
 				<div class="leftcol">
-					<h3 class="InfoTitle">File owner</h3>
-					<label><input type="text" name="param2" maxlength="255" value="' . $res->perm_owner . '" size="50"></label>
-					<h3 class="InfoTitle">File group</h3>
-					<label><input type="text" name="param3" maxlength="255" value="' . $res->perm_group . '" size="50"></label>
-					<h3 class="InfoTitle">File permissions</h3>
-					<label><input type="text" name="param4" maxlength="255" value="' . $res->perms . '" size="50"></label>
+					<table>
+					<th>File owner</th>
+					</tr>
+					<td><input type="text" name="param2" maxlength="255" value="' . $res->perm_owner . '" size="50"></td>
+					</tr>
+					<th>File group</th>
+					</tr>
+					<td><input type="text" name="param3" maxlength="255" value="' . $res->perm_group . '" size="50"></td>
+					</tr>
+					<th>File permission</th>
+					</tr>
+					<td><input type="text" name="param4" maxlength="255" value="' . $res->perms . '" size="50"></td>
+					</tr>
+					</table>
 				</div>
 				<div class="rightcol">
-					<h3 class="InfoTitle">Pre hook execution command or program</h3>
-					<label><input type="text" name="param5" maxlength="255"  value="' . $res->prestep . '" size="50"></label>
-					<h3 class="InfoTitle">Post hook execution command or program</h3>
-					<label><input type="text" name="param6" maxlength="255" value="' . $res->poststep . '" size="50"></label>
-					<h3 class="InfoTitle">Specify file installation order</h3>
-					<label>
+					<table>
+					<th>Pre hook execution command or program</th>
+					</tr>
+					<td><input type="text" name="param5" maxlength="255"  value="' . $res->prestep . '" size="50"></td>
+					</tr>
+					<th>Post hook execution command or program</th>
+					</tr>
+					<td><input type="text" name="param6" maxlength="255" value="' . $res->poststep . '" size="50"></td>
+					</tr>
+					<th>Specify file installation order</th>
+					</tr>
+					<td>
 						<select name="param9" style="WIDTH: 260px">
 							<option value="' . $res->fileindex . '"> ' . $res->fileindex . ' (Selected now)
 							<option value="10"> 10 (Lowest priority, will be installed last)
@@ -6816,8 +7236,9 @@ echo '</fieldset>
 							<option value="2"> 2
 							<option value="1"> 1 (Highest priority, will be installed first)
 						</select>
-					</label>
-				</div>
+					</td>
+				</tr>
+	</table>
 </fieldset>
 
 				<div class="DivSpacer"></div>
@@ -6839,6 +7260,10 @@ echo '</fieldset>
 
 <fieldset class="GroupField">
 	<legend>Load old file revision</legend>
+		<table>
+			<th>Load older revision</th>
+			</tr>
+
 			<form method="get" action="index.php">
 				<input type="hidden" name="main" value="open_file">
 				<input type="hidden" name="param1" value="' . $param1 . '">
@@ -6847,33 +7272,30 @@ echo '</fieldset>
 				<input type="hidden" name="param4" value="' . $param4 . '">
 				<input type="hidden" name="param5" value="' . $param5 . '">
 
-				<label>
-					<select name="param6" style="WIDTH: 260px">
-';
+				<td>
+					<select name="param6" style="WIDTH: 260px">';
 
                                            $sql = $db->query("select revision from andutteye_files where filename = '$param1' and directory = '$param2' and distribution = '$param3' and tagging = '$param4' order by revision desc");
                                             while ($row = $sql->fetch()) {
                                                     $revision = $row['revision'];
-echo '
-					<option value="' . $revision . '">&nbsp;' . $revision . '.0
-';
+						     echo '<option value="' . $revision . '">&nbsp;' . $revision . '.0';
                                             }
 
-echo '
+					echo '
 					</select>
 					<input class="button" type="submit" value="Load">
-				</label>
+				</td>
 			</form>
+	</table>
 </fieldset>
 
 ';
 
-echo '
-		<div class="DivSpacer"></div>
-		<label>
-			<img src="themes/' . $authNamespace->andutteye_theme . '/back.png" alt="" title="" /><a href="index.php?main=system_files&param1=' . $param5 . '">&nbsp;Back to ' . $param5 . ' files overview</a>
-		</label>
-	</div>
+echo '<div class="DivSpacer"></div>
+	<label>
+	<img src="themes/' . $authNamespace->andutteye_theme . '/back.png" alt="" title="" /><a href="index.php?main=system_files&param1=' . $param5 . '">&nbsp;Back to ' . $param5 . ' files overview</a>
+	</label>
+    </div>
 </div>
 ';
 
@@ -7068,7 +7490,7 @@ header("Location:index.php?main=create_role");
 
 //End of subfunction
 }
-function remove_system($param1) {
+function remove_front($param1) {
 require 'db.php';
 require_once 'Zend/Auth/Adapter/DbTable.php';
 require_once 'Zend/Session/Namespace.php';
@@ -7077,15 +7499,56 @@ $authNamespace = new Zend_Session_Namespace('Zend_Auth');
 verify_if_user_is_logged_in();
 
 if($param1) {
-        $sql = $db->query("select * from andutteye_systems where seqnr = '$param1'");
+        $sql = $db->query("select * from andutteye_front_configuration where seqnr = '$param1'");
         $res = $sql->fetchObject();
 
         //Validate som permissions.
 
-        $sql = "delete from andutteye_systems where seqnr = '$param1'";
+        $sql = "delete from andutteye_front_configuration where seqnr = '$param1'";
         $db->query($sql);
 }
 
+header("Location:index.php?main=create_front");
+
+//End of subfunction
+}
+function remove_system($param1) {
+require 'db.php';
+require_once 'Zend/Auth/Adapter/DbTable.php';
+require_once 'Zend/Session/Namespace.php';
+$authNamespace = new Zend_Session_Namespace('Zend_Auth');
+$tables = array('andutteye_systems',
+                'andutteye_assetmanagement',
+                'andutteye_changeevent',
+                'andutteye_choosenbundles',
+                'andutteye_choosenpackages',
+                'andutteye_base_agentconfiguration',
+                'andutteye_managementlog',
+                'andutteye_monitor_configuration',
+                'andutteye_provisioning',
+                'andutteye_serverlog',
+                'andutteye_snapshot',
+                'andutteye_software',
+                'andutteye_specifications',
+                'andutteye_statistics',
+                'andutteye_uploads');
+
+verify_if_user_is_logged_in();
+
+if(!$authNamespace->andutteye_admin) {
+
+	if(verify_role_object_permission($param1,'system',3,'0','0')) {
+		print "Yes you have read-write-delete on this system\n";
+	} else {
+		header("Location:index.php?main=create_system&status=You%20dont%20have%20permissions%20to%20do%20this.");
+		exit;
+	}
+}
+foreach ($tables as &$value) {
+	print "Deleting $param1 information in table $value <br>";
+        $sql = "delete from $value where system_name = '$param1'";
+        $db->query($sql);
+}
 header("Location:index.php?main=create_system");
 
 //End of subfunction
@@ -7223,16 +7686,18 @@ $authNamespace = new Zend_Session_Namespace('Zend_Auth');
 
 verify_if_user_is_logged_in();
 
-
-echo '
-	<div id="content">
-		<div class="section content">
-
-			<h2 class="BigTitle"><span class="ColoredTxt">Asset Management Revision Trend</span> for System ' . $param1 . ' on ' . $param2 . '</h2>
+echo '<div id="content">
+	<div class="section content">
+		<h2 class="BigTitle"><span class="ColoredTxt">Asset Management Revision Trend</span> for System ' . $param1 . ' on ' . $param2 . '</h2>
 
 <fieldset class="GroupField">
 	<legend>Revision Management</legend>
-';
+		<table>
+			<th>Assetmanagment monitor</th>
+			<th>Assetmanagment value</th>
+			<th>Date</th>
+			<th>Time</th>
+		</tr>';
 
 
 		$sql = $db->query("select * from andutteye_assetmanagement where system_name = '$param1' and assetmanagementname = '$param2 'order by seqnr desc");
@@ -7244,23 +7709,21 @@ echo '
                                 $created_date   = $row['created_date'];
                                 $created_time   = $row['created_time'];
 
-echo '
-				<div class="leftcol">
-					<label><img src="themes/' . $authNamespace->andutteye_theme . '/revision_1.png" alt="" title="" /> <a href="#"  class="Tips2" title="Date:' . $created_date . ' Time:' . $created_time . ' Program:' . $assetmanagementprog . ' Arguments:' . $assetmanagementargs . '">' . $assetmanagementname . '</a></label>
-				</div>
-				<div class="rightcol">
-					<label>' . $assetmanagementresult . '</label>
-				</div>
-';
-
+				echo '<td>
+					<img src="themes/' . $authNamespace->andutteye_theme . '/revision_1.png" alt="" title="" /> <a href="#"  class="Tips2" title="Date:' . $created_date . ' Time:' . $created_time . ' Program:' . $assetmanagementprog . ' Arguments:' . $assetmanagementargs . '">' . $assetmanagementname . '</a>
+				      </td>
+				      <td>' . $assetmanagementresult . '</td>
+				      <td>' . $created_date . '</td>
+				      <td>' . $created_time . '</td>
+				</tr>';
                 }
 
 
 echo '
+</table>
 </fieldset>
-				<div class="DivSpacer"></div>
-				<label><img src="themes/' . $authNamespace->andutteye_theme . '/back.png" alt="" title="" /><a href="index.php?main=system_overview&param1=' . $param1 . '">&nbsp;Back to ' . $param1 . ' system overview</a></label>
-
+	<div class="DivSpacer"></div>
+	<label><img src="themes/' . $authNamespace->andutteye_theme . '/back.png" alt="" title="" /><a href="index.php?main=system_overview&param1=' . $param1 . '">&nbsp;Back to ' . $param1 . ' system overview</a></label>
 		</div>
 	</div>
 ';
@@ -7348,7 +7811,7 @@ echo '
 ';
 	
 			include_once 'graph/php-ofc-library/open_flash_chart_object.php';
-			open_flash_chart_object( '100%', 450, 'http://'. $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] ."/andutteye/graph/graph-statistics.php?system=$param1&statistics=$param2", false );
+			open_flash_chart_object( '100%', 450, 'http://'. $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] ."/$graph_tp_dir/graph/graph-statistics.php?system=$param1&statistics=$param2", false );
 
 echo '
 				</label>
@@ -7392,6 +7855,13 @@ echo "<div id='content'>
 		   <fieldset class='GroupField'>
                         <legend><span class='BigTitle'><span class='ColoredTxt'>Monitorstatus</span> on $param1 </span> for $param2</legend>
 
+			<table>
+				<th>Monitortype</th>
+				<th>Status</th>
+				<th>Message</th>
+				<th>Date</th>
+				<th>Time</th>
+				</tr>
                         ";
 
 				$subsql = $db->query("select * from andutteye_monitor_status where monitorname = '$param2' and system_name = '$param1' and monitortype = '$param3' order by seqnr desc");
@@ -7410,15 +7880,15 @@ echo "<div id='content'>
                                			 $lastdate_notok   = $row['lastdate_notok'];
                                			 $lasttime_notok   = $row['lasttime_notok'];
 
-						echo "<div class='table'>";
-                                		echo "<div class='column'><label>$monitortype</label></div>";
-                                		echo "<div class='column'><label>$monitorstatus</label></div>";
-                                		echo "<div class='column40'><label><a href=''  class='Tips2' title='Monitor:$monitorname Type:$monitortype Status:$monitorstatus NrOk:$number_ok LastdateOk:$lastdate_ok LasttimeOk:$lasttime_ok NrNotOk:$number_notok LastdateNotOk:$lastdate_notok LasttimeNotOk:$lasttime_notok'>$monitormessage</a></label></div>";
-                                		echo "<div class='column'><label>$created_date</label></div>";
-                                		echo "<div class='column'><label>$created_time</label></div>";
-                                		echo "</div>";
+                                		echo "<td>$monitortype</td>";
+                                		echo "<td>$monitorstatus</td>";
+                                		echo "<td><a href=''  class='Tips2' title='Monitor:$monitorname Type:$monitortype Status:$monitorstatus NrOk:$number_ok LastdateOk:$lastdate_ok LasttimeOk:$lasttime_ok NrNotOk:$number_notok LastdateNotOk:$lastdate_notok LasttimeNotOk:$lasttime_notok'>$monitormessage</a></td>";
+                                		echo "<td>$created_date</td>";
+                                		echo "<td>$created_time</td>";
+                                		echo "</tr>";
 					}
 		
+echo "</table>";
 echo "<label><img src='themes/$authNamespace->andutteye_theme/back.png' alt='' title='' /><a href='index.php?main=monitoring_front&param1=$param1'>&nbsp;Back to $param1 monitoring front</a></label>";
 echo "
                 </div>
@@ -7451,7 +7921,7 @@ echo "<div id='content'>
                         	echo "<label>";
 
                         	include_once 'graph/php-ofc-library/open_flash_chart_object.php';
-                        	open_flash_chart_object( '100%', 450, 'http://'. $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] ."/andutteye/graph/graph-statistics.php?system=$param1&statistics=$systemstatisticsname", false );
+                        	open_flash_chart_object( '100%', 450, 'http://'. $_SERVER['SERVER_NAME'] . ":" . $_SERVER['SERVER_PORT'] ."/$graph_tp_dir/graph/graph-statistics.php?system=$param1&statistics=$systemstatisticsname", false );
                         echo "</label>";
 
                         }
@@ -8187,99 +8657,91 @@ require 'db.php';
 require_once 'Zend/Session/Namespace.php';
 $authNamespace = new Zend_Session_Namespace('Zend_Auth');
 
-echo '
-	<div id="content">
-		<div class="section content" style="width:450px; margin:0 auto;">
+$sql = $db->query("select * from andutteye_systems where system_name = '$param1' order by system_name asc");
+$res = $sql->fetchObject();
+
+echo '<div id="content">
+		<div class="section content">
 			<fieldset class="GroupField">
 			<legend><span class="BigTitle"><span class="ColoredTxt">Install new or reinstall</span> system</span></legend>
+			
+			<table>
 
 				<form method="get" action="index.php">
 					<input type="hidden" name="main" value="prepare_new_system">
-			
-					<label>Install system</label>
-					<label><select name="param1" style="WIDTH: 260px">';
+					<input type="hidden" name="param1" value="'.$res->system_name.'">
+					<th>Domain</th>
+					<th>Group</th>
+					<th>System</th>
+					</tr>
+					<td>'.$res->domain_name.'</td>
+					<td>'.$res->group_name.'</td>
+					<td>'.$res->system_name.'</td>
+					</tr>
 
-					$sql = $db->query("select * from andutteye_systems where system_name = '$param1' order by system_name asc");
-                        		while ($row = $sql->fetch()) {
-                                		$seqnr = $row['seqnr'];
-                                		$system_name = $row['system_name'];
-                                		$group_name = $row['group_name'];
-                                		$domain_name = $row['domain_name'];
-						echo "<option value='$system_name'> $domain_name $group_name $system_name";
-
-					}
-					echo '
-					</select>
-					</label>
-					<label>System specification</label>';
+					<th colspan="3">Andutteye management status</th></tr>';
 
 				        $sql    = $db->query("select seqnr from andutteye_specifications where system_name ='$param1'");
         				$exists = $sql->fetchAll();
         				$exists = count($exists);
 
 					if($exists) {
-						echo '<label><img src="themes/' . $authNamespace->andutteye_theme . '/info.png" alt="" title="" />  <b>' .$exists. '</b> system specification saved, ready to continue.</label>';
+						echo '<td colspan="3"><img src="themes/' . $authNamespace->andutteye_theme . '/info.png" alt="" title="" />  <b>' .$exists. '</b> system specification(s) saved, ready to continue.</td>';
 					} else {
-						echo '<label><img src="themes/' . $authNamespace->andutteye_theme . '/alert.png" alt="" title="" />  <b>' .$exists. '</b> system specification saved, save a specification before trying to install the system.</label>';
-						echo '<label><img src="themes/' . $authNamespace->andutteye_theme . '/info.png" alt="" title="" /> <a href="index.php?main=system_specification&param1=' .$param1. '">Create a system specification here first.</a></label>';
+						echo '<td colspan="3"><img src="themes/' . $authNamespace->andutteye_theme . '/alert.png" alt="" title="" />  <b>' .$exists. '</b> system specification saved, save a specification before trying to install the system.<br>';
+						echo '<img src="themes/' . $authNamespace->andutteye_theme . '/info.png" alt="" title="" /> <a href="index.php?main=system_specification&param1=' .$param1. '">Create a system specification first by clicking this link.</a></td></tr>';
 					}
 
 			echo '
-
+			</table>
 			</fieldset>
 		</div>
-	<br />';
+';
 
 $sql = $db->query("select system_name,macadress from andutteye_provisioning where system_name = '$param1' order by seqnr desc limit 0,1");
 $res = $sql->fetchObject();
 
 if("$res->system_name") {
 
-echo '<div class="section content" style="width:450px; margin:0 auto;">
-        <fieldset class="GroupField">
-                <legend><span class="BigTitle"><span class="ColoredTxt">System already</span> installed</span></legend>';
-
+echo ' <fieldset class="GroupField">
+                <legend><span class="BigTitle"><span class="ColoredTxt">System already</span> installed</span></legend>
+		
+		<table>
+			<th>System</th>
+			<th>Macadress</th>
+			<th>Select</th>
+		</tr>';
 		echo '
-			<div class="column70">
-			<label>' .$res->system_name. ' (' .$res->macadress. ')</label>
-			</div>
-			<div class="column30">
-				<label>
-				Manual <input type="radio" name="param2" value="' .$res->macadress. ' " CHECKED>
-				</label>
-			</div>
-		</div> ';
+			<td>'.$res->system_name.'</td>
+			<td>'.$res->macadress.'</td>
+			<td>
+			<input type="radio" name="param2" value="' .$res->macadress. ' " CHECKED> Use current
+			</td>
+			</tr>';
 
 }
 
 echo '
-</fieldset>
-</div>';
-echo '<div class="section content" style="width:450px; margin:0 auto;">
+</table>
+</fieldset>';
+echo '<div class="section content">
         <fieldset class="GroupField">
-                <legend><span class="BigTitle"><span class="ColoredTxt">Specify manual</span> macadress</span></legend>';
+                <legend><span class="BigTitle"><span class="ColoredTxt">Use following</span> macadress</span></legend>
+		
+		<table>
+			<th>Macadress</th>
+			<th>Status</th>
+			<th>Select</th>
+			</tr>';
 
 		echo '
-		<div class="table">
-			<div class="column70">
-				<label><input type="text" name="param3" maxlength="255" value="" size="25"></label>
-			</div>
-			<div class="column30">
-				<label>
-				Manual <input type="radio" name="param2" value="manual">
-				</label>
-			</div>
-		</div> ';
-
-echo '
-</fieldset>
-</div>';
-
-
-echo '<div class="section content" style="width:450px; margin:0 auto;">
-	<fieldset class="GroupField">
-		<legend><span class="BigTitle"><span class="ColoredTxt">Select an available</span> macadress</span></legend>
-';
+			<td><input type="text" name="param3" maxlength="255" value="" size="25"></td>
+			<td></td>
+			<td>
+				<input type="radio" name="param2" value="manual"> Manual
+			</td>
+			</tr>
+		    ';
 
 			$sql = $db->query("select * from andutteye_provisioning_checkin order by seqnr asc");
                         while ($row = $sql->fetch()) {
@@ -8289,21 +8751,18 @@ echo '<div class="section content" style="width:450px; margin:0 auto;">
                                 $serialnumber = $row['serialnumber'];
 
 			echo '
-			<div class="table">
-				<div class="column70">
-					<label>
-						<img src="themes/' . $authNamespace->andutteye_theme . '/systems_2.png" alt="" title="" />
-						<b>' .$macaddress. '</b> (' .$status. ')
-					</label>
-				</div>
-				<div class="column30">
-					<label>
-					Select <input type="radio" name="param2" value="' .$macaddress. '">
-					</label>
-				</div>';
+				<td>
+					<img src="themes/' . $authNamespace->andutteye_theme . '/systems_2.png" alt="" title="" />
+					'.$macaddress. '
+				</td>
+				<td>'.$status.'</td>
+				<td>
+					<input type="radio" name="param2" value="' .$macaddress. '"> Automatic
+				</td>
+				</tr>';
 
-			echo '</div>';
                         }
+	echo '</table>';
 
 if($exists) {
         echo '<label><input type="submit" value="Submit"></label>';
@@ -8316,4 +8775,521 @@ echo "
 ";
 
 }
+function fileadmin($param1,$param2,$param3,$param4,$param5,$param6) {
+require 'db.php';
+require_once 'Zend/Session/Namespace.php';
+$authNamespace = new Zend_Session_Namespace('Zend_Auth');
+
+verify_if_user_is_logged_in();
+verify_if_user_have_admin_prevs();
+
+echo '<div id="content">
+	<div class="section content">
+                     <legend><img src="themes/' . $authNamespace->andutteye_theme . '/file_b.png" alt="" title="" /><span class="BigTitle">Create<span class="ColoredTxt"> new file</span></span></legend>
+			<form method="get" action="index.php">
+				<input type="hidden" name="main" value="save_fileadmin">
+
+			<fieldset class="GroupField">
+	<legend>File content</legend>
+';
+		
+echo '<label><textarea cols="100" rows="30" name="param1"></textarea></label>';
+echo '
+</fieldset>
+<fieldset class="GroupField">
+	<legend>File related</legend>
+				<div class="leftcol">
+					<table>
+					<th>Directory (ex /etc/)</th>
+					</tr>
+					<td><input type="text" name="param2" maxlength="255" value="" size="50"></td>
+					</tr>
+					<th>Filename (ex passwd)</th>
+					</tr>
+					<td><input type="text" name="param3" maxlength="255" value="" size="50"></td>
+					</tr>
+					<th>File owner</th>
+					</tr>
+					<td><input type="text" name="param4" maxlength="255" value="" size="50"></td>
+					</tr>
+					<th>File group</th>
+					</tr>
+					<td><input type="text" name="param5" maxlength="255" value="" size="50"></td>
+					</tr>
+					<th>File permission</th>
+					</tr>
+					<td><input type="text" name="param6" maxlength="255" value="" size="50"></td>
+					</tr>
+					<th>Pre hook execution command or program</th>
+                                        </tr>
+                                        <td><input type="text" name="param9" maxlength="255"  value="" size="50"></td>
+                                        </tr>
+                                        <th>Post hook execution command or program</th>
+                                        </tr>
+                                        <td><input type="text" name="param10" maxlength="255" value="" size="50"></td>
+                                        </tr>
+
+					</table>
+				</div>
+				<div class="rightcol">
+					<table>
+					<th>Domain</th>
+                                        </tr>
+                                        <td><select name="param12" style="WIDTH: 260px">';
+
+                                        $sql = $db->query("select distinct(domain_name) from andutteye_domains order by domain_name asc");
+                                        while ($row = $sql->fetch()) {
+                                                $domain_name = $row['domain_name'];
+                                                echo '<option value="'.$domain_name.'"> '.$domain_name.'';
+                                        }
+                                        echo '</select></td>
+                                        </tr>
+					<th>Distribution</th>
+					</tr>
+					<td><select name="param7" style="WIDTH: 260px">';
+
+        				$sql = $db->query("select distinct(distribution) from andutteye_packages order by distribution asc");
+        				while ($row = $sql->fetch()) {
+                				$distribution = $row['distribution'];
+                				echo '<option value="'.$distribution.'"> '.$distribution.'';
+        				}
+        				echo '</select></td>
+       					</tr>
+					<th>File tagging</th>
+					</tr>
+					<td><select name="param8" style="WIDTH: 260px">';
+
+        				$sql = $db->query("select domain_name,group_name,system_name from andutteye_systems order by system_name asc");
+        				while ($row = $sql->fetch()) {
+                				$domain_name = $row['domain_name'];
+                				$group_name = $row['group_name'];
+                				$system_name = $row['system_name'];
+
+                				$man = $db->query("select * from andutteye_specifications where system_name = '$system_name' order by revision desc limit 0,1");
+                				$man = $man->fetchObject();
+
+                				echo '
+                				<option value="">(Start '.$system_name.' tagging options)
+                				<option value="--'.$domain_name.'"> --'.$domain_name.' (W)
+                				<option value="--'.$domain_name.'--'.$man->patchlevel.'"> --'.$domain_name.'--'.$man->patchlevel.'
+                				<option value="--'.$group_name.'"> --'.$group_name.'
+                				<option value="--'.$group_name.'--'.$man->patchlevel.'"> --'.$group_name.'--'.$man->patchlevel.'
+                				<option value="-- '.$domain_name.'--'.$group_name.'"> -- '.$domain_name.'--'.$group_name.'
+                				<option value="-- '.$domain_name.'--'.$group_name.'--'.$man->patchlevel.'"> -- '.$domain_name.'--'.$group_name.'--'.$man->patchlevel.'
+                				<option value="--'.$system_name.'"> --'.$system_name.'
+                				<option value="--'.$system_name.'--'.$man->patchlevel.'"> --'.$system_name.'--'.$man->patchlevel.' (B)
+                				<option value="">(End '.$system_name.' tagging options)
+                				';
+        				}
+        				echo '</select></td>
+       					</tr>
+					<th>Specify file installation order</th>
+					</tr>
+					<td>
+						<select name="param11" style="WIDTH: 260px">
+							<option value="10"> 10 (Lowest priority, will be installed last)
+							<option value="9"> 9
+							<option value="8"> 8
+							<option value="7"> 7
+							<option value="6"> 6
+							<option value="5"> 5
+							<option value="4"> 4
+							<option value="3"> 3
+							<option value="2"> 2
+							<option value="1"> 1 (Highest priority, will be installed first)
+						</select>
+					</td>
+					</tr>
+
+		</table>
+</fieldset>
+
+<fieldset class="GroupField">
+	<legend>Submit <span class="ColoredTxt">to create a new filemanagement file</span></legend>
+	<table>
+		<th>Submit</th></tr>
+			<td><input class="button" type="submit" value="Submit"></td>
+			</tr>
+	</table>
+</fieldset>
+';
+
+    echo '</div>
+';
+
+// End of subfunction
+}
+function save_fileadmin($param1,$param2,$param3,$param4,$param5,$param6,$param7,$param8,$param9,$param10,$param11,$param12) {
+require 'db.php';
+require_once 'Zend/Auth/Adapter/DbTable.php';
+require_once 'Zend/Session/Namespace.php';
+$authNamespace = new Zend_Session_Namespace('Zend_Auth');
+
+verify_if_user_is_logged_in();
+verify_if_user_have_admin_prevs();
+
+if($param1 != "" && $param2 != "" && $param3 != "") {
+        $date = date("20y-m-d");
+        $time = date("H:m:s");
+
+        //Remove Control m.
+        $pattern = "/(\cM)/";
+        $replace = "";
+        $param1 = preg_replace($pattern, $replace, "$param1");
+
+                $data = array(
+                        'filename'       => "$param3",
+                        'directory'      => "$param2",
+                        'tagging'        => "$param8",
+                        'distribution'   => "$param7",
+                        'revision'       => "1",
+                        'content'        => "$param1",
+                        'prestep'        => "$param9",
+                        'poststep'       => "$param10",
+                        'perm_owner'     => "$param4",
+                        'perm_group'     => "$param5",
+                        'perms'          => "$param6",
+                        'fileindex'      => "$param11",
+                        'domain_name'    => "$param12",
+                        'created_by'     => "$authNamespace->andutteye_username",
+                        'created_date'   => "$date",
+                        'created_time'   => "$time"
+                );
+                $db->insert('andutteye_files', $data);
+                header("Location:index.php?main=fileadmin");
+}
+
+// End of subfunction
+}
+function check_if_service_is_alive($service) {
+
+  $cmd = "ps -efl | grep $service | grep -v grep";
+
+     // run the system command and assign output to a variable ($output)
+     exec($cmd, $output, $result);
+
+     // check the number of lines that were returned
+     if(count($output) >= 1){
+          // the process is still alive
+          return true;
+     }
+     // the process is dead
+     return false;
+
+// End of subfunction
+}
+function submit_group_command($param1,$param2,$param3,$param4) {
+require 'db.php';
+require_once 'Zend/Auth/Adapter/DbTable.php';
+require_once 'Zend/Session/Namespace.php';
+$authNamespace = new Zend_Session_Namespace('Zend_Auth');
+$date = date("20y-m-d");
+$time = date("H:m:s");
+
+verify_if_user_is_logged_in();
+
+if(!verify_role_object_permission($param4,'domain',2,'0','0')) {
+        // Verify if domain is allowed to be write.
+        header("Location:index.php?main=enviroment_overview&status=Not%20allowed%20to%20write%20on%20domain");
+        exit;
+}
+if(!verify_role_object_permission($param3,'group',2,'0','0')) {
+        // Verify if domain is allowed to be write.
+        header("Location:index.php?main=enviroment_overview&status=Not%20allowed%20to%20write%20on%20group");
+        exit;
+}
+
+switch ($param1) {
+    case 'EnableFilemanagment':
+		while (list ($key,$system) = @each ($param2)) {
+			$sql = $db->query("select revision from andutteye_specifications where system_name = '$system' order by revision desc limit 0,1");
+			$res = $sql->fetchObject();
+
+			$sql = "update andutteye_specifications set config_update = 'Active' where system_name = '$system' and revision = '$res->revision'";
+			$db->query($sql);
+		}
+        break;
+    case 'DisableFilemanagement':
+		while (list ($key,$system) = @each ($param2)) {
+			$sql = $db->query("select revision from andutteye_specifications where system_name = '$system' order by revision desc limit 0,1");
+			$res = $sql->fetchObject();
+
+			$sql = "update andutteye_specifications set config_update = 'Disabled' where system_name = '$system' and revision = '$res->revision'";
+			$db->query($sql);
+		}
+        break;
+    case 'EnablePackagemanagement':
+		while (list ($key,$system) = @each ($param2)) {
+			$sql = $db->query("select revision from andutteye_specifications where system_name = '$system' order by revision desc limit 0,1");
+			$res = $sql->fetchObject();
+
+			$sql = "update andutteye_specifications set package_update = 'Active' where system_name = '$system' and revision = '$res->revision'";
+			$db->query($sql);
+		}
+        break;
+    case 'DisablePackagemanagement':
+		while (list ($key,$system) = @each ($param2)) {
+			$sql = $db->query("select revision from andutteye_specifications where system_name = '$system' order by revision desc limit 0,1");
+			$res = $sql->fetchObject();
+
+			$sql = "update andutteye_specifications set package_update = 'Disabled' where system_name = '$system' and revision = '$res->revision'";
+			$db->query($sql);
+		}
+        break;
+    case 'LockAllMonitors':
+	while (list ($key,$system) = @each ($param2)) {
+		$sql = "update andutteye_monitor_configuration set override = 'no', created_date = '$date', created_time = '$time', created_by = '$authNamespace->andutteye_username' where system_name = '$system'";
+		$db->query($sql);
+	}
+        break;
+    case 'UnlockAllMonitors':
+	while (list ($key,$system) = @each ($param2)) {
+		$sql = "update andutteye_monitor_configuration set override = 'yes', created_date = '$date', created_time = '$time', created_by = '$authNamespace->andutteye_username' where system_name = '$system'";
+		$db->query($sql);
+	}
+        break;
+     default:
+	//Invalid command, dont do anything
+}
+header("Location:index.php?main=group_overview&param1=$param4&param2=$param3&status=Command%20executed");
+exit;
+
+
+// End of subfunction
+}
+function submit_domain_command($param1,$param2,$param3) {
+require 'db.php';
+require_once 'Zend/Auth/Adapter/DbTable.php';
+require_once 'Zend/Session/Namespace.php';
+$authNamespace = new Zend_Session_Namespace('Zend_Auth');
+$date = date("20y-m-d");
+$time = date("H:m:s");
+
+verify_if_user_is_logged_in();
+
+if(!verify_role_object_permission($param3,'domain',2,'0','0')) {
+        // Verify if domain is allowed to be write.
+        header("Location:index.php?main=enviroment_overview&status=Not%20allowed%20to%20write%20on%20domain");
+        exit;
+}
+
+switch ($param1) {
+    case 'EnableFilemanagment':
+		while (list ($key,$system) = @each ($param2)) {
+			$sql = $db->query("select revision from andutteye_specifications where system_name = '$system' order by revision desc limit 0,1");
+			$res = $sql->fetchObject();
+
+			$sql = "update andutteye_specifications set config_update = 'Active' where system_name = '$system' and revision = '$res->revision'";
+			$db->query($sql);
+		}
+        break;
+    case 'DisableFilemanagement':
+		while (list ($key,$system) = @each ($param2)) {
+			$sql = $db->query("select revision from andutteye_specifications where system_name = '$system' order by revision desc limit 0,1");
+			$res = $sql->fetchObject();
+
+			$sql = "update andutteye_specifications set config_update = 'Disabled' where system_name = '$system' and revision = '$res->revision'";
+			$db->query($sql);
+		}
+        break;
+    case 'EnablePackagemanagement':
+		while (list ($key,$system) = @each ($param2)) {
+			$sql = $db->query("select revision from andutteye_specifications where system_name = '$system' order by revision desc limit 0,1");
+			$res = $sql->fetchObject();
+
+			$sql = "update andutteye_specifications set package_update = 'Active' where system_name = '$system' and revision = '$res->revision'";
+			$db->query($sql);
+		}
+        break;
+    case 'DisablePackagemanagement':
+		while (list ($key,$system) = @each ($param2)) {
+			$sql = $db->query("select revision from andutteye_specifications where system_name = '$system' order by revision desc limit 0,1");
+			$res = $sql->fetchObject();
+
+			$sql = "update andutteye_specifications set package_update = 'Disabled' where system_name = '$system' and revision = '$res->revision'";
+			$db->query($sql);
+		}
+        break;
+    case 'LockAllMonitors':
+	while (list ($key,$system) = @each ($param2)) {
+		$sql = "update andutteye_monitor_configuration set override = 'no', created_date = '$date', created_time = '$time', created_by = '$authNamespace->andutteye_username' where system_name = '$system'";
+		$db->query($sql);
+	}
+        break;
+    case 'UnlockAllMonitors':
+	while (list ($key,$system) = @each ($param2)) {
+		$sql = "update andutteye_monitor_configuration set override = 'yes', created_date = '$date', created_time = '$time', created_by = '$authNamespace->andutteye_username' where system_name = '$system'";
+		$db->query($sql);
+	}
+        break;
+     default:
+	//Invalid command, dont do anything
+}
+header("Location:index.php?main=domain_overview&param1=$param3&status=Command%20executed");
+exit;
+
+
+// End of subfunction
+}
+function create_front($param1,$param2,$param3,$param4) {
+
+verify_if_user_is_logged_in();
+verify_if_user_have_admin_prevs();
+
+require 'db.php';
+require_once 'Zend/Session/Namespace.php';
+$authNamespace = new Zend_Session_Namespace('Zend_Auth');
+
+if($param1) {
+        $date = date("20y-m-d");
+        $time = date("H:m:s");
+
+        $sql   = $db->query("select seqnr from andutteye_front_configuration where system_name ='$param1'");
+        $exists = $sql->fetchAll();
+        $exists = count($exists);
+
+        if($param1 != "" && $param2 != "" && $exists == 0) {
+                $data = array(
+                        'system_name'       => "$param1",
+                        'system_address'    => "$param2",
+                        'system_port'    => "$param3",
+                        'front_description' => "$param4",
+                        'created_by'     => "$authNamespace->andutteye_username",
+                        'created_date'   => "$date",
+                        'created_time'   => "$time"
+                );
+                $db->insert('andutteye_front_configuration', $data);
+        }
+}
+
+echo '<div id="content">
+		<div class="content">
+			<fieldset class="GroupField">
+				<legend><img src="themes/' . $authNamespace->andutteye_theme . '/front_b.png" alt="" title="" /><span class="BigTitle"><span class="ColoredTxt">Create</span> new front proxy</span></legend>
+
+				<form method="get" action="index.php">
+					<input type="hidden" name="main" value="create_front">
+
+						<label>Frontname</label>
+						<label><input type="text" name="param1" size="35" maxlength="255" value=""></label>
+						<label>Contactadress (Ipaddress or dnsname)</label>
+						<label><input type="text" name="param2" size="35" maxlength="255" value=""></label>
+						<label>Contactport</label>
+						<label><input type="text" name="param3" size="35" maxlength="255" value=""></label>
+						<label>Description</label>
+						<label><input type="text" name="param4" size="35" maxlength="255" value=""></label>
+
+						<label><input type="submit" value="Submit"></label>
+				</form>
+
+</fieldset>
+
+		</div>
+
+		<br />
+
+<div class="content">
+	<fieldset class="GroupField">
+		<legend><span class="BigTitle"><span class="ColoredTxt">Change</span> front proxies</span></legend>
+	
+			<table>
+				<th>Frontname</th>
+				<th>Contactaddress</th>
+				<th>Contactport</th>
+				<th>Action</th>
+				</tr>';
+
+			$sql = $db->query("select * from andutteye_front_configuration order by system_name asc");
+                        while ($row = $sql->fetch()) {
+                                $seqnr = $row['seqnr'];
+                                $system_name = $row['system_name'];
+                                $system_address = $row['system_address'];
+                                $system_port = $row['system_port'];
+                                $front_description = $row['front_description'];
+                                $front_ver_name = $row['front_ver_name'];
+
+			echo '
+				<td>
+				<img src="themes/' . $authNamespace->andutteye_theme . '/front_1.png" alt="" title="" />
+				<a href="" class="Tips2" title="Frontname:' . $system_name . ' Description:' . $front_description . '">'.$system_name.'</a>
+				</td>
+				<td>
+				'.$system_address.'
+				</td>
+				<td>
+				'.$system_port.'
+				</td>
+				<td>
+				<img src="themes/' . $authNamespace->andutteye_theme . '/delete_1.png" alt="" title="" />
+				<a href="index.php?main=remove_front&param1=' .$seqnr . '" onclick="return confirm(\'Remove frontproxy ' . $system_name . '?\')">Remove</a>
+				</td>
+				</tr>
+			';
+
+                        }
+
+
+
+echo "
+</table>
+</fieldset>
+</div>
+";
+
+
+// End of subfunction
+}
+function get_last_system_specification_revision($system_name) {
+
+verify_if_user_is_logged_in();
+require 'db.php';
+require_once 'Zend/Session/Namespace.php';
+$authNamespace = new Zend_Session_Namespace('Zend_Auth');
+
+$sql = $db->query("select revision from andutteye_specifications where system_name = '$system_name' order by revision desc limit 0,1");
+$res = $sql->fetchObject();
+
+if(!$res->revision) {
+	return(0);
+} else {
+	return($res->revision);
+}
+
+// End of subfunction
+}
+function get_current_filemanagement_status($system_name) {
+
+verify_if_user_is_logged_in();
+require 'db.php';
+require_once 'Zend/Session/Namespace.php';
+$authNamespace = new Zend_Session_Namespace('Zend_Auth');
+
+$sql = $db->query("select revision from andutteye_specifications where system_name = '$system_name' order by revision desc limit 0,1");
+$res = $sql->fetchObject();
+
+$sql = $db->query("select config_update from andutteye_specifications where system_name = '$system_name' and revision = '$res->revision'");
+$res = $sql->fetchObject();
+
+return($res->config_update);
+
+// End of subfunction
+}
+function get_current_packagemanagement_status($system_name) {
+
+verify_if_user_is_logged_in();
+require 'db.php';
+require_once 'Zend/Session/Namespace.php';
+$authNamespace = new Zend_Session_Namespace('Zend_Auth');
+
+$sql = $db->query("select revision from andutteye_specifications where system_name = '$system_name' order by revision desc limit 0,1");
+$res = $sql->fetchObject();
+
+$sql = $db->query("select package_update from andutteye_specifications where system_name = '$system_name' and revision = '$res->revision'");
+$res = $sql->fetchObject();
+
+return($res->package_update);
+
+// End of subfunction
+}
+
 ?>

@@ -15,7 +15,7 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-#    $Id: andutteyedagt 739 2008-10-28 21:15:29Z andutt $
+#    $Id: andutteyedagt 768 2009-05-14 14:37:27Z andutt $
 #
 our $version = "Andutteye Agent Version 3.0 (2008 www.thundera.se).";
 our $Server_listen_adress;
@@ -84,7 +84,9 @@ sub parse_and_load_configuration {
 my @tmp;
 my $params="0";
 
-print "$date $time Parsing and reading parameters from config $config.\n";
+if($Use_debug_level > 1) {
+	print "$date $time Parsing and reading parameters from config $config.\n";
+}
 
       open("conf","<$config")
                 or die "ERROR Failed to open configuration file for reading config:$config error:$!\n";
@@ -279,11 +281,13 @@ our $monitor;
 our $monitortype;
 our $id="1";
 
-print "$date $time Clearing memory on previous monitors, if any.\n";
+if($Use_debug_level > 2) {
+	print "$date $time Clearing memory on previous monitors, if any.\n";
+	print "$date $time Clearing memory on previous monitors status, if any.\n";
+	print "$date $time Parsing and reading monitors from config $config.\n";
+}
 %monitorhash = ();
-print "$date $time Clearing memory on previous monitors status, if any.\n";
 %monitorstatushash = ();
-print "$date $time Parsing and reading monitors from config $config.\n";
 
       open("conf","<$config")
                 or die "ERROR Failed to open configuration file for reading config:$config error:$!\n";
@@ -539,7 +543,9 @@ print "$date $time Parsing and reading monitors from config $config.\n";
 
 	close("conf");
 
-print "Total monitors loaded:". keys( %monitorhash ) .".\n";
+if($Use_debug_level) {
+	print "Total monitors loaded:". keys( %monitorhash ) .".\n";
+}
 
 $token="0";
 $id="0";
@@ -549,7 +555,7 @@ sub check_message {
 my $messagestring="$_[0]"; 
 my $defaultmessage="$_[1]";
 
-if($Use_debug_level) {
+if($Use_debug_level > 1) {
 	print "Entering subfunction check_message() \n";
 }
 
@@ -567,7 +573,7 @@ if ("$messagestring" eq "no") {
 		return "$messagestring";
 	}
 }
-if($Use_debug_level) {
+if($Use_debug_level > 2) {
 	print "Leaving subfunction check_message() \n";
 }
 
@@ -605,7 +611,7 @@ if("$Server_listen_adress" eq "no" && "$Server_listen_port" eq "no") {
 	print "[info] Running in standalone mode, no server specific tasks needs to be executed.\n";
 	return
 }
-if($Use_debug_level) {
+if($Use_debug_level > 1) {
 	print "Entering subfunction send_message_to_server()\n";
 }
 if($Server_listen_adress eq "no" || $Server_listen_port eq "no") {
@@ -809,7 +815,7 @@ for(@andutteye_servers) {
 # End of for loop port
 }
 
-if($Use_debug_level) {
+if($Use_debug_level > 2) {
 	print "Leaving subfunction send_message_to_server()\n";
 }
 
@@ -819,7 +825,7 @@ sub check_processes {
 my $found="0";
 my $msg;
 
-if($Use_debug_level) {
+if($Use_debug_level > 1) {
 	print "Entering subfunction check_processes() \n";
 	print "Contacting operatingsystem api->$Api_dir_location/$Use_api -getprocesses\n";
 }
@@ -844,17 +850,21 @@ foreach my $key (keys %monitorhash) {
 		for(@current_processes) {
 			chomp;
 				if(/^$/) {
-					if($Use_debug_level > 5) {
+					if($Use_debug_level > 4) {
 						print "Skipping blank process line.\n";
 					}
 					next;
 				}
 				if(/$value->{'monitor'}/) {
-					print "Process line from api->$_\n";
-					print "Found a hit in active processes. Our process $value->{'monitor'} is running.\n";
+					 if($Use_debug_level > 4) {
+						print "Process line from api->$_\n";
+						print "Found a hit in active processes. Our process $value->{'monitor'} is running.\n";
+					}
 
 					if($value->{'status'} eq "up") {
-						print "Process $value->{'monitor'} status is up and config parameter says up. Everything is ok.\n";
+					 	if($Use_debug_level > 3) {
+							print "Process $value->{'monitor'} status is up and config parameter says up. Everything is ok.\n";
+						}
 						resume_operation("PS","$value->{'monitor'}","check");
 						$monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "PS";
 						$monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Ok";
@@ -897,7 +907,9 @@ foreach my $key (keys %monitorhash) {
 		}
 		if($found == 0) {
 				if($value->{'status'} eq "down") {
-					print "Process $value->{'monitor'} status is down and config parameter says down. Everything is ok.\n";
+					if($Use_debug_level > 3) {
+						print "Process $value->{'monitor'} status is down and config parameter says down. Everything is ok.\n";
+					}
 					resume_operation("PS","$value->{'monitor'}","check");
 					$monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "PS";
                                         $monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Ok";
@@ -942,7 +954,7 @@ foreach my $key (keys %monitorhash) {
 }
 sub check_filesystems {
 
-if($Use_debug_level) {
+if($Use_debug_level > 1) {
         print "Entering subfunction check_filesystems() \n";
 }
 foreach my $key (keys %monitorhash) {
@@ -974,7 +986,9 @@ foreach my $key (keys %monitorhash) {
 			print "!! Error filesystem $value->{'monitor'} doesnt seem to be mounted.\n";
 			next;
 		} else {
-			print "Contacting operatingsystem api->$Api_dir_location/$Use_api -getfilesystemfillage $value->{'monitor'}\n";
+			if($Use_debug_level > 3) {
+				print "Contacting operatingsystem api->$Api_dir_location/$Use_api -getfilesystemfillage $value->{'monitor'}\n";
+			}
 			$fsfillage=`$Api_dir_location/$Use_api -getfilesystemfillage $value->{'monitor'}`;
 		}
 
@@ -1009,7 +1023,9 @@ foreach my $key (keys %monitorhash) {
                                         print "!! Arent allowed to verify monitor:$value->{'monitor'} since its not in range for specified schedule times.\n";
                                 }
                 } else {
+			if($Use_debug_level > 2) {
                                print "\t [ok] Filesystem $value->{'monitor'} is ok on warning limit.\n";
+			}
 			       $monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "FS";
                                $monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Ok";
                                $monitorstatushash{"$value->{'monitor'}"}{'message'} = "Filesystem is ok on warninglevel";
@@ -1041,7 +1057,9 @@ foreach my $key (keys %monitorhash) {
                                         print "!! Arent allowed to verify monitor:$value->{'monitor'} since its not in range for specified schedule times.\n";
                                 }
                 } else {
+			if($Use_debug_level > 2) {
                                print "\t [ok] Filesystem $value->{'monitor'} is ok on critical limit.\n";
+			}
 			       $monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "FS";
                                $monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Ok";
                                $monitorstatushash{"$value->{'monitor'}"}{'message'} = "Filesystem is ok on criticallevel";
@@ -1073,7 +1091,9 @@ foreach my $key (keys %monitorhash) {
                                         print "!! Arent allowed to verify monitor:$value->{'monitor'} since its not in range for specified schedule times.\n";
                                 }
                 } else {
+			if($Use_debug_level > 2) {
                                print "\t [ok] Filesystem $value->{'monitor'} is ok on fatal limit.\n";
+			}
 			       $monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "FS";
                                $monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Ok";
                                $monitorstatushash{"$value->{'monitor'}"}{'message'} = "Filesystem is ok on fatallevel";
@@ -1176,7 +1196,7 @@ foreach my $key (keys %monitorhash) {
 	  }
      }
 }
-if ($Use_debug_level) {
+if ($Use_debug_level > 2) {
       print "Leaving subfunction execute_every_program()\n";
 }
 
@@ -1185,7 +1205,7 @@ if ($Use_debug_level) {
 sub send_assetmanagement_information {
 my $result;
 
-if($Use_debug_level) {
+if($Use_debug_level > 1) {
         print "Entering subfunction send_assetmanagement_information() \n";
 }
 foreach my $key (keys %monitorhash) {
@@ -1200,7 +1220,9 @@ foreach my $key (keys %monitorhash) {
                                 print "\targuments        	:$value->{'arguments'}\n";
                         }
                         if(defined($value->{'monitor'})) {
-				print "Found a assetmanagement monitor. Executing->$value->{'program'} with arguments->$value->{'arguments'} to find out:$value->{'monitor'}\n";
+				if($Use_debug_level > 3) {
+					print "Found a assetmanagement monitor. Executing->$value->{'program'} with arguments->$value->{'arguments'} to find out:$value->{'monitor'}\n";
+				}
 			}
 			if ( -f "$value->{'program'}") {
 				if( -x "$value->{'program'}") {
@@ -1224,7 +1246,7 @@ foreach my $key (keys %monitorhash) {
 	}
 }
 
-if($Use_debug_level) {
+if($Use_debug_level > 2) {
         print "Leaving subfunction send_assetmanagement_information() \n";
 }
 # End of subfunction
@@ -1232,7 +1254,7 @@ if($Use_debug_level) {
 sub send_statistics_information {
 my $result;
 
-if($Use_debug_level) {
+if($Use_debug_level > 1) {
         print "Entering subfunction send_statistics_information() \n";
 }
 foreach my $key (keys %monitorhash) {
@@ -1247,7 +1269,9 @@ foreach my $key (keys %monitorhash) {
                                 print "\targuments              :$value->{'arguments'}\n";
                         }
                         if(defined($value->{'monitor'})) {
-                                print "Found a statistic monitor. Executing->$value->{'program'} with arguments->$value->{'arguments'} to find out:$value->{'monitor'}\n";
+                                if($Use_debug_level > 3) {
+                                	print "Found a statistic monitor. Executing->$value->{'program'} with arguments->$value->{'arguments'} to find out:$value->{'monitor'}\n";
+				}
                         }
                         if ( -f "$value->{'program'}") {
                                 if( -x "$value->{'program'}") {
@@ -1270,7 +1294,7 @@ foreach my $key (keys %monitorhash) {
                 }
         }
 }
-if($Use_debug_level) {
+if($Use_debug_level > 2) {
         print "Leaving subfunction send_statistics_information() \n";
 }
 # End of subfunction
@@ -1450,7 +1474,9 @@ foreach my $key (keys %monitorhash) {
 				}
 				$count++;
 			}
-			print "$count lines processed and verified on file->$value->{'monitor'}.\n";
+			if($Use_debug_level > 3 ) {
+				print "$count lines processed and verified on file->$value->{'monitor'}.\n";
+			}
 
 			if($found_searchpattern > "0") {
 				 if(check_schedule("$value->{'schedule'}") == 0) {
@@ -1493,7 +1519,9 @@ foreach my $key (keys %monitorhash) {
 				print "\tDeleting checkpoint.\n";
 				delete $filetracehash{$monitor};
 			} else {
-				print "Saving checkpoint $count as start for next verification.\n";
+				if($Use_debug_level > 3) {
+					print "Saving checkpoint $count as start for next verification.\n";
+				}
                 		$filetracehash{$monitor} = { monitor => $monitor, checkpoint => $count};
 			}
 
@@ -1537,8 +1565,11 @@ foreach my $key (keys %monitorhash) {
 		        		$current_key=Digest::MD5->new->addfile(*file)->hexdigest;
 						close("$monitor");
 
+					if($Use_debug_level > 3) {
         					print "\tSaving checksum->$current_key for file->$value->{'monitor'} in memory.\n";
-                					$filemodhash{$monitor} = { monitor => $monitor, current_key => $current_key};
+					}
+
+                			$filemodhash{$monitor} = { monitor => $monitor, current_key => $current_key};
                         				
 					if($Use_debug_level > 3) {
                					print "[info] Number of checksums in memory ". keys( %filemodhash ) ." .\n";
@@ -1548,11 +1579,15 @@ foreach my $key (keys %monitorhash) {
 		        		$current_key=Digest::MD5->new->addfile(*file)->hexdigest;
 						close("$monitor");
 
-				print "Comparing checksums for object->$monitor\n";
-				print "\tSaved->$filemodhash{$monitor}->{current_key} Current->$current_key\n";
+				if ($Use_debug_level > 3) {
+					print "Comparing checksums for object->$monitor\n";
+					print "\tSaved->$filemodhash{$monitor}->{current_key} Current->$current_key\n";
+				}
 
 				if("$filemodhash{$monitor}->{current_key}" eq "$current_key") {
-					print "\t[ok] Object->$monitor is unchanged.\n";
+					if ($Use_debug_level > 3) {
+						print "\t[ok] Object->$monitor is unchanged.\n";
+					}
 					$monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "FM";
                                        	$monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Ok";
                                        	$monitorstatushash{"$value->{'monitor'}"}{'message'} = "File $value->{'monitor'} is unchanged";
@@ -1602,8 +1637,10 @@ foreach my $key (keys %monitorhash) {
 							open("file","<$dir/$_") or warn "\t[err] Failed to open $dir/$_ to retrive checksum.";
                                        				$current_key=Digest::MD5->new->addfile(*file)->hexdigest or warn $!;
                                        					close("file");
-
-                                       				print "\tSaving checksum->$current_key for file->$dir/$_ in memory.\n";
+					
+								if ($Use_debug_level > 3) {
+                                       					print "\tSaving checksum->$current_key for file->$dir/$_ in memory.\n";
+								}
                                                			$filemodhash{"$dir/$_"} = { monitor => "$dir/$_", current_key => $current_key};
                                        			
 								if($Use_debug_level > 3) {
@@ -1615,11 +1652,16 @@ foreach my $key (keys %monitorhash) {
 						open("file","<$dir/$_") or warn "\t[err] Failed to open $dir/$_ to retrive checksum.";
                                        			$current_key=Digest::MD5->new->addfile(*file)->hexdigest or warn $!;
                                        				close("file");
-						print "Comparing checksums for object->$complete\n";
-						print "\tSaved->$filemodhash{$complete}->{current_key} Current->$current_key\n";
+								
+						if ($Use_debug_level > 3) {
+							print "Comparing checksums for object->$complete\n";
+							print "\tSaved->$filemodhash{$complete}->{current_key} Current->$current_key\n";
+						}
 				
 						if("$filemodhash{$complete}->{current_key}" eq "$current_key") {
-							print "\t[ok] Object->$monitor is unchanged.\n";
+							if ($Use_debug_level > 3) {
+								print "\t[ok] Object->$monitor is unchanged.\n";
+							}
 							$monitorstatushash{"$value->{'monitor'}"}{'monitortype'} = "FM";
                                                 	$monitorstatushash{"$value->{'monitor'}"}{'monitorstatus'} = "Ok";
                                                 	$monitorstatushash{"$value->{'monitor'}"}{'message'} = "File $value->{'monitor'} is unchanged.";
@@ -1897,12 +1939,12 @@ if ($Use_debug_level > 2) {
 }
 sub install_new_config {
 
-if($Use_debug_level) {
+if($Use_debug_level > 2) {
         print "Entering subfunction install_new_config() \n";
 }
 send_message_to_server("$This_Host","INSTALLCONFIG");
 
-if($Use_debug_level) {
+if($Use_debug_level > 2) {
         print "Leaving subfunction install_new_config() \n";
 }
 # End of subfunction.
@@ -1911,7 +1953,7 @@ sub notify_syslog {
 my $ecode;
 my $message="$_[0]";
 
-if($Use_debug_level) {
+if($Use_debug_level > 3) {
         print "Entering subfunction notify_syslog()\n";
 }
 if($Enable_syslog_notification eq "yes") {
@@ -1928,7 +1970,7 @@ if($Enable_syslog_notification eq "yes") {
         	print "Will not notify local syslog since Enable_syslog_notification is set to:$Enable_syslog_notification.\n";
 	}
 }
-if($Use_debug_level) {
+if($Use_debug_level > 2) {
         print "Leaving subfunction notify_syslog() \n";
 }
 # End of subfunction
@@ -2370,7 +2412,7 @@ if($Use_debug_level > 4) {
 }
 send_message_to_server("$This_Host","SNAPSHOT","$pslist","$dflist","$netlist","$hardware","$users");
 
-if($Use_debug_level) {
+if($Use_debug_level > 3) {
         print "Leaving subfunction system_snapshot()\n";
 }
 # End of subfunction
@@ -2466,58 +2508,86 @@ send_message_to_server("$This_Host","SaveBaseConfig","$baseconfig");
 sub send_local_configuration_to_andutteye_server {
 my $count;
 
+# Empty out the monitor array.
+@monitors=();
+
 foreach my $key (keys %monitorhash) {
         my $value = $monitorhash{$key};
 
 	if($value->{'type'} eq "LA") {
-		print "[info] Found a LA monitor to save on server.\n";
+		if($Use_debug_level > 3) {
+			print "[info] Found a LA monitor to save on server.\n";
+		}
         	push(@monitors,"$value->{'type'},$value->{'monitor'},$value->{'execute_program'},$value->{'send_email'},$value->{'severity'},$value->{'schedule'},$value->{'message'},$value->{'alarmlimit'},$value->{'errorlimit'}");
 	}
 	elsif($value->{'type'} eq "MA") {
-		print "[info] Found a MA monitor to save on server.\n";
+		if($Use_debug_level > 3) {
+			print "[info] Found a MA monitor to save on server.\n";
+		}
         	push(@monitors,"$value->{'type'},$value->{'monitor'},$value->{'execute_program'},$value->{'send_email'},$value->{'severity'},$value->{'schedule'},$value->{'message'},$value->{'alarmlimit'},$value->{'errorlimit'}");
 	}
 	elsif($value->{'type'} eq "SA") {
-		print "[info] Found a SA monitor to save on server.\n";
+		if($Use_debug_level > 3) {
+			print "[info] Found a SA monitor to save on server.\n";
+		}
         	push(@monitors,"$value->{'type'},$value->{'monitor'},$value->{'execute_program'},$value->{'send_email'},$value->{'severity'},$value->{'schedule'},$value->{'message'},$value->{'alarmlimit'},$value->{'errorlimit'}");
 	}
 	elsif($value->{'type'} eq "FS") {
-		print "[info] Found a FS monitor to save on server.\n";
+		if($Use_debug_level > 3) {
+			print "[info] Found a FS monitor to save on server.\n";
+		}
         	push(@monitors,"$value->{'type'},$value->{'monitor'},$value->{'execute_program'},$value->{'send_email'},$value->{'severity'},$value->{'schedule'},$value->{'message'},$value->{'alarmlimit'},$value->{'errorlimit'},$value->{'warning_limit'},$value->{'critical_limit'},$value->{'fatal_limit'}");
 	}
 	elsif($value->{'type'} eq "PS") {
-		print "[info] Found a PS monitor to save on server.\n";
+		if($Use_debug_level > 3) {
+			print "[info] Found a PS monitor to save on server.\n";
+		}
         	push(@monitors,"$value->{'type'},$value->{'monitor'},$value->{'status'},$value->{'execute_program'},$value->{'send_email'},$value->{'severity'},$value->{'schedule'},$value->{'message'},$value->{'alarmlimit'},$value->{'errorlimit'}");
 	}
 	elsif($value->{'type'} eq "FT") {
-		print "[info] Found a FT monitor to save on server.\n";
+		if($Use_debug_level > 3) {
+			print "[info] Found a FT monitor to save on server.\n";
+		}
         	push(@monitors,"$value->{'type'},$value->{'monitor'},$value->{'execute_program'},$value->{'send_email'},$value->{'severity'},$value->{'schedule'},$value->{'message'},$value->{'alarmlimit'},$value->{'errorlimit'},$value->{'searchpattern'}");
 	}
 	elsif($value->{'type'} eq "EV") {
-		print "[info] Found a EV monitor to save on server.\n";
+		if($Use_debug_level > 3) {
+			print "[info] Found a EV monitor to save on server.\n";
+		}
         	push(@monitors,"$value->{'type'},$value->{'monitor'},$value->{'status'},$value->{'execute_program'},$value->{'send_email'},$value->{'severity'},$value->{'schedule'},$value->{'message'},$value->{'alarmlimit'},$value->{'errorlimit'},$value->{'exitstatus'},$value->{'arguments'}");
 	}
 	elsif($value->{'type'} eq "PH") {
-		print "[info] Found a PH monitor to save on server.\n";
+		if($Use_debug_level > 3) {
+			print "[info] Found a PH monitor to save on server.\n";
+		}
         	push(@monitors,"$value->{'type'},$value->{'monitor'},$value->{'execute_program'},$value->{'send_email'},$value->{'severity'},$value->{'schedule'},$value->{'message'},$value->{'alarmlimit'},$value->{'errorlimit'}");
 	}
 	elsif($value->{'type'} eq "ST") {
-		print "[info] Found a ST monitor to save on server.\n";
+		if($Use_debug_level > 3) {
+			print "[info] Found a ST monitor to save on server.\n";
+		}
         	push(@monitors,"$value->{'type'},$value->{'monitor'},$value->{'status'},$value->{'program'},$value->{'arguments'}");
 	}
 	elsif($value->{'type'} eq "AM") {
-		print "[info] Found a AM monitor to save on server.\n";
+		if($Use_debug_level > 3) {
+			print "[info] Found a AM monitor to save on server.\n";
+		}
         	push(@monitors,"$value->{'type'},$value->{'monitor'},$value->{'status'},$value->{'program'},$value->{'arguments'}");
 	}
 	elsif($value->{'type'} eq "FM") {
-		print "[info] Found a FM monitor to save on server.\n";
+		if($Use_debug_level > 3) {
+			print "[info] Found a FM monitor to save on server.\n";
+		}
         	push(@monitors,"$value->{'type'},$value->{'monitor'},$value->{'execute_program'},$value->{'send_email'},$value->{'severity'},$value->{'schedule'},$value->{'message'},$value->{'alarmlimit'},$value->{'errorlimit'}");
 	} else {
 		print "[info] Found a unspecified supported parameter.\n";
 	}
 }
 $count = @monitors;
-print "[info] $count monitors found.\n";
+
+if($Use_debug_level > 3) {
+	print "[info] $count monitors found.\n";
+}
 
 my $monitors=join(";;;;",@monitors);
 send_message_to_server("$This_Host","SaveConfig","$monitors");
@@ -2533,12 +2603,16 @@ if ( -f "$Cache_dir_location/management/andutteyecontent.tar" ) {
 	
 		chdir("$Cache_dir_location/management")
 			or warn "[error] Failed to move to directory:$Cache_dir_location/management\n";
-	
-		print "[info] Unpacking management content:$Cache_dir_location/management/andutteyecontent.tar\n";
+
+		if($Use_debug_level > 3) {	
+			print "[info] Unpacking management content:$Cache_dir_location/management/andutteyecontent.tar\n";
+		}
 		$ecode=system("tar xvf andutteyecontent.tar > /dev/null 2>&1");
 
 		if($ecode == 0 ) {
-			print "[info] Management content unpacked ok.\n";
+			if($Use_debug_level > 3) {	
+				print "[info] Management content unpacked ok.\n";
+			}
 			return(0);
 		} else {
 			print "[error] Failed to unpack management content, exitcode:$ecode\n";
@@ -2546,12 +2620,16 @@ if ( -f "$Cache_dir_location/management/andutteyecontent.tar" ) {
 		}
 
 	} else {
-		print "[info] Management content package is empty.\n";
+		if($Use_debug_level > 3) {
+			print "[info] Management content package is empty.\n";
+		}
 		return(2);
 	}
 
 } else {
-	print "[info] No management content found.\n";
+	if($Use_debug_level > 3) {
+		print "[info] No management content found.\n";
+	}
 	return(2);
 }
 
@@ -2610,7 +2688,6 @@ open("result",">>$Cache_dir_location/management/result.log");
 
 if($packages eq "") {
 	print "[info] No packages marked for uninstallation.\n";
-	print result "No packages marked for uninstallation\n";
 } else {
 
 	print "[info] Uninstalling package(s), please wait...\n";
@@ -2640,7 +2717,6 @@ open("result",">>$Cache_dir_location/management/result.log");
 
 if($packages eq "") {
 	print "[info] No packages marked for installation.\n";
-	print result "No packages marked for installation.\n";
 } else {
 	print "[info] Installing package(s), please wait...\n";
 	print result "Installing package(s), please wait...\n";
@@ -2849,16 +2925,24 @@ for(1..10) {
 }
 
 close("result");
+
+# Empty filehash
+@validate_files=();
+
 # End of subfunction
 }
 sub clean_management_files {
 my $ecode;
 
-print "[info] Cleaning management files and content under ->$Cache_dir_location/management\n";
+if($Use_debug_level > 3) {
+	print "[info] Cleaning management files and content under ->$Cache_dir_location/management\n";
+}
 $ecode=system("rm -rf $Cache_dir_location/management/*");
 
 if($ecode == 0) {
-	print "[info] Management cache directory $Cache_dir_location/management cleaned ok.\n";
+	if($Use_debug_level > 3) {
+		print "[info] Management cache directory $Cache_dir_location/management cleaned ok.\n";
+	}
 } else {
 	print "[error] Clean of management cache directory $Cache_dir_location/management failed with exitcode:$ecode.\n";
 }
@@ -2892,7 +2976,9 @@ my $monitor_status_result;
 
 foreach my $key (keys %monitorstatushash) {
         $value = $monitorstatushash{$key};
-	print "Monitor:$key Type:$value->{'monitortype'} Status:$value->{'monitorstatus'} Message:$value->{'message'}\n";
+	if ($Use_debug_level > 3) {
+		print "[info] Monitorstatus:$key Type:$value->{'monitortype'} Status:$value->{'monitorstatus'} Message:$value->{'message'}\n";
+	}
 	push(@monitor_status_result,"$key~$value->{'monitortype'}~$value->{'monitorstatus'}~$value->{'message'}");
 }
 $monitor_status_result=join(";;;;",@monitor_status_result);
@@ -2992,7 +3078,9 @@ for(;;) {
 				print "[error] Unpacking of management content failed! aborting management control.\n";
 			}
 			elsif(unpack_and_parse_management_content() == 2) {
-				print "[info] No management content found, suppose there is nothing to do.\n";
+				if($Use_debug_level > 3) {
+					print "[info] No management content found, suppose there is nothing to do.\n";
+				}
 			} else {
 				print "[error] A invalid return state found from unpack_and_parse_management_content function.\n";
 			}
@@ -3001,15 +3089,16 @@ for(;;) {
 	}
 
 if ($Use_debug_level) {
-	print "\nStart timestamp:$firstdate $firsttime Current timestamp:$date $time\n";
+	print "Start timestamp:$firstdate $firsttime Current timestamp:$date $time\n";
 	print "Verification loops:$Loops Pid:$$ Arguments:@ARGV. Loopinterval $Loop_interval seconds until next run.\n";
 }
 
-my $left="$Loop_interval";
+#my $left="$Loop_interval";
 #for(1..$Loop_interval) {
-#
-#	print "[info] Polling for andutteye actions. $left s to complete run.\n";
-#	#send_message_to_server("$This_Host","CheckForActions");
+#	if($Use_debug_level > 3) {
+#		print "[info] Polling for andutteye actions. $left s to complete run.\n";
+#	}
+#	send_message_to_server("$This_Host","CheckForActions");
 #	sleep(5);
 #	$left=($left - 5);
 #}

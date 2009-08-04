@@ -157,7 +157,6 @@ fieldset.GroupField legend {
 	height:25px;
 	margin:0 0 0 10px;
 	padding:5px 0 0 0;
-	background-image: url(button.png);
 	background-repeat: no-repeat;
 	background-position: center top;
 	text-align: center;
@@ -526,14 +525,21 @@ label {
 	background-repeat: repeat-x;
 	background-position: center top;
 	border:1px solid #333;
-        height:20px;
+	font-size:10px;
+}
+input {
+	color:#fff;
+	background-image: url(login.png);
+	background-repeat: repeat-x;
+	background-position: center top;
+	border:1px solid #333;
 	font-size:10px;
 }
 .login input:hover,textarea:hover {
-	background-color:#212121
+	background-color:#212121;
 }
 .login input:focus,textarea:focus {
-	background-color:#111
+	background-color:#111;
 }
 input[type=submit]{
 	padding:5px 8px;
@@ -545,14 +551,20 @@ input[type=submit]{
         color:#fff;
         border:1px solid #333;
         background-color:#262323;
+	background-image: url(login.png);
+	background-repeat: repeat-x;
+	background-position: center top;
         padding:3px;
-		font-size:inherit;
+	font-size:inherit;
         font-family:inherit;
 }
 .content input,select {
         color:#fff;
         border:1px solid #333;
-        background-color:#262323;
+        background-color:#000;
+	background-image: url(login.png);
+	background-repeat: repeat-x;
+	background-position: center top;
         padding:3px;
 	font-size:inherit;
         font-family:inherit;
@@ -967,8 +979,8 @@ div.autosuggest ul em
 	cursor:pointer; 
 	font-weight:bold; 
 	color: transparent; 
-	border-bottom:2px solid #191919;
-	margin:0px;
+	border-bottom:1px solid #191919;
+	margin:2px;
 	padding:0px;
 }
 .toggler:hover	 { 
@@ -986,7 +998,6 @@ th {
         background-repeat: repeat-x;
 }
 td {
-        width:20%;
 	padding:0.5em;
         padding-left:32px;
         background-position:8px center;

@@ -15,7 +15,7 @@
 #
 # Description: Andutteye Software Suite relay cache transfer engine
 #
-# $Id: andutteyedmo_cachecli 608 2008-03-11 19:24:42Z andutt $
+# $Id: andutteyedmo_cachecli 703 2008-09-04 21:21:53Z andutt $
 #
 # The version-parameter tells the current version and fixlevel of the program.
 my $version = "Andutteye Software Suite Cacherelayagent Version:1.2 LatestFix:2005-03-25 (andutt)";
@@ -179,7 +179,8 @@ sub load_hash_with_cached_messages {
 # Load hash with messages.
 #
 create_socket("$andutteye_cache_server","$andutteye_cache_port");
-print Server "givemeeverything#----###----#$user#----###----#$password\n";
+#print Server "givemeeverything#----###----#$user#----###----#$password\n";
+print Server "givemeeverything#----###----#$password\n";
 while(<Server>) {
 	 if ( $_ =~/QUIT/) {
 	        return 0;	

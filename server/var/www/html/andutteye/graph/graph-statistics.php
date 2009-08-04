@@ -122,7 +122,7 @@ $count++;
 }
 $g = new graph();
 $g->title( "$statistics for $system", '{font-size: 10px; color: #fccc69}' );
-$g->bg_colour = 'transparent';
+$g->bg_colour = '#191919';
 $g->set_inner_background( '#DDEFFA', '#CBD7E6', 90 );
 $g->x_axis_colour( '#799191', '#FFFFFF' );
 $g->y_axis_colour( '#799191', '#FFFFFF' );

@@ -1,0 +1,400 @@
+#!/usr/bin/perl
+#
+#    Copyright Andreas Utterberg Thundera (c) All rights Reserved 2008
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#    $Id: andutteyedagt 739 2008-10-28 21:15:29Z andutt $
+#
+#
+#
+our $version = "Andutteye FrontRelayer Version 3.0 (2008 www.thundera.se).";
+our $Front_listen_adress;
+our $Front_listen_port;
+our $Server_listen_adress = "localhost";
+our $Server_listen_port = "32001";
+our $System_identification_key = "060d9650e2572e5353056252bb576b8b";
+our $BackendAndutteyeName = "localhost";
+our $Cache_dir_location = "/var/cache/andutteye/front";
+our $Loop_interval = "5";
+our $Loops="1";
+our $Enable_ssl_encryption;
+our $Use_ssl_server_key;
+our $Use_ssl_server_cert;
+our $Enable_syslog_notification;
+our $Enable_daemon_mode;
+our $Use_database_type;
+our $Use_database_name;
+our $Use_database_user;
+our $Use_dbi_database_extra_string;
+our $Use_database_password;
+our $Use_debug_level;
+our $Log_dir_location;
+our $system_name;
+our $system_address;
+our $system_port;
+our $config;
+our $dbh;
+our $sth;
+our $sql;
+our %FromFrontMessages;
+our %ToFrontMessages;
+
+our ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+our $date=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+our $time=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+our $firstdate=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+our $firsttime=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+use DBI;
+use IO::Socket::INET;
+use strict;
+
+sub parse_and_load_configuration {
+my @tmp;                          
+my $params="0";                   
+
+
+      open("conf","<$config")
+                or die "ERROR Failed to open configuration file for reading config:$config error:$!\n";
+        for(<conf>) {                                                                                  
+                chomp;                                                                                 
+                if(/^#/) {                                                                             
+                        next;                                                                          
+                }                                                                                      
+                if(/^$/) {                                                                             
+                        next;
+                }
+                if(/^Front_listen_adress/) {
+                        @tmp=split("=","$_");
+                        $Front_listen_adress="$tmp[1]";
+                        $params++;
+                }
+                if(/^Front_listen_port/) {
+                        @tmp=split("=","$_");
+                        $Front_listen_port="$tmp[1]";
+                        $params++;
+                }
+                if(/^Server_listen_adress/) {
+                        @tmp=split("=","$_");
+                        $Server_listen_adress="$tmp[1]";
+                        $params++;
+                }
+                if(/^Server_listen_port/) {
+                        @tmp=split("=","$_");
+                        $Server_listen_port="$tmp[1]";
+                        $params++;
+                }
+                if(/^Loop_interval/) {
+                        @tmp=split("=","$_");
+                        $Loop_interval="$tmp[1]";
+                        $params++;
+                }
+                if(/^Enable_ssl_encryption/) {
+                        @tmp=split("=","$_");
+                        $Enable_ssl_encryption="$tmp[1]";
+                        $params++;
+                }
+                if(/^Cache_dir_location/) {
+                        @tmp=split("=","$_");
+                        $Cache_dir_location="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_ssl_server_key/) {
+                        @tmp=split("=","$_");
+                        $Use_ssl_server_key="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_ssl_server_cert/) {
+                        @tmp=split("=","$_");
+                        $Use_ssl_server_cert="$tmp[1]";
+                        $params++;
+                }
+                if(/^Enable_syslog_notification/) {
+                        @tmp=split("=","$_");
+                        $Enable_syslog_notification="$tmp[1]";
+                        $params++;
+                }
+                if(/^Enable_daemon_mode/) {
+                        @tmp=split("=","$_");
+                        $Enable_daemon_mode="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_database_type/) {
+                        @tmp=split("=","$_");
+                        $Use_database_type="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_database_name/) {
+                        @tmp=split("=","$_");
+                        $Use_database_name="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_database_user/) {
+                        @tmp=split("=","$_");
+                        $Use_database_user="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_dbi_database_extra_string/) {
+                        @tmp=split("=","$_");
+                        $Use_dbi_database_extra_string="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_database_password/) {
+                        @tmp=split("=","$_");
+                        $Use_database_password="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_debug_level/) {
+                        @tmp=split("=","$_");
+                        $Use_debug_level="$tmp[1]";
+                        $params++;
+                }
+                if(/^Log_dir_location/) {
+                        @tmp=split("=","$_");
+                        $Log_dir_location="$tmp[1]";
+                        $params++;
+                }
+
+	$params++;
+	}
+
+close("conf");
+print "[$date $time] Parsing of $config completed. $params parameters loaded.\n";
+
+# End of subfunction
+}
+sub retrive_messages_saved_on_the_front {
+my $socket;
+
+if($Enable_ssl_encryption eq "yes") {
+	require IO::Socket::SSL;
+        	if($Use_debug_level > 2) {
+                        print "\tFront server	:$Front_listen_adress\n";
+                        print "\tFront port  	:$Front_listen_port\n";
+                        print "\tSocket mode    :Ssl encryption enabled\n";
+                }
+                $socket = IO::Socket::SSL->new( PeerHost => "$Front_listen_adress",
+               		PeerPort => "$Front_listen_port",
+                        Reuse    => "1",
+                        Proto => "tcp");
+
+
+                if($Use_debug_level > 4) {
+                	my ($subject_name, $issuer_name, $cipher);
+                        	if( ref($socket) eq "IO::Socket::SSL") {
+                               		$subject_name = $socket->peer_certificate("subject");
+                                        $issuer_name = $socket->peer_certificate("issuer");
+                                        $cipher = $socket->get_cipher();
+                                        print "Ssl cert subject:$subject_name\n";
+                                        print "Issuer          :$issuer_name\n";
+                                        print "Cipher          :$cipher\n";
+                                }
+		}
+        	if(!$socket) {
+                        print "ERROR Unable to connect to system $Front_listen_adress on port $Front_listen_port [ssl]\n";
+		}
+} else {
+
+	$socket = IO::Socket::INET->new(PeerAddr => "$Front_listen_adress",
+	                        PeerPort => "$Front_listen_port",
+                                Proto    => "tcp");
+        	if(!$socket) {
+                        print "ERROR Unable to connect to system $Front_listen_adress on port $Front_listen_port [tcp]\n";
+                } else {
+			print "[$date,$time] Trying to retrive messages from front system $Front_listen_adress\n";
+
+			print $socket "$BackendAndutteyeName#----###----#$System_identification_key\n";
+			while(<$socket>) {
+				if ($_ =~/^ANDUTTEYEQUIT/) {
+                                	last;
+                                } else {
+                  			$FromFrontMessages{$_} = { aesmessage => "$_"};
+				}
+			}
+                  	print "[$date,$time] Total Andutteye messages retrived ". keys( %FromFrontMessages ) .".\n";
+		}
+}
+
+# End of subfunction
+}
+sub relay_messages_to_backend_andutteye_server {
+my $socket;
+my $count="0";
+
+if($Enable_ssl_encryption eq "yes") {
+        print "SSL is on\n";
+} else {
+
+print "[$date,$time] Trying to send messages retrived from front systems to backend server\n";
+for my $messages (sort keys %FromFrontMessages) {
+    	my $current = $FromFrontMessages{$messages};
+       	chomp $current->{aesmessage};
+	my @data = split("#----###----#","$current->{aesmessage}");
+
+			
+        $socket = IO::Socket::INET->new(PeerAddr => "$Server_listen_adress",
+                                PeerPort => "$Server_listen_port",
+                                Proto    => "tcp");
+                if(!$socket) {
+                        print "ERROR Unable to connect to system $Server_listen_adress on port $Server_listen_port [tcp]\n";
+                } else {
+			
+			if($current->{aesmessage} =~/^$/) {
+        			delete $FromFrontMessages{$messages};
+				next;
+			} else {
+				print $socket "$current->{aesmessage}\n";
+				
+				if ("$data[1]" =~/INSTALLCONFIG/) {
+                                	open("config",">>$Cache_dir_location/$data[0]") 
+						or die ("Failed to open configurationfile:$Cache_dir_location/$data[0]\n");
+
+                                        while(<$socket>) {
+                                                if ( $_ =~/ANDUTTEYEQUIT/) {
+                                                        last;
+                                                }
+                                                if ( $_ =~/OPENCONFIG/ ) {
+                                                        open("config",">$Cache_dir_location/$data[0]") 
+								or die ("Failed to open configurationfile:$Cache_dir_location/$data[0]\n");
+                                                	next;
+                                                }
+                                                if ( $_ =~/CLOSECONFIG/) {
+                                                        close("config");
+                                                        last;
+                                                }
+                                                print config $_;
+                                        }
+
+				  	if( -z "$Cache_dir_location/$data[0]" ) {
+						unlink("$Cache_dir_location/$data[0]");
+				  	} else {
+						print "[$date $time] Temporary save of new andutteye configuration for system $data[0].\n";
+				  	}
+                        	}
+                        	if ("$data[1]" eq "ValidateManagement") {
+
+                                        while(<$socket>) {
+                                                if ( $_ =~/ANDUTTEYEQUIT/) {
+                                                        last;
+                                                }
+                                                if ( $_ =~/ANDUTTEYEOPENFILE/ ) {
+                                                        if( -f "$Cache_dir_location/$data[0].tar") {
+                                                                unlink("$Cache_dir_location/$data[0].tar")
+                                                                        or die ("ERROR Failed to remove $Cache_dir_location/$data[0].tar\n");
+                                                        }
+                                                        open("file",">>$Cache_dir_location/$data[0].tar")
+                                                                or die ("Failed to open management content file:$Cache_dir_location/$data[0].tar\n");
+                                                        binmode("file");
+
+                                                        next;
+                                                }
+                                                if ( $_ =~/ANDUTTEYECLOSECONFIG/) {
+                                                        close("file");
+                                                        last;
+                                                }
+                                                print file $_;
+                                        }
+				  	if( -z "$Cache_dir_location/$data[0].tar" ) {
+						unlink("$Cache_dir_location/$data[0].tar");
+				  	} else {
+						print "[$date $time] Temporary save of andutteye management content for system $data[0].\n";
+				  	}
+                        	}
+
+        			delete $FromFrontMessages{$messages};
+        			$count++;
+			}
+		}
+	close($socket);
+}
+
+print "[$date,$time] $count message(s) transfered. Total ". keys( %FromFrontMessages ) ." still in memory.\n";
+}
+
+# End of subfunction
+}
+sub program_info {
+#
+print "\n";
+print "$version\n";
+print"\n";
+print "Example:$0 -config=/etc/andutteye/andutteyedfrt.conf\n";
+print "\n";
+print "-config\t\t:Specifies frontrelay configuration to use.\n";
+print "\n";
+exit 1;
+
+# End of subfunction
+}
+sub run_as_daemon {
+
+chdir '/' or die "Can't chdir to /: $!";
+open (STDIN,"/dev/null") or die "Can't read /dev/null as standard input: $!";
+open (STDOUT, ">>$Log_dir_location/andutteyedfrt.log") or die "Can't write standard out messages to $Log_dir_location/andutteyedfrt.log: $!";
+open (STDERR, ">>$Log_dir_location/andutteyedfrt.log") or die "Can't write standard error messages to $Log_dir_location/andutteyedfrt.log: $!";
+defined(my $pid = fork) or die "Can't fork andutteyedfrt. Try to execute andutteyedfrt without daemon mode enabled.: $!";
+exit if $pid;
+umask 0;
+
+# End of subfunction
+}
+
+
+# Parse of commandline arguments.
+for(@ARGV) {
+        if ( $_ =~/-config/ ) {
+                my @tmp=split("=","$_");
+                $config="$tmp[1]";
+        }
+}
+if(!defined($ARGV[0])) {
+        program_info();
+}
+for(;;) {           
+        ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+        $date=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);                 
+        $time=sprintf("%02d:%02d:%02d",$hour,$min,$sec);                        
+
+        # Parse configuration and load systems name.
+        parse_and_load_configuration();             
+
+        if ("$Enable_daemon_mode" eq "yes") {
+                if($Loops == 1) {            
+                        run_as_daemon();     
+                }                            
+        }
+	
+	# Retrive front proxys to handle
+	$dbh = DBI->connect("dbi:$Use_dbi_database_extra_string$Use_database_type:$Use_database_name", $Use_database_user, $Use_database_password) 
+		or die("ERROR Couldnt open database:$Use_database_name errormessage:$!");
+
+         $sql="select system_name,system_address,system_port from andutteye_front_configuration order by system_name asc";
+         $sth = $dbh->prepare("$sql");
+         $sth->execute or die "Failed :$!\n";
+
+                $sth->bind_columns(undef, \$system_name, \$system_address, \$system_port);
+                while($sth->fetch()) {
+			$Front_listen_adress = $system_address;
+			$Front_listen_port = $system_port;
+			print "[$date $time] Running on ($system_name) system $Front_listen_adress port $Front_listen_port.\n";
+
+			retrive_messages_saved_on_the_front();
+			relay_messages_to_backend_andutteye_server();
+                }
+
+print "[$date $time] Loops $Loops Loopinterval $Loop_interval started $firstdate $firsttime.\n";
+sleep($Loop_interval);
+$Loops++;
+}

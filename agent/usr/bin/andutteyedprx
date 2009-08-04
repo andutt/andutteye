@@ -15,8 +15,9 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-#    $Id: andutteyedprx 645 2008-04-23 18:18:14Z andutt $
+#    $Id: andutteyedprx 770 2009-05-14 16:24:53Z andutt $
 #
+##
 our $version="Andutteye Proxy 3.0 (2008 www.thundera.se)";
 our $config;
 our $client;
@@ -43,7 +44,9 @@ our $Log_dir_location;
 our $Cache_dir_location;
 our $System_identification_name;
 our $System_identification_key;
+our $Use_Proxy_Method;
 our %Cached_messages;
+our %Cached_andutteyeserver_messages;
 
 our ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
 our $date=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
@@ -68,12 +71,8 @@ sub program_info {
 	print "\n";
 	print "$version\n";
 	print "\n";
-	print "Invalid input, usage:\n";
-	print "\n";
-	print "$0 -config=/etc/andutteye/andutteye.conf\n";
-	print "\n";
+	print "$0 -config=/etc/andutteye/andutteyedprx.conf\n";
 	print "$0  -config\t:Specify which configuration file to use.\n";
-	print "\n";
 	print "\n";
 	exit 1;
 }
@@ -81,7 +80,7 @@ sub parse_and_load_configuration {
 my @tmp;
 my $params="0";
 
-print "$date $time Parsing and reading parameters from config $config.\n";
+print "[$date $time] Parsing and reading parameters from config $config.\n";
 
       open("conf","<$config")
 		or die "ERROR Failed to open configuration file for reading config:$config error:$!\n";
@@ -197,11 +196,21 @@ print "$date $time Parsing and reading parameters from config $config.\n";
 			$Cache_dir_location="$tmp[1]";
 			$params++;
 		}
+		if(/^Use_Proxy_Method/) {
+			@tmp=split("=","$_");
+			$Use_Proxy_Method="$tmp[1]";
+			$params++;
+		}
+		if(/^System_identification_key/) {
+			@tmp=split("=","$_");
+			$System_identification_key="$tmp[1]";
+			$params++;
+		}
 	}
 close("conf");
 
 if($Use_debug_level > 1) {
-	print "$date $time Parsing of $config completed. $params parameters loaded.\n";
+	print "[$date $time] Parsing of $config completed. $params parameters loaded.\n";
 }
 if($Use_debug_level > 2) {
 	print "Local_listen_address\t		:$Local_listen_address\n";
@@ -223,6 +232,7 @@ if($Use_debug_level > 2) {
 	print "Use_max_cache_limit\t		:$Use_max_cache_limit\n";
 	print "Log_dir_location\t			:$Log_dir_location\n";
 	print "Cache_dir_location\t			:$Cache_dir_location\n";
+	print "Use_Proxy_Method\t			:$Use_Proxy_Method\n";
 }
 		
 # End of subfunction
@@ -269,9 +279,10 @@ $time=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
                         	Listen => 10
 			)  or die $!;
         		
-			print "$date $time Tcp socket connection established on local address:$Local_listen_address and port:$Local_listen_port.\n";
-			print "$date $time Waiting for client connections.\n";
+			print "[$date $time] Tcp socket connection established on local address:$Local_listen_address and port:$Local_listen_port.\n";
 	}
+	print "[$date $time] Waiting for client connections.\n";
+	print "[$date $time] Invoking proxy method:$Use_Proxy_Method.\n";
 
 # End of subfunction
 }
@@ -486,10 +497,10 @@ if ("$Enable_daemon_mode" eq "yes") {
 		or die "$date $time ERROR Cant change directory to / errormsg: $!";
 	open (STDIN,"/dev/null") 
 		or die "$date $time ERROR Can't read /dev/null as standard input: $!";
-	open (STDOUT, ">>$Log_dir_location/andutteyed_proxy.log") 
-		or die "$date $time ERROR Can't write standard out messages to $Log_dir_location/andutteyed_proxy.log errormsg: $!";
-	open (STDERR, ">>$Log_dir_location/andutteyed_proxy.log") 
-		or die "$date $time ERROR Can't write standard error messages to $Log_dir_location/andutteyed_proxy.log errormsg: $!";
+	open (STDOUT, ">>$Log_dir_location/andutteyedprx.log") 
+		or die "$date $time ERROR Can't write standard out messages to $Log_dir_location/andutteyedprx.log errormsg: $!";
+	open (STDERR, ">>$Log_dir_location/andutteyedprx.log") 
+		or die "$date $time ERROR Can't write standard error messages to $Log_dir_location/andutteyedprx.log errormsg: $!";
 
 		defined(my $pid = fork) 
 			or die "$date $time Can't fork $0, try to execute $0 without daemon option errormsg: $!";
@@ -589,9 +600,45 @@ $time=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
 
 # End of subfunction
 }
-#########################################################
-# STARTING MAIN EXECUTING OF THE PROGRAM
-#########################################################
+sub act_as_an_andutteye_front {
+my $is_key_given = $_[0];
+my $aes_message = $_[1];
+my $spooled_messages = "0";
+
+if($is_key_given eq "$System_identification_key") {
+
+	# The given backend key is correct, spool cached messages.
+	print " Backend andutteye server $aes_message authenticated.\n";                         
+        
+	for my $message (sort keys %Cached_messages) {
+        	my $current = $Cached_messages{$message};
+
+                if(!$current->{aesmessage}) {
+                	print "$date $time Ignoring empty hash entry\n";
+                } else {                                                  
+                	#chomp $current->{aesmessage};                        
+                        print $client "$current->{aesmessage}\n";            
+                }                                                         
+                delete $Cached_messages{$message};                               
+                $spooled_messages++;                                                 
+        }                                                                 
+        print "[$date $time] $spooled_messages messages retrived. Cachememory cleaned, ";
+
+} else {
+	if ("$aes_message" eq "") {
+        	print " Found a undefined message, unable to cache it.\n";
+        } else {
+		unless(exists ($Cached_messages{$aes_message})) {
+                	$Cached_messages{$aes_message} = { aesmessage => $aes_message};
+		} else {
+			print ", exact message already cached, ignoring, ";
+		}
+        }
+}
+
+# End of subfunction
+}
+
 parse_and_generate_init();
 parse_and_load_configuration();
 daemonize();
@@ -606,62 +653,42 @@ while ($client = $socket->accept()) {
 	my $message = <$client>;
 	$SIG{CHLD} = 'IGNORE';
 	my @data = split("#----###----#","$message");
+	chomp $data[1];
 
 
-		if ($data[1] eq "CHECK") {
+	if ($data[1]) {
+		
+		if($Use_Proxy_Method eq "proxy") {
 			execute_proxy_hooks("pre","$message");
 			try_to_send_cached_messages();
 			print "$date $time Message $messages from system $data[0] id $data[1]\n";
 			send_message_to_server("$message");
 			execute_proxy_hooks("post","$message");
 		}
-		elsif ($data[1] eq "CHECKINSOFTWARE") {
+		elsif($Use_Proxy_Method eq "front") {
+
+			if($data[1] eq "INSTALLCONFIG") {
+				print $client "CLOSECONFIG\n";
+			}
+
 			execute_proxy_hooks("pre","$message");
-			try_to_send_cached_messages();
-			print "$date $time Message $messages from system $data[0] id $data[1]\n";
-			send_message_to_server("$message");
-			execute_proxy_hooks("post","$message");
-		}
-		elsif ($data[1] eq "CONFIG") {
-			execute_proxy_hooks("pre","$message");
-			try_to_send_cached_messages();
-			print "$date $time Message $messages from system $data[0] id $data[1]\n";
-			send_message_to_server("$message");
-			execute_proxy_hooks("post","$message");
-		}
-		elsif ($data[1] eq "SNAPSHOT") {
-			execute_proxy_hooks("pre","$message");
-			try_to_send_cached_messages();
-			print "$date $time Message $messages from system $data[0] id $data[1]\n";
-			send_message_to_server("$message");
-			execute_proxy_hooks("post","$message");
-		}
-		elsif ($data[1] eq "ALARM") {
-			execute_proxy_hooks("pre","$message");
-			try_to_send_cached_messages();
-			print "$date $time Message $messages from system $data[0] id $data[1]\n";
-			send_message_to_server("$message");
-			execute_proxy_hooks("post","$message");
-		}
-		elsif ($data[1] eq "RESUMEOPERATION") {
-			execute_proxy_hooks("pre","$message");
-			try_to_send_cached_messages();
-			print "$date $time Message $messages from system $data[0] id $data[1]\n";
-			send_message_to_server("$message");
-			execute_proxy_hooks("post","$message");
-		}
-		elsif ($data[1] eq "INSTALLCONFIG") {
-			execute_proxy_hooks("pre","$message");
-			try_to_send_cached_messages();
-			print "$date $time Message $messages from system $data[0] id $data[1]\n";
-			send_message_to_server("$message");
+			print "[$date $time] Message from system $data[0] ";
+
+			if($data[1] eq "$System_identification_key") {
+				act_as_an_andutteye_front("$data[1]","$data[0]");
+				print $client "ANDUTTEYEQUIT\n";
+				print "". keys( %Cached_messages ) ." messages in memory.\n";
+			} else {
+				act_as_an_andutteye_front("0","$message");
+				print $client "ANDUTTEYEQUIT\n";
+				print "". keys( %Cached_messages ) ." messages in memory.\n";
+			}
 			execute_proxy_hooks("post","$message");
 		} else {
-			print "$date $time TRACE ERROR Invalid andutteye message recived.\n";
-			print "$date $time TRACE ERROR Complete packets->$message\n";
-			print "$date $time TRACE ERROR Packet dropped.\n";
-			exit;
+			print "$date $time Invalid Use_Proxy_Method specified, only (proxy|front) are valid.\n";
 		}
+	}
+
 # End of while
 $messages++;
 }

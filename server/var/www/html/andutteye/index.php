@@ -15,27 +15,47 @@ if(empty($_GET['main'])){
         $main = $_GET['main'];
 }
 if(empty($_GET['param1'])){
-        $param1 = "";
+	if(!empty($_POST['param1'])){
+		$param1 = $_POST['param1'];
+	} else {
+        	$param1 = "";
+	}
 }else{
         $param1 = $_GET['param1'];
 }
 if(empty($_GET['param2'])){
-        $param2 = "";
+	if(!empty($_POST['param2'])){
+		$param2 = $_POST['param2'];
+	} else {
+        	$param2 = "";
+	}
 }else{
         $param2 = $_GET['param2'];
 }
 if(empty($_GET['param3'])){
-        $param3 = "";
+	if(!empty($_POST['param3'])){
+                $param3 = $_POST['param3'];
+        } else {
+        	$param3 = "";
+	}
 }else{
         $param3 = $_GET['param3'];
 }
 if(empty($_GET['param4'])){
-        $param4 = "";
+	if(!empty($_POST['param4'])){
+                $param4 = $_POST['param4'];
+        } else {
+        	$param4 = "";
+	}
 }else{
         $param4 = $_GET['param4'];
 }
 if(empty($_GET['param5'])){
-        $param5 = "";
+	if(!empty($_POST['param5'])){
+                $param5 = $_POST['param5'];
+        } else {
+        	$param5 = "";
+	}
 }else{
         $param5 = $_GET['param5'];
 }
@@ -163,7 +183,7 @@ echo '
 
 <div class="PageHeader">
 	<div class="MainLogo">
-		<p>Version 3.0<br><span class="NormalTxt">Codename<span class="ColoredTxt"> Phoenix</span></span></p>
+		<p>Version 3.1<br><span class="NormalTxt">Codename<span class="ColoredTxt"> Sphinx</span></span></p>
 	</div>
 </div>
 

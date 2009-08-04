@@ -7,6 +7,7 @@ $database_hst="localhost";
 $database_dbn="andutteye";
 $database_usr="andutteye";
 $database_pwd="andutteye";
+$graph_tp_dir="andutteye";
 $Transfer_dir_location="transfer";
 $password_slt="0acf719778ed39b6847cc818ec3f72252c12ad6d";
 

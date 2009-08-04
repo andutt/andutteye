@@ -24,12 +24,12 @@ while ($row = $sql->fetch()) {
 
 $g = new graph();
 
-$g->bg_colour = 'transparent';
+$g->bg_colour = '#191919';
 $g->pie(60,'#fccc69','#1d7ffc',false,1);
 $g->pie_values( $data, $label );
 $g->pie_slice_colours( array('#d01f3c','#79f373','#1ea4fd') );
 $g->set_tool_tip( '#val# monitors with this monitortype.' );
-$g->title('Monitortype spread for $system', '{font-size:9px; color: #fccc69}' );
+$g->title('Monitortype spread for '.$system.'', '{font-size:9px; color: #fccc69}' );
 echo $g->render();
 
 ?>
