@@ -84,7 +84,7 @@ echo '<div id="MainMenu">
 						<img src="themes/' . $authNamespace->andutteye_theme . '/domains_1.png" alt="" title="" /> ' . $domain_name . '</a>';
 						echo '<ul>';
 				
-					$subsql = $db->query("select group_name,group_description from andutteye_groups where domain_name = '$domain_name'");
+					$subsql = $db->query("select group_name,group_description from andutteye_groups where domain_name = '$domain_name' order by group_name asc");
                                 		while ($row = $subsql->fetch()) {
                                         		$group_name = $row['group_name'];
                                         		$group_description = $row['group_description'];
@@ -94,7 +94,7 @@ echo '<div id="MainMenu">
 								<img src="themes/' . $authNamespace->andutteye_theme . '/groups_2.png" alt="" title="" /> ' . $group_name . '</a>';
 								echo '<ul>';
 					
-								$ssubsql = $db->query("select system_name from andutteye_systems where domain_name = '$domain_name' and group_name = '$group_name'");
+								$ssubsql = $db->query("select system_name from andutteye_systems where domain_name = '$domain_name' and group_name = '$group_name' order by system_name asc");
                                 				while ($row = $ssubsql->fetch()) {
                                         				$system_name = $row['system_name'];
 
@@ -1214,10 +1214,21 @@ while ($row = $gsql->fetch()) {
 	$filemanagement_status = get_current_filemanagement_status($system_name);
 	$packagemanagement_status = get_current_packagemanagement_status($system_name);
 
+	if($filemanagement_status == "Disabled") {
+		$filemanagement_status_image = '<img src="themes/' . $authNamespace->andutteye_theme . '/stopped.png" alt="" title="" />';
+	} else {
+		$filemanagement_status_image = '<img src="themes/' . $authNamespace->andutteye_theme . '/started.png" alt="" title="" />';
+	}
+	if($packagemanagement_status == "Disabled") {
+		$packagemanagement_status_image = '<img src="themes/' . $authNamespace->andutteye_theme . '/stopped.png" alt="" title="" />';
+	} else {
+		$packagemanagement_status_image = '<img src="themes/' . $authNamespace->andutteye_theme . '/started.png" alt="" title="" />';
+	}
+
         echo '<td colspan="2"> <img src="themes/' . $authNamespace->andutteye_theme . '/systems_2.png" alt="" title="" /> '.$system_name.'</td>
 	     <td> <img src="themes/' . $authNamespace->andutteye_theme . '/groups_2.png" alt="" title="" /> '.$group_name.'</td>
-	     <td>' .$packagemanagement_status.' </td>
-	     <td>' .$filemanagement_status.' </td>
+	     <td>' .$packagemanagement_status_image.' </td>
+	     <td>' .$filemanagement_status_image.' </td>
              <td><input type="checkbox" name="param2[]" value='.$system_name.'></td>
               </tr>';
 }
@@ -1728,9 +1739,11 @@ echo '<h3 class="toggler">
 			<td><input type="radio" name="param1" value="LockAllMonitors"></td>
 			<td><input type="radio" name="param1" value="UnlockAllMonitors"></td>
 		</tr>
-                <th colspan="2">System</th>
-                <th colspan="2">Group</th>
-                <th colspan="2">Enforce</th>
+		<th colspan="2">System</th>
+                <th>Group</th>
+                <th>Packagemanagement</th>
+                <th>Filemanagement</th>
+                <th>Enforce</th>
 		</tr>
 ';
 $gsql  = $db->query("select * from andutteye_systems where group_name ='$param2' and domain_name = '$param1' order by system_name desc");
@@ -1740,8 +1753,24 @@ while ($row = $gsql->fetch()) {
 	$system_name	= $row['system_name'];
 	$group_name	= $row['group_name'];
 
-	echo '<td colspan="2"> <img src="themes/' . $authNamespace->andutteye_theme . '/systems_2.png" alt="" title="" /> '.$system_name.'</td>
-	      <td colspan="2"> <img src="themes/' . $authNamespace->andutteye_theme . '/groups_2.png" alt="" title="" /> '.$group_name.'</td>
+	$filemanagement_status = get_current_filemanagement_status($system_name);
+        $packagemanagement_status = get_current_packagemanagement_status($system_name);
+
+        if($filemanagement_status == "Disabled") {
+                $filemanagement_status_image = '<img src="themes/' . $authNamespace->andutteye_theme . '/stopped.png" alt="" title="" />';
+        } else {
+                $filemanagement_status_image = '<img src="themes/' . $authNamespace->andutteye_theme . '/started.png" alt="" title="" />';
+        }
+        if($packagemanagement_status == "Disabled") {
+                $packagemanagement_status_image = '<img src="themes/' . $authNamespace->andutteye_theme . '/stopped.png" alt="" title="" />';
+        } else {
+                $packagemanagement_status_image = '<img src="themes/' . $authNamespace->andutteye_theme . '/started.png" alt="" title="" />';
+        }
+
+        echo '<td colspan="2"> <img src="themes/' . $authNamespace->andutteye_theme . '/systems_2.png" alt="" title="" /> '.$system_name.'</td>
+             <td> <img src="themes/' . $authNamespace->andutteye_theme . '/groups_2.png" alt="" title="" /> '.$group_name.'</td>
+             <td>' .$packagemanagement_status_image.' </td>
+             <td>' .$filemanagement_status_image.' </td>
 	      <td colspan="2"><input type="checkbox" name="param2[]" value='.$system_name.'></td>
 	      </tr>';
 }
@@ -5512,13 +5541,13 @@ echo '
 			<th>Submit</th>
 		</tr>';
 
-$sql = $db->query("select distinct(filename) from andutteye_files");
+$sql = $db->query("select filename,tagging from andutteye_files where revision = '1' order by filename asc");
  while ($row = $sql->fetch()) {
                 $filename  = $row['filename'];
-		$ressql = $db->query("select * from andutteye_files where domain_name = '$param2' and distribution = '$param3' and filename = '$filename' order by revision desc limit 0,1");
+                $tagging  = $row['tagging'];
+		$ressql = $db->query("select * from andutteye_files where domain_name = '$param2' and distribution = '$param3' and filename = '$filename' and tagging = '$tagging' and revision = '1'");
                 $ressql = $ressql->fetchObject();
 
-		
                 echo "
                 <form method='get' action='index.php'>
                 <input type='hidden' name='main' value='change_file_permissions'>
@@ -5549,7 +5578,7 @@ $sql = $db->query("select distinct(filename) from andutteye_files");
                         </td>
                      <td>
                             <img src="themes/' . $authNamespace->andutteye_theme . '/file_1.png" alt="" title="" />&nbsp;
-                             <a href="#" class="Tips2" title="Permission set by:' . $res->created_by . ' Date:' . $res->created_date . ' Time:' . $res->created_time . '">' .$ressql->directory.'/'.$ressql->filename.'--'.$ressql->tagging.'</a></td>
+                             <a href="#" class="Tips2" title="Permission set by:' . $res->created_by . ' Date:' . $res->created_date . ' Time:' . $res->created_time . '">' .$ressql->directory.'/'.$ressql->filename.''.$ressql->tagging.'</a></td>
                             <td><input class="button" type="submit" value="Set permission"></label></td>
                 </tr></form>';
 	}
