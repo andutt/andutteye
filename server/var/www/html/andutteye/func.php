@@ -104,22 +104,22 @@ echo '<div id="MainMenu">
 										echo '
 										<ul>
 
-                                                                                        <li><a href="index.php?main=monitoring_front&param1=' . $system_name . '"><img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" /> Monitoring</a></li>';
+                                                                                        <li><a href="index.php?main=monitoring_front&param1=' . $system_name . '"><img src="themes/' . $authNamespace->andutteye_theme . '/monitoring_1.png" alt="" title="" /> Monitoring</a></li>';
 
                                 						 if(verify_role_object_permission($system_name,'system',2,'0','0')) {
 
                                         						echo '
-                                                        					<li><a href="index.php?main=system_specification&param1=' .$system_name. '"><img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" /> Pkgmanagement</a></li>
-                                                        					<li><a href="index.php?main=system_files&param1=' .$system_name. '"><img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" /> Filemanagement</a></li>
-                                                        					<li><a href="index.php?main=system_configuration&param1='.$system_name.'"><img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" /> Configuration</a></li>';
+                                                        					<li><a href="index.php?main=system_specification&param1=' .$system_name. '"><img src="themes/' . $authNamespace->andutteye_theme . '/package_1.png" alt="" title="" /> Packages</a></li>
+                                                        					<li><a href="index.php?main=system_files&param1=' .$system_name. '"><img src="themes/' . $authNamespace->andutteye_theme . '/file_1.png" alt="" title="" /> Files</a></li>
+                                                        					<li><a href="index.php?main=system_configuration&param1='.$system_name.'"><img src="themes/' . $authNamespace->andutteye_theme . '/configuration_1.png" alt="" title="" /> Configuration</a></li>';
                                 						}
 
-                                        						  echo '<li><a href="index.php?main=show_statistics&param1='.$system_name.'"><img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" /> Statistics</a></li>
-                                                        				        <li><a href="index.php?main=show_software_profile&param1='.$system_name.'"><img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" /> Softwareinventory</a></li>
-                                                        					<li><a href="index.php?main=show_system_snapshot&param1='.$system_name.'"><img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" /> Systemsnapshots</a></li>
-                                                        					<li><a href="index.php?main=show_server_transactions&param1='.$system_name.'"><img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" /> Servertranses</a></li>
-                                                        					<li><a href="index.php?main=change_events_database"><img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" /> Changeeventsdb</a></li>
-                                                        					<li><img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" /> Syslogdb</li>
+                                        						  echo '<li><a href="index.php?main=show_statistics&param1='.$system_name.'"><img src="themes/' . $authNamespace->andutteye_theme . '/statistics_1.png" alt="" title="" /> Statistics</a></li>
+                                                        				        <li><a href="index.php?main=show_software_profile&param1='.$system_name.'"><img src="themes/' . $authNamespace->andutteye_theme . '/software_inventory_1.png" alt="" title="" /> Inventory</a></li>
+                                                        					<li><a href="index.php?main=show_system_snapshot&param1='.$system_name.'"><img src="themes/' . $authNamespace->andutteye_theme . '/snapshots_1.png" alt="" title="" /> Snapshots</a></li>
+                                                        					<li><a href="index.php?main=change_events_database"><img src="themes/' . $authNamespace->andutteye_theme . '/db_1.png" alt="" title="" /> Eventdb</a></li>
+                                                        					<li><img src="themes/' . $authNamespace->andutteye_theme . '/db_1.png" alt="" title="" /> Syslogdb</li>
+                                                        					<li><a href="index.php?main=show_server_transactions&param1='.$system_name.'"><img src="themes/' . $authNamespace->andutteye_theme . '/logs_1.png" alt="" title="" /> Logs</a></li>
 
 										</ul>';
 
@@ -397,7 +397,12 @@ require 'db.php';
 echo '
 <div id="content">
 	<h2 class="BigTitle"><img src="themes/' . $authNamespace->andutteye_theme . '/overview_b.png" alt="" title="" /><span class="ColoredTxt">Andutteye system</span> status</h2>
-';
+
+<fieldset class="GroupField">
+        <legend>Enviroment status</legend>
+        <table>                           
+              <th>Unresolved tasks</th></tr>
+';                                          
 
                 $sql = $db->query("select system_name from andutteye_systems order by system_name asc");
                 while ($row = $sql->fetch()) {
@@ -410,9 +415,9 @@ echo '
                         if($alarm != "0") {
 echo '
 <div class="SecurityAlert">
-	<span>
-		<a href="index.php?main=monitoring_front&param1=' . $system_name . '">There are <b>' . $alarm . '</b> untreated security alerts</a>
-	</span>
+        <span>
+                <a href="index.php?main=monitoring_front&param1=' . $system_name . '">There are <b>' . $alarm . '</b> untreated security alerts</a>
+        </span>
 </div>
 ';
                         }
@@ -422,9 +427,11 @@ echo '
                         $bundle = count($bundle);
 
                         if($bundle != "0") {
-echo '
-								<label><img src="themes/' . $authNamespace->andutteye_theme . '/alert.png" alt="" title="" /> <a href="index.php?main=system_specification&param1=' . $system_name . '"><b>' . $bundle . '</b> pending management bundle changes on system ' . $system_name . '</a></label>
-';
+                                echo '
+                                <td><img src="themes/' . $authNamespace->andutteye_theme . '/alert.png" alt="" title="" /> <a href="index.php?main=system_spe
+cification&param1=' . $system_name . '">There are <b>' . $bundle . '</b> pending management bundlechanges on system ' . $system_name . ' that needs to be sav
+ed.</a></td></tr>
+                                ';
                         }
 
                         $subsql = $db->query("select seqnr from andutteye_choosenpackages where system_name = '$system_name' and specaction != 'N'");
@@ -432,14 +439,19 @@ echo '
                         $package = count($package);
 
                         if($package != "0") {
-echo '
-								<label><img src="themes/' . $authNamespace->andutteye_theme . '/alert.png" alt="" title="" />  <a href="index.php?main=system_specification&param1=' . $system_name . '"><b>' . $package . '</b> pending management package changes on system ' . $system_name . '</a></label>
-';
+                                echo '
+                                <td><img src="themes/' . $authNamespace->andutteye_theme . '/alert.png" alt="" title="" />  <a href="index.php?main=system_sp
+ecification&param1=' . $system_name . '">There are <b>' . $package . '</b> pending management packagechanges on system '.$system_name.' that needs to be save
+d.</a></td></tr>
+                                ';
                         }
 
                 }
 
 echo '
+</table>
+</fieldset>
+
 <fieldset class="GroupField">
 	<legend>Andutteye services status</legend>
 	<div class="leftcol">
@@ -490,7 +502,7 @@ echo '
 		echo '
 		</label>
                 </div>
-                <div class="rightcol">
+			<div class="rightcol">
 		<label>';
 
 		include_once 'graph/php-ofc-library/open_flash_chart_object.php';
@@ -512,6 +524,7 @@ while ($row = $sql->fetch()) {
 		<legend><img src="themes/' . $authNamespace->andutteye_theme . '/domains_1.png" alt="" title="" /> Domain '.$domain_name.'</legend>
 		<table>
 			<th>System</th>
+				<th>Connectivity</th>
 			<th>Status</th>
 			<th>Date</th>
 			<th>Time</th>
@@ -533,6 +546,21 @@ while ($row = $sql->fetch()) {
 		} else {
 			echo '<td><img src="themes/' . $authNamespace->andutteye_theme . '/stopped.png" alt="" title="" /> System is offline</td>';
 		}
+
+		$sql   = $db->query("select seqnr from andutteye_managementobject_status where system_name = '$system_name' and status != 'Ok'");
+        	$diffs = $sql->fetchAll();
+        	$diff = count($diffs);
+
+		if($diff == 0) {
+			echo '<td><img src="themes/' . $authNamespace->andutteye_theme . '/started.png" alt="" title="" /></td>';
+		} else {
+			
+			$sssubsql = $db->query("select distinct(runid) from andutteye_managementlog where system_name = '$system_name' order by seqnr desc limit 0,1");
+                	$man = $sssubsql->fetchObject();
+			
+			echo '<td><img src="themes/' . $authNamespace->andutteye_theme . '/alert.png" alt="" title="" /> <a href="index.php?main=show_managementlog&param1=' . $system_name . '&param2=' . $man->runid . '">Review log '.$diff.' pending changes</a></td>';
+		}
+
 		echo "<td>$res->created_date</td>";
 		echo "<td>$res->created_time</td></tr>";
 	}
@@ -635,7 +663,7 @@ echo '
 </div>
 ';
 
-// End of subfunction
+	// End of subfunction
 }
 
 function create_group($param1,$param2,$param3,$param4,$param5,$param6,$param7,$param8,$param9,$param10) {
@@ -1227,7 +1255,7 @@ while ($row = $gsql->fetch()) {
 
         echo '<td colspan="2"> <img src="themes/' . $authNamespace->andutteye_theme . '/systems_2.png" alt="" title="" /> '.$system_name.'</td>
 	     <td> <img src="themes/' . $authNamespace->andutteye_theme . '/groups_2.png" alt="" title="" /> '.$group_name.'</td>
-	     <td>' .$packagemanagement_status_image.' </td>
+	     <td>' .$packagemanagement_status_image.'</td>
 	     <td>' .$filemanagement_status_image.' </td>
              <td><input type="checkbox" name="param2[]" value='.$system_name.'></td>
               </tr>';
@@ -2082,6 +2110,51 @@ echo '<h3 class="toggler">
 echo '</table></div>';
 
 echo '<h3 class="toggler">
+        <img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle"> SYSTEM INTEGRITY</span></h3>
+        <div class="element">
+                        <table>
+                                <th>Managementobject</th>
+                                <th>Status</th>
+                                <th>Managementlog</th>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>By</th>
+                                </tr>';
+
+		$gsql = $db->query("select * from andutteye_managementobject_status where system_name = '$param1' order by management_obj asc");
+
+                 while ($row = $gsql->fetch()) {
+                        $seqnr             = $row['seqnr'];
+                        $management_obj    = $row['management_obj'];
+                        $status            = $row['status'];
+                        $management_log    = $row['management_log'];
+                        $created_by        = $row['created_by'];
+                        $created_date      = $row['created_date'];
+                        $created_time      = $row['created_time'];
+
+			echo '
+                                <td>
+                                <img src="themes/' . $authNamespace->andutteye_theme . '/link.png" alt="" title="" /> '.$management_obj.'</td>
+                                <td>'.$status.'</td>';
+
+				if($management_log) {
+                                	echo '<td><a href="index.php?main=show_managementlog&param1=box&param2='.$management_log.'" class="Tips2" title="Management log:'.$management_log.'">Review log</a></td>';
+				} else {
+					echo '<td>No log available</td>';
+				}
+			echo '
+                                <td>'.$created_date.'</td>
+                                <td>'.$created_time.'</td>
+                                <td>'.$created_by.'</td>
+	
+				</tr>
+                                ';
+		}
+
+echo '</table></div>';
+
+
+echo '<h3 class="toggler">
 	<img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle"> SYSTEM TRANSFER FILES</span></h3>
 	<div class="element">
 			<table>
@@ -2658,7 +2731,7 @@ require_once 'Zend/Session/Namespace.php';
 $authNamespace = new Zend_Session_Namespace('Zend_Auth');
 
 echo '<div id="content">
-	<h2 class="BigTitle">' . $param1 . ' Server <span class="ColoredTxt">Transactions</span></h2>
+	<h2 class="BigTitle">' . $param1 . ' Server <span class="ColoredTxt">Transactions</span> and management logs</h2>
 		<fieldset class="GroupField">
 			<legend>Transactions</legend>';
 echo '<label>';
@@ -2667,6 +2740,33 @@ echo '<label>';
 echo '</label>
 </fieldset>
 ';
+
+echo '
+<h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle">&nbsp;System management logs</span></h3>
+        <div class="element">
+                <table>
+                        <th>Managementlog id</th>
+                        <th>Date</th>
+                </tr>';
+
+
+                        $sql = $db->query("select distinct runid,created_date from andutteye_managementlog where system_name = '$param1' order by seqnr desc limit 0,20");
+                        while ($row = $sql->fetch()) {
+                               $runid  = $row['runid'];
+                               $created_date  = $row['created_date'];
+
+                                echo '
+                                <td><img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" /><a href="index.php?main=show_managementlog&param1=' . $param1 . '&param2=' . $runid . '">Management log RunId ' . $runid . '</a></td>
+                                <td>'.$created_date.'</td>
+                                </tr>
+';
+                        }
+
+
+
+echo '
+</table>
+</div>';
 
 echo '<h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle"> Select other dates</span></h3>
 	<div class="element">
@@ -5313,9 +5413,9 @@ $date = date("20y-m-d");
 $time = date("H:m:s");
 
 $data = array(
-        'system_name' => "$param1",
-        'bundle'      => "$param5",
-        'revision'    => "$param8",
+        'system_name'  => "$param1",
+        'bundle'       => "$param5",
+        'revision'     => "$param8",
         'specid'       => "$param3",
         'specaction'   => "A",
         'created_date' => "$date",
@@ -5323,6 +5423,8 @@ $data = array(
         'created_by'   => "$authNamespace->andutteye_username"
         );
         $db->insert('andutteye_choosenbundles', $data);
+        header("Location:index.php?main=show_bundles&param1=$param1&param3=$param3");
+        exit;
 }
 
 echo '<div id="content">
@@ -5393,7 +5495,7 @@ echo '<fieldset class="GroupField">
                         $packages = count($packages);
 
 			echo '
-				<td><a href="#" class="Tips2" title="Package:' . $aepackage . ' Version:' . $aeversion . ' Release:' . $aerelease . ' Arch:' . $aearchtype . ' Action:' . $aeaction . '">' . $bundle . '</a></td>
+				<td><a href="#" class="Tips2" title="Bundle:' . $bundle . ' Revision:' . $revision . '">' . $bundle . '</a></td>
 				<td>' . $packages . '</td>
 				<td>' . $revision . '</td>
 				<td>' . $created_date . '</td>
@@ -5441,23 +5543,23 @@ echo '
                         $sql = $db->query("select distinct bundle, revision, created_date, created_time from andutteye_bundles where distribution = '$res->distribution' and domain_name = '$dom->domain_name' order by bundle  asc limit 0,20");
                 }
                 while ($row = $sql->fetch()) {
-                        $seqnr  = $row['seqnr'];
                         $bundle  = $row['bundle'];
                         $revision    = $row['revision'];
                         $created_date    = $row['created_date'];
                         $created_time    = $row['created_time'];
 
-                        $subsql  = $db->query("select bundle from andutteye_choosenbundles where system_name = '$param1' and specid = '$param3' and specaction = 'N' and bundle = '$bundle' and revision = '$revision'");
+                        $subsql  = $db->query("select bundle from andutteye_choosenbundles where system_name = '$param1' and specid = '$param3' and specaction != 'R' and bundle = '$bundle' and revision = '$revision'");
                         $choosen = $subsql->fetchObject();
 
                         if($bundle == $choosen->bundle) {
-                                continue;
+				continue;
+				
                         }
 			$subsql2 = $db->query("select seqnr from andutteye_bundles where bundle = '$bundle' and revision = '$revision' and domain_name = '$dom->domain_name'");
                         $packages = $subsql2->fetchAll();
                         $packages = count($packages);
 
-echo '
+			echo '
 			<form method="get" action="index.php">
 				<input type="hidden" name="main" value="show_bundles">
 				<input type="hidden" name="param1" value="' . $param1 . '">
@@ -5466,17 +5568,18 @@ echo '
 				<input type="hidden" name="param8" value="' . $revision . '">
 
 
-				<td><a href="#" class="Tips2" title="Bundle:' . $bundle . ' Revision:' . $revision . ' Distribution:' . $distribution . '"><b>' . $bundle . '</b></a></td>
+				<td><a href="#" class="Tips2" title="Bundle:' . $bundle . ' Revision:' . $revision . ' Distribution:' . $res->distribution . '"><b>' . $bundle . '</b></a></td>
 				<td>' . $packages . '</td>
 				<td>' . $revision . '</td>
 				<td>' . $res->distribution . '</td>
-				<td>Add<input type="radio" name="param9" value="add"></td>
+				<td><input type="radio" name="param9" value="add"></td>
 				<td><input class="button" type="submit" value="Submit bundle change"></td>
+				</form>
+
 				<td>
 					<img src="themes/' . $authNamespace->andutteye_theme . '/delete_1.png" alt="" title="" />
 					<a href="index.php?main=remove_bundle&param1=' . $bundle . '&param2=' . $revision . '&param3=' . $res->distribution . '&param4=' . $dom->domain_name . '&param5=' . $param1 . '&param6=' . $param3 . '" onclick="return confirm(\'Remove bundle ' . $bundle . ' revision ' . $revision . ' for domain ' . $dom->domain_name . ' that contains ' . $packages . ' packages?\')">Remove</a>
 				</td>
-			</form>
 			</tr>';
                 }
 
@@ -5731,7 +5834,7 @@ if(!$param7) {
 
 $data = array(
         'system_name'  => "$param1",
-		'aepackage'    => "$param5",
+	'aepackage'    => "$param5",
         'aeversion'    => "$param6",
         'aerelease'    => "$param7",
         'aearchtype'   => "$param8",
@@ -5743,6 +5846,9 @@ $data = array(
         'created_by'   => "$authNamespace->andutteye_username"
 	);
 	$db->insert('andutteye_choosenpackages', $data);
+	header("Location:index.php?main=show_packages&param1=$param1&param3=$param3");
+        exit;
+
 }
 
 echo '<div id="content">
@@ -6098,7 +6204,7 @@ if(!$param13 ) {
         $data = array(
        		'revision'       => "$next_revision",
                 'system_name'    => "$param1",
-                'packagetype'    => "$param5",
+                'pkgmanagementtype'    => "$param5",
                 'archtype'       => "$param7",
                 'distribution'   => "$param8",
                 'package_update' => "$param12",
@@ -6210,6 +6316,9 @@ if(!$param13 ) {
         $sql   = $db->query("select seqnr from andutteye_choosenbundles where system_name ='$param1' and specid = '$res->revision'");
         $bundles = $sql->fetchAll();
         $bundles = count($bundles);
+
+        header("Location:index.php?main=system_specification&param1=$param1");
+        exit;
 }
 
 $subsql = $db->query("select seqnr from andutteye_choosenbundles where system_name = '$param1' and specaction != 'N'");
@@ -6241,14 +6350,13 @@ echo '
 					System ' . $res->system_name . '</td>
 					</tr>
 					<td>
-					Package type</td>
+					Packagemanagement validationtype</td>
 					</tr>
 					<td>
 						<select name="param5" style="WIDTH: 260px">
-							<option value="' . $res->packagetype . '"> ' . $res->packagetype . '
-							<option value="rpm"> rpm
-							<option value="apt"> apt
-							<option value="andutteye"> andutteye
+							<option value="' . $res->pkgmanagementtype . '"> ' . $res->pkgmanagementtype . '
+							<option value="Selected"> Selected
+							<option value="Full"> Full
 						</select>
 					</td>
 					</tr>
@@ -6542,86 +6650,10 @@ echo '
 
 echo '
 	</table>
-</div>
-
-<h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle">&nbsp;Patchlevel management</span></h3>
-	<div class="element">
-		<table>
-			<th>Distribution</th>
-			<th>Patchlevel</th>
-			<th>Status</th>
-			<th>Log</th>
-			<th>By</th>
-			</tr>';
-
-			 $sql = $db->query("select * from andutteye_patchlevel where distribution = '$res->distribution' order by patchlevel desc");
-                       	 while ($row = $sql->fetch()) {
-                                $distribution  = $row['distribution'];
-                                $patchlevel    = $row['patchlevel'];
-                                $status        = $row['status'];
-                                $log           = $row['log'];
-                                $created_date  = $row['created_date'];
-                                $created_time  = $row['created_time'];
-                                $created_by    = $row['created_by'];
-
-				echo '
-					<td>' . $distribution . '</td>
-					<td>' . $patchlevel . '</td>
-					<td>' . $status . '</td>
-					<td>' . $log . '</td>
-					<td>' . $created_by . '</td>
-					</tr>';
-
-				echo '
-					<form method="get" action="index.php">
-						<input type="hidden" name="main" value="system_configuration">
-						<input type="hidden" name="param1" value="' . $param1 . '">
-						<input type="hidden" name="' . $seqnr . '" value="' . $param3 . '">
-							<div class="table">
-								<div class="column40"><label>Change patchlevel characteristics here</a></label></div>
-								<div class="column"><label>Open patchlevel<input type="radio" name="param2" value="open"></label></div>
-								<div class="column"><label>Lock patchlevel<input type="radio" name="param2" value="disable"></label></div>
-								<div class="column"><label>' . $created_date . '</label></div>
-								<div class="column"><label>' . $created_time . '</label></div>
-							</div>
-						<label><input class="button" type="submit" value="Change patchlevel status"></label>
-						<br />
-					</form>
-';
-
-			}
+</div>';
 
 
 echo '
-</table>
-</div>
-
-<h3 class="toggler"><img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" /><span class="InfoTitle">&nbsp;System management logs</span></h3>
-	<div class="element">
-		<table>
-			<th>Managementlog id</th>
-			<th>Date</th>
-		</tr>';
-
-				
-                        $sql = $db->query("select distinct runid,created_date from andutteye_managementlog where system_name = '$res->system_name' order by seqnr desc limit 0,20");
-                        while ($row = $sql->fetch()) {
-                               $runid  = $row['runid'];
-                               $created_date  = $row['created_date'];
-				
-				echo '
-				<td><img src="themes/' . $authNamespace->andutteye_theme . '/actions.png" alt="" title="" /><a href="index.php?main=show_managementlog&param1=' . $param1 . '&param2=' . $runid . '">Management log RunId ' . $runid . '</a></td>
-				<td>'.$created_date.'</td>
-				</tr>
-';
-			}
-
-
-
-echo '
-</table>
-</div>
-			
 <div class="DivSpacer"></div>
 	<label><img src="themes/' . $authNamespace->andutteye_theme . '/back.png" alt="" title="" /> <a href="index.php?main=system_overview&param1=' . $param1 . '">&nbsp;Back to ' . $param1 . ' system overview</a></label>
 
@@ -6912,7 +6944,7 @@ echo "<div id='content'>
         }
 
 echo "</table>
- <label><img src='themes/$authNamespace->andutteye_theme/back.png' alt='' title='' /><a href='index.php?main=system_specification&param1=$param1'>&nbsp;Back to $param1 system overview</a></label>
+ <label><img src='themes/$authNamespace->andutteye_theme/back.png' alt='' title='' /><a href='index.php?main=show_server_transactions&param1=$param1'>&nbsp;Back to $param1 logs</a></label>
 	</fieldset>
      </div>
 </div>
@@ -7153,13 +7185,13 @@ if($param6) {
 	$sql = $db->query("select * from andutteye_files where filename = '$param1' and directory = '$param2' and distribution = '$param3' and tagging = '$param4' and revision = '$param6'");
 	$res = $sql->fetchObject();
 
-	$subsql = $db->query("select * from andutteye_files where filename = '$param1' and directory = '$param2' and distribution = '$param3' and tagging = '$param4' order by revision desc limit 0,1");
+	$subsql = $db->query("select * from andutteye_files where filename = '$param1' and directory = '$param2' and distribution = '$param3' and tagging = '$param4' order by seqnr desc limit 0,1");
 	$seq = $subsql->fetchObject();
 } else {
-	$sql = $db->query("select * from andutteye_files where filename = '$param1' and directory = '$param2' and distribution = '$param3' and tagging = '$param4' order by revision desc limit 0,1");
+	$sql = $db->query("select * from andutteye_files where filename = '$param1' and directory = '$param2' and distribution = '$param3' and tagging = '$param4' order by seqnr desc limit 0,1");
 	$res = $sql->fetchObject();
 
-	$subsql = $db->query("select * from andutteye_files where filename = '$param1' and directory = '$param2' and distribution = '$param3' and tagging = '$param4' order by revision desc limit 0,1");
+	$subsql = $db->query("select * from andutteye_files where filename = '$param1' and directory = '$param2' and distribution = '$param3' and tagging = '$param4' order by seqnr desc limit 0,1");
 	$seq = $subsql->fetchObject();
 }
 
@@ -7304,7 +7336,7 @@ echo '</fieldset>
 				<td>
 					<select name="param6" style="WIDTH: 260px">';
 
-                                           $sql = $db->query("select revision from andutteye_files where filename = '$param1' and directory = '$param2' and distribution = '$param3' and tagging = '$param4' order by revision desc");
+                                           $sql = $db->query("select revision from andutteye_files where filename = '$param1' and directory = '$param2' and distribution = '$param3' and tagging = '$param4' order by seqnr desc");
                                             while ($row = $sql->fetch()) {
                                                     $revision = $row['revision'];
 						     echo '<option value="' . $revision . '">&nbsp;' . $revision . '.0';
@@ -7317,8 +7349,35 @@ echo '</fieldset>
 			</form>
 	</table>
 </fieldset>
-
+<fieldset class="GroupField">
+        <legend>File revisionhistory</legend>
+                <table>
+			<th>File</th>
+			<th>Revision</th>
+			<th>Created by</th>
+			<th>Created on</th>
+		</tr>
 ';
+
+$sql = $db->query("select directory, filename, tagging, revision, created_by, created_date, created_time from andutteye_files where filename = '$param1' and directory = '$param2' and distribution = '$param3' and tagging = '$param4' order by seqnr desc limit 0,5");
+                                            while ($row = $sql->fetch()) {
+                                                    $directory = $row['directory'];
+                                                    $filename = $row['filename'];
+                                                    $tagging = $row['tagging'];
+                                                    $revision = $row['revision'];
+                                                    $created_by = $row['created_by'];
+                                                    $created_date = $row['created_date'];
+                                                    $created_time = $row['created_time'];
+					 	    echo "<td>$directory/$filename$tagging</td>";
+					 	    echo "<td>$revision</td>";
+					 	    echo "<td>$created_by</td>";
+					 	    echo "<td>$created_date $created_time</td>";
+						    echo "</tr>";
+                                            }
+
+echo'  </table>
+</fieldset>';
+
 
 echo '<div class="DivSpacer"></div>
 	<label>
@@ -7332,7 +7391,7 @@ echo '<div class="DivSpacer"></div>
 }
 
 
-function save_file($param1,$param2,$param3,$param4,$param5,$param6,$param7,$param8,$param9,$param10,$param11) {
+function save_file($param1,$param2,$param3,$param4,$param5,$param6,$param7,$param8,$param9,$param10,$param11,$param12) {
 require 'db.php';
 require_once 'Zend/Auth/Adapter/DbTable.php';
 require_once 'Zend/Session/Namespace.php';
@@ -7353,6 +7412,7 @@ $res = $sql->fetchObject();
 	$pattern = "/(\cM)/";
 	$replace = "";
 	$param1 = preg_replace($pattern, $replace, "$param1");
+
 
                 $data = array(
                         'filename'       => "$res->filename",
@@ -9031,7 +9091,7 @@ if(!verify_role_object_permission($param3,'group',2,'0','0')) {
 switch ($param1) {
     case 'EnableFilemanagment':
 		while (list ($key,$system) = @each ($param2)) {
-			$sql = $db->query("select revision from andutteye_specifications where system_name = '$system' order by revision desc limit 0,1");
+			$sql = $db->query("select revision from andutteye_specifications where system_name = '$system' order by seqnr desc limit 0,1");
 			$res = $sql->fetchObject();
 
 			$sql = "update andutteye_specifications set config_update = 'Active' where system_name = '$system' and revision = '$res->revision'";
@@ -9040,7 +9100,7 @@ switch ($param1) {
         break;
     case 'DisableFilemanagement':
 		while (list ($key,$system) = @each ($param2)) {
-			$sql = $db->query("select revision from andutteye_specifications where system_name = '$system' order by revision desc limit 0,1");
+			$sql = $db->query("select revision from andutteye_specifications where system_name = '$system' order by seqnr desc limit 0,1");
 			$res = $sql->fetchObject();
 
 			$sql = "update andutteye_specifications set config_update = 'Disabled' where system_name = '$system' and revision = '$res->revision'";
@@ -9049,7 +9109,7 @@ switch ($param1) {
         break;
     case 'EnablePackagemanagement':
 		while (list ($key,$system) = @each ($param2)) {
-			$sql = $db->query("select revision from andutteye_specifications where system_name = '$system' order by revision desc limit 0,1");
+			$sql = $db->query("select revision from andutteye_specifications where system_name = '$system' order by seqnr desc limit 0,1");
 			$res = $sql->fetchObject();
 
 			$sql = "update andutteye_specifications set package_update = 'Active' where system_name = '$system' and revision = '$res->revision'";
@@ -9058,7 +9118,7 @@ switch ($param1) {
         break;
     case 'DisablePackagemanagement':
 		while (list ($key,$system) = @each ($param2)) {
-			$sql = $db->query("select revision from andutteye_specifications where system_name = '$system' order by revision desc limit 0,1");
+			$sql = $db->query("select revision from andutteye_specifications where system_name = '$system' order by seqnr desc limit 0,1");
 			$res = $sql->fetchObject();
 
 			$sql = "update andutteye_specifications set package_update = 'Disabled' where system_name = '$system' and revision = '$res->revision'";
@@ -9105,7 +9165,7 @@ if(!verify_role_object_permission($param3,'domain',2,'0','0')) {
 switch ($param1) {
     case 'EnableFilemanagment':
 		while (list ($key,$system) = @each ($param2)) {
-			$sql = $db->query("select revision from andutteye_specifications where system_name = '$system' order by revision desc limit 0,1");
+			$sql = $db->query("select revision from andutteye_specifications where system_name = '$system' order by seqnr desc limit 0,1");
 			$res = $sql->fetchObject();
 
 			$sql = "update andutteye_specifications set config_update = 'Active' where system_name = '$system' and revision = '$res->revision'";
@@ -9114,7 +9174,7 @@ switch ($param1) {
         break;
     case 'DisableFilemanagement':
 		while (list ($key,$system) = @each ($param2)) {
-			$sql = $db->query("select revision from andutteye_specifications where system_name = '$system' order by revision desc limit 0,1");
+			$sql = $db->query("select revision from andutteye_specifications where system_name = '$system' order by seqnr desc limit 0,1");
 			$res = $sql->fetchObject();
 
 			$sql = "update andutteye_specifications set config_update = 'Disabled' where system_name = '$system' and revision = '$res->revision'";
@@ -9123,7 +9183,7 @@ switch ($param1) {
         break;
     case 'EnablePackagemanagement':
 		while (list ($key,$system) = @each ($param2)) {
-			$sql = $db->query("select revision from andutteye_specifications where system_name = '$system' order by revision desc limit 0,1");
+			$sql = $db->query("select revision from andutteye_specifications where system_name = '$system' order by seqnr desc limit 0,1");
 			$res = $sql->fetchObject();
 
 			$sql = "update andutteye_specifications set package_update = 'Active' where system_name = '$system' and revision = '$res->revision'";
@@ -9132,7 +9192,7 @@ switch ($param1) {
         break;
     case 'DisablePackagemanagement':
 		while (list ($key,$system) = @each ($param2)) {
-			$sql = $db->query("select revision from andutteye_specifications where system_name = '$system' order by revision desc limit 0,1");
+			$sql = $db->query("select revision from andutteye_specifications where system_name = '$system' order by seqnr desc limit 0,1");
 			$res = $sql->fetchObject();
 
 			$sql = "update andutteye_specifications set package_update = 'Disabled' where system_name = '$system' and revision = '$res->revision'";
@@ -9293,7 +9353,7 @@ require 'db.php';
 require_once 'Zend/Session/Namespace.php';
 $authNamespace = new Zend_Session_Namespace('Zend_Auth');
 
-$sql = $db->query("select revision from andutteye_specifications where system_name = '$system_name' order by revision desc limit 0,1");
+$sql = $db->query("select revision from andutteye_specifications where system_name = '$system_name' order by seqnr desc limit 0,1");
 $res = $sql->fetchObject();
 
 $sql = $db->query("select config_update from andutteye_specifications where system_name = '$system_name' and revision = '$res->revision'");
@@ -9310,7 +9370,7 @@ require 'db.php';
 require_once 'Zend/Session/Namespace.php';
 $authNamespace = new Zend_Session_Namespace('Zend_Auth');
 
-$sql = $db->query("select revision from andutteye_specifications where system_name = '$system_name' order by revision desc limit 0,1");
+$sql = $db->query("select revision from andutteye_specifications where system_name = '$system_name' order by seqnr desc limit 0,1");
 $res = $sql->fetchObject();
 
 $sql = $db->query("select package_update from andutteye_specifications where system_name = '$system_name' and revision = '$res->revision'");

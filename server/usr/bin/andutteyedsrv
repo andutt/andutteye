@@ -1453,6 +1453,19 @@ if(defined($row[0])) {
 
 	@lines=split(";;;;","$result");
         	for(@lines) {
+
+			if($_=~/##!DIFF!##:/) {
+				my @tmp=split(":",$_);
+				print_out("info","5","Updating managementobject $tmp[1] for system $system_name");
+
+				$sql ="update andutteye_managementobject_status set status = 'Differs'";
+				$sql .=", created_by = 'andutteyedsrv', created_date = '$date', created_time = '$time', management_log = '$runid'";
+				$sql .=" where management_obj = '$tmp[1]' and system_name = '$system_name'";
+				$sth = $dbh->prepare("$sql");
+                        	$sth->execute;
+				
+			}
+
 			$sql ="insert into andutteye_managementlog(runid,system_name,logentry,messagetype,created_date,created_time) values (?,?,?,?,?,?)";
 			$sth = $dbh->prepare("$sql");
                         $sth->execute($runid,$system_name,"$_","AgentLogEntry",$date,$time);
@@ -1462,6 +1475,12 @@ if(defined($row[0])) {
 } else {
 	print_out("error","1","no last runid for management resultlog save on system:$system_name");
 }
+
+$sql ="update andutteye_managementobject_status set status = 'Ok'";
+$sql .=", created_by = 'andutteyedsrv', created_date = '$date', created_time = '$time'";
+$sql .=" where status != 'Differs' and system_name = '$system_name'";
+$sth = $dbh->prepare("$sql");
+$sth->execute;
 
 
 print $client "ANDUTTEYEQUIT\n";

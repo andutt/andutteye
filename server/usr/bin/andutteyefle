@@ -143,7 +143,7 @@ if (!defined($row[1])) {
 	$group="$row[1]";
 }
 
-$sql="select patchlevel,distribution from andutteye_specifications where system_name = '$system' order by revision desc limit 0,1";
+$sql="select patchlevel,distribution from andutteye_specifications where system_name = '$system' order by seqnr asc limit 0,1";
 $sth = $dbh->prepare("$sql");
 $sth->execute or die "Failed :$!\n";
 @row = $sth->fetchrow_array;
@@ -210,7 +210,7 @@ for(@tagging) {
 	
 		$subsql = "select filename,directory,tagging,revision,fileindex,prestep,poststep,perms,perm_owner,perm_group,content,seqnr";
 		$subsql.= " from andutteye_files where filename = '$filename' and directory = '$directory' and tagging";
-		$subsql.= " = '$tagging' order by revision desc limit 0,1";
+		$subsql.= " = '$tagging' order by seqnr desc limit 0,1";
 		$substh = $dbh->prepare("$subsql");
 		$substh->execute or die "Failed :$!\n";
 		@res = $substh->fetchrow_array;
@@ -248,6 +248,11 @@ connect_to_database();
 open("action",">>$Cache_dir_location/$system/actionlist.dat")
 	or die $!;
 
+print "Cleaning management_object status from information.\n";
+$sql = "delete from andutteye_managementobject_status where system_name = '$system'";
+$sth = $dbh->prepare("$sql");
+$sth->execute or die "Failed :$!\n";
+
 for my $control (keys %files) {
 	my $check = $files{$control};
 	print "\t------- Found and to be exported file(s)\n";
@@ -273,6 +278,12 @@ for my $control (keys %files) {
 
 	print "Creating actionlist for $check->{directory}/$check->{filename}\n";
 	print action "File#$check->{filename}#$check->{directory}#$check->{fileindex}#$row[3]#$row[4]#$row[5]#$row[1]#$row[2]#$Active\n";
+	
+	print "Loading management_object status for $check->{directory}/$check->{filename}\n";
+	$subsql = "insert into andutteye_managementobject_status(system_name,management_obj,status,created_date,created_time,created_by)";
+	$subsql.= " values('$system','$check->{directory}/$check->{filename}','Sent','$date','$time','andutteyefle')";
+	$substh = $dbh->prepare("$subsql");
+	$substh->execute or die "Failed :$!\n";
 }
 
 close("action");

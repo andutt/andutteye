@@ -55,6 +55,7 @@ our $aearch;
 our $aearchtype;
 our $distribution;
 our $nrdependencies;
+our $validate_package_method;
 our %fixed_packages;
 our %auto_packages;
 our %perform_packages;
@@ -479,6 +480,7 @@ $sth->execute or die "Failed:$!\n";
 # retrieve all installed packages and check for any nonexisting packages which will be removed.
 while (@installed = $sth->fetchrow_array){
         $found=0;
+
         # check entire package hash for a match on name and archtype.
         for my $control2 (sort keys %auto_packages) {
                 my $auto2 = $auto_packages{$control2};
@@ -493,13 +495,19 @@ while (@installed = $sth->fetchrow_array){
 		}
         }
         if ($found == 0) {
-                # could not find a package and arch -match in the hash. lets uninstall package!.
-                $perform_count++;
-                print "[info] [Uninstall] Package only exist on server: name => $installed[0], version => $installed[1], release => $installed[2], arch => $installed[3]\n";
-                $perform_packages{"$perform_count"} = { name => "$installed[0]", version => "--", release => "--", arch => "$installed[3]", sversion => "$installed[1]", srelease => "$installed[2]", action => "Uninstall" };
-                $uninstall++;
-		# Uninstall problems fix.
-                $perform_count++;
+	
+		# If selected package_validate_method is used, we dont what to touch anything else then our package(s)
+		if($validate_package_method eq "Selected") {
+			print "validate_package_method is set to Selected, will not uninstall.\n";
+		} else {
+                	# could not find a package and arch -match in the hash. lets uninstall package!.
+                	$perform_count++;
+                	print "[info] [Uninstall] Package only exist on server: name => $installed[0], version => $installed[1], release => $installed[2], arch => $installed[3]\n";
+                	$perform_packages{"$perform_count"} = { name => "$installed[0]", version => "--", release => "--", arch => "$installed[3]", sversion => "$installed[1]", srelease => "$installed[2]", action => "Uninstall" };
+                	$uninstall++;
+			# Uninstall problems fix.
+                	$perform_count++;
+		}
         }
 }
 #
@@ -731,6 +739,26 @@ if("$row[0]" eq "") {
 	}
 }
 	
+# End of subfunction
+}
+sub determine_packagemanagement_type {
+
+connect_to_database();
+
+$sql="select pkgmanagementtype from andutteye_specifications where system_name = '$system' and revision = '$specification_revision'";
+$sth = $dbh->prepare("$sql");
+$sth->execute or die "Failed :$!\n";
+@row = $sth->fetchrow_array;
+
+$validate_package_method="$row[0]";
+
+if($validate_package_method) {
+	print "[info] Package validation method is set to $validate_package_method\n";
+} else {
+	print "[Error] ERROR no package validation method is set for system:$system and revision:$specification_revision!\n";
+	exit;
+}
+
 # End of subfunction
 }
 
@@ -1040,6 +1068,7 @@ parse_and_load_configuration();
 determine_if_valid();
 determine_jobid();
 determine_specification_revision();
+determine_packagemanagement_type();
 get_domain();
 load_choosen_bundles_and_packages_info();
 load_choosen_package_from_packages_field();

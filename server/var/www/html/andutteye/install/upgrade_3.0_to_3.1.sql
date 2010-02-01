@@ -41,3 +41,4 @@ alter table andutteye_packages add column patchlevelinfo varchar(255) default nu
 alter table andutteye_rolepermissions add column distribution varchar(255) default null;
 alter table andutteye_rolepermissions add column domain_name varchar(255) default null;
 alter table andutteye_files add column filelocked varchar(255) default null;
+alter table andutteye_specifications add column pkgmanagementtype varchar(255) default null;

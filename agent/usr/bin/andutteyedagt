@@ -2797,7 +2797,7 @@ for(1..10) {
 							}
 						}
 
-						print "\t[info] Installing correct file->$dir/file\n";
+						print "\t[info] Installing correct file->$dir/$file\n";
 						$ecode=system("mv -f $Cache_dir_location/management/$dir/$file $dir/$file");
 						
 						if($ecode == 0) {
@@ -2856,7 +2856,7 @@ for(1..10) {
 						}
 					} else {
 						print "\t[info] File $dir/$file differs, notok.\n";
-						print result "## Notice! ## File $dir/$file differs, differences below.\n";
+						print result "##!DIFF!##:$dir/$file: differs, differences below.\n";
 						print result "$diff\n";
 
 						if($Active eq "Active") {
