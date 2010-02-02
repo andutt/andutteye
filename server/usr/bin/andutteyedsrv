@@ -53,6 +53,7 @@ our $pid;
 our $waitpid;
 our @splittedsoft;
 our $splittedsoft;
+our $monitor_max="500";
 our $transfer_item_loops="0";
 our $next_transfer_item_loops="0";
 my $socket;
@@ -1063,10 +1064,15 @@ for(@monitors) {
 			print_out("warning","2","Found a invalid monitor on $system_name, type is: $monitorline[0]");
 		}
 	}
+	if($loaded >= $monitor_max) {
+		print_out("error","2","System:$system_name exceeded maximum amount of monitors:$monitor_max");
+		log_entry("Exceeded maximum amount of monitors:$monitor_max","MonitorMax","$system_name");
+                last;
+        }
 # End of forloop
 }
 #print "[$date $time] Saved $loaded system monitors in database\n";
-print_out("info","3","saved $loaded system monitors in database for $system_name");
+print_out("info","3","Saved $loaded system monitors in database for $system_name");
 log_entry("Saved $loaded system monitors in database","SaveConfig","$system_name");
 #print "[$date $time] $override dont saved because they were not overrideble.\n";
 print_out("info","3","For $system_name, the amount of non-overridable monitors was $override");
@@ -1356,7 +1362,7 @@ if (! -f "$Management_package_program") {
 	print_out("info","2","Validating management packages for $system_name");
 	log_entry("Validating management packages","ValidateManagement","$system_name");
 	#system("$Management_package_program -system=$system_name > /dev/null 2>&1");
-	system("$Management_package_program -system=$system_name");
+	system("$Management_package_program -system=$system_name > /dev/null 2>&1");
 
 }
 if (! -f "$Management_files_program") {
