@@ -2138,7 +2138,7 @@ echo '<h3 class="toggler">
                                 <td>'.$status.'</td>';
 
 				if($management_log) {
-                                	echo '<td><a href="index.php?main=show_managementlog&param1=box&param2='.$management_log.'" class="Tips2" title="Management log:'.$management_log.'">Review log</a></td>';
+                                	echo '<td><img src="themes/' . $authNamespace->andutteye_theme . '/alert.png" alt="" title="" /> <a href="index.php?main=show_managementlog&param1='.$param1.'&param2='.$management_log.'" class="Tips2" title="Management log:'.$management_log.'">Review log</a></td>';
 				} else {
 					echo '<td>No log available</td>';
 				}
