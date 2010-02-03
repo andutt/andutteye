@@ -8963,8 +8963,8 @@ echo '
                 				<option value="--'.$domain_name.'--'.$man->patchlevel.'"> --'.$domain_name.'--'.$man->patchlevel.'
                 				<option value="--'.$group_name.'"> --'.$group_name.'
                 				<option value="--'.$group_name.'--'.$man->patchlevel.'"> --'.$group_name.'--'.$man->patchlevel.'
-                				<option value="-- '.$domain_name.'--'.$group_name.'"> -- '.$domain_name.'--'.$group_name.'
-                				<option value="-- '.$domain_name.'--'.$group_name.'--'.$man->patchlevel.'"> -- '.$domain_name.'--'.$group_name.'--'.$man->patchlevel.'
+                				<option value="--'.$domain_name.'--'.$group_name.'"> -- '.$domain_name.'--'.$group_name.'
+                				<option value="--'.$domain_name.'--'.$group_name.'--'.$man->patchlevel.'"> -- '.$domain_name.'--'.$group_name.'--'.$man->patchlevel.'
                 				<option value="--'.$system_name.'"> --'.$system_name.'
                 				<option value="--'.$system_name.'--'.$man->patchlevel.'"> --'.$system_name.'--'.$man->patchlevel.' (B)
                 				<option value="">(End '.$system_name.' tagging options)
