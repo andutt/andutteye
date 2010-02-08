@@ -1,0 +1,172 @@
+#!/bin/bash
+#
+# Copyright (C) 2004-2010 Andreas Utterberg Thundera AB.
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# version 3 as published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# For the complete GPL v3 license, visit http://www.fsf.org/licenses
+#
+# chkconfig: 345 90 10
+# description: Andutteye Systems Management Solution
+#
+# processname: andutteyedprx, andutteyedagt, andutteyedsrv
+# pid: /var/run/processname.pid
+#
+### BEGIN INIT INFO                                          
+# Provides:            andutteye                             
+# Required-Start:      $network                              
+# Required-Stop:                                             
+# Default-Start:         3 5                                 
+# Default-Stop:        0 1 2 6                               
+# Description:         Start Andutteye services              
+### END INIT INFO                                            
+
+if [ ! -f "/etc/sysconfig/andutteye" ]
+       then                           
+       echo "ERROR Missconfigured system, couldnt locate andutteye init parameters."
+       exit 1                                                                       
+else                                                                                
+       source /etc/sysconfig/andutteye                                              
+fi                                                                                  
+
+set_var() {
+       case $1
+       in     
+       andutteyedprx)
+               program="andutteyedprx"
+               description="Andutteye proxy service"
+               config="$andutteye_config_dir/andutteydprx.conf"
+               LOCKFILE="/var/lock/subsys/$program"            
+               PIDFILE="/var/run/$program.pid"                 
+       ;;                                                      
+       andutteyedagt)                                          
+               program="andutteyedagt"                         
+               description="Andutteye agent"                   
+               config="$andutteye_config_dir/andutteyedagt.conf"
+               LOCKFILE="/var/lock/subsys/$program"             
+               PIDFILE="/var/run/$program.pid"                  
+               ;;                                               
+       andutteyedsrv)                                           
+               program="andutteyedsrv"                          
+               description="Andutteye server"                   
+               config="$andutteye_config_dir/andutteyedsrv.conf"
+               LOCKFILE="/var/lock/subsys/$program"             
+               PIDFILE="/var/run/$program.pid"                  
+               ;;                                               
+       andutteyedslg)                                           
+               program="andutteyedslg"                          
+               description="Andutteye syslog server"            
+               config="$andutteye_config_dir/andutteyedslg.conf"
+               LOCKFILE="/var/lock/subsys/$program"             
+               PIDFILE="/var/run/$program.pid"                  
+               ;;                                               
+       *)                                                       
+               failure "ERROR Missconfigured Andutteye init configuration, $andutteye_program is not recognised."
+               echo "$1 is not a recognised andutteye service"                                                   
+               exit                                                                                              
+               ;;                                                                                                
+       esac                                                                                                      
+}                                                                                                                
+
+# Shell functions sourced from /etc/rc.status:
+#      rc_check         check and set local and overall rc status
+#      rc_status        check and set local and overall rc status
+#      rc_status -v     ditto but be verbose in local rc status  
+#      rc_status -v -r  ditto and clear the local rc status      
+#      rc_failed        set local and overall rc status to failed
+#      rc_failed <num>  set local and overall rc status to <num><num>
+#      rc_reset         clear local rc status (overall remains)      
+#      rc_exit          exit appropriate to overall rc status        
+. /etc/rc.status                                                     
+
+# First reset status of this service
+rc_reset                            
+
+# Return values acc. to LSB for all commands but status:
+# 0 - success                                           
+# 1 - generic or unspecified error                      
+# 2 - invalid or excess argument(s)                     
+# 3 - unimplemented feature (e.g. "reload")             
+# 4 - insufficient privilege                            
+# 5 - program is not installed                          
+# 6 - program is not configured                         
+# 7 - program is not running                            
+#                                                       
+# Note that starting an already running service, stopping
+# or restarting a not-running service as well as the restart
+# with force-reload (in case signalling is not supported) are
+# considered a success.                                      
+
+start_all() {
+       for andutteye_program in $run_andutteye_functionality
+       do                                                   
+               start $andutteye_program                     
+       done                                                 
+}                                                           
+start() {                                                   
+       set_var $1                                           
+        echo -n -e "\tStarting $description"                
+        su - $run_andutteye_as_user -c "$program -config=$config" > /dev/null 
+        rc_status -v                                                          
+        rc_reset                                                              
+}                                                                             
+stop_all(){
+       for andutteye_program in $run_andutteye_functionality
+       do
+               stop $andutteye_program
+       done
+}
+stop() {
+       set_var $1
+        echo -n -e "\tStopping $description"
+
+         is_service_down=`ps -e | grep $program | grep -v grep | awk '{print $1}'`
+         if [ ! -z "$is_service_down" ]
+                then
+                kill $is_service_down
+                rc_status -v
+        fi
+        rc_reset
+}
+
+case "$1" in
+    start)
+        echo "Starting Andutteye Systems Management Solution:"
+
+        if [ ! -z $2 ]
+                then
+                start $2
+        else
+                start_all
+        fi
+    ;;
+    stop)
+        echo "Stopping Andutteye Systems Management Solution:"
+
+        if [ ! -z $2 ]
+                then
+                stop $2
+        else
+                stop_all
+        fi
+
+    ;;
+    restart)
+        $0 stop
+        $0 start
+        rc_status
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart}"
+        exit 1
+        ;;
+esac
+rc_exit
+

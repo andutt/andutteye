@@ -4,14 +4,14 @@
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
-# version 2 as published by the Free Software Foundation.
+# version 3 as published by the Free Software Foundation.
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
-# For the complete GPL v2 license, visit http://www.fsf.org/licenses
+# For the complete GPL v3 license, visit http://www.fsf.org/licenses
 #
 # $Id: andutteye 669 2008-06-17 21:05:16Z andutt $
 #
@@ -20,7 +20,7 @@
 #
 # processname: andutteyedprx, andutteyedagt, andutteyedsrv
 # pid: /var/run/processname.pid
-
+#
 ### BEGIN INIT INFO
 # Provides: andutteyedprx, andutteyedagt, andutteyedsrv
 # Required-Start: $network $remote_fs
