@@ -1,0 +1,480 @@
+#!/usr/bin/perl
+##
+## Copyright (C) 2004-2018 Andreas Utterberg Thundera AB.
+##
+## This program is free software; you can redistribute it and/or
+## modify it under the terms of the GNU General Public License
+## version 2 as published by the Free Software Foundation.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##
+## For the complete GPL v2 license, visit http://www.fsf.org/licenses
+##
+## Description:Andutteye management utility. A part of andutteye management.
+## 
+## $Id$
+##
+## The version parameter tells current version of the program
+#
+our $version = "Andutteye Management utillity. Version 1.0 (andutt)";
+our $action;
+our $searchwhat;
+our $setwhat;
+our $executewhat;
+our $setonhost;
+our $setonkey;
+our $setongroup;
+our $setonwhere;
+our $managementdir;
+our $asuser;
+our ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+our $date=sprintf("20%02d%02d%02d",$year%100,$mon+1,$mday);
+our $time=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+use File::Basename;
+use strict;
+use warnings;
+
+
+sub search_ae_information {
+
+
+print "Searching the andutteye repository for -> $searchwhat\n";
+print "--------------------------------------\n";
+my @specifications=`ls $managementdir/specifications`;
+
+for(@specifications) {
+        chomp;
+        if($_ =~/$searchwhat/) {
+                print "Found specification:$_\n";
+        }
+}
+for(@specifications) {
+        chomp;
+        my $spec = $_;
+
+        open("SPEC","<$managementdir/specifications/$_")
+                or die $!;
+        for(<SPEC>) {
+                chomp;
+                my $entry =$_;
+
+                if($entry =~/$searchwhat/) {
+                        print "Found in specification $spec in key:$entry\n";
+                }
+        }
+}
+my @logclient=`ls $managementdir/log-client`;
+for(@logclient) {
+        chomp;
+        if($_ =~/$searchwhat/) {
+                print "Found log-client:$_\n";
+        }
+}
+for(@logclient) {
+        chomp;
+        my $logname = $_;
+
+        open("LOG","<$managementdir/log-client/$logname")
+                or die $!;
+        for(<LOG>) {
+                chomp;
+                my $entry =$_;
+
+                if($entry =~/$searchwhat/) {
+                        print "Found in log-client $logname in key:$entry\n";
+                }
+        }
+}
+my @bundles=`ls $managementdir/bundles`;
+for(@bundles) {
+        chomp;
+        if($_ =~/$searchwhat/) {
+                print "Found bundles:$_\n";
+        }
+}
+for(@bundles) {
+        chomp;
+        my $bundle = $_;
+
+        open("BUNDLE","<$managementdir/bundles/$bundle")
+                or die $!;
+        for(<BUNDLE>) {
+                chomp;
+                my $entry =$_;
+
+                if($entry =~/$searchwhat/) {
+                        print "Found in bundle $bundle in key:$entry\n";
+                }
+        }
+}
+
+
+# End of subfunction
+}
+sub set_ae_keys {
+
+print "Setting keys in specifications in andutteye repository\n";
+print "--------------------------------------\n";
+
+if($setonhost) {
+        my @specifications=`ls $managementdir/specifications`;
+        for(@specifications) {
+                chomp;
+                if($_ =~/$setonhost/) {
+                        my $spec=$_;
+
+                        open("SPEC","<$managementdir/specifications/$_")
+                                or die $!;
+                        for(<SPEC>) {
+                                chomp;
+                                my $entry =$_;
+
+                                if($entry =~/$setonkey/) {
+                                        print "Found specification $spec setting keyvalue to $setwhat on key $setonkey. Now:$entry\n";
+                                        `perl -p -i -e "s/$entry/$setonkey:$setwhat/g" $managementdir/specifications/$spec`;
+                                }       print "Done.\n";
+                        }
+                }
+        }
+}
+if($setongroup) {
+        my @specifications=`ls $managementdir/specifications`;
+        for(@specifications) {
+                chomp;
+                my $spec=$_;
+
+                        open("SPEC","<$managementdir/specifications/$_")
+                                or die $!;
+                        for(<SPEC>) {
+                                chomp;
+                                my $entry =$_;
+
+                                if($entry =~/$setongroup/) {
+        
+                                        open("SPECEDIT","<$managementdir/specifications/$spec")
+                                                or die $!;
+
+                                        for(<SPECEDIT>) {
+                                                chomp;
+                                                my $entry2 =$_;
+
+                                                if($entry2 =~/$setonkey/) {
+                                                        print "Found specification $spec(group:$setongroup) setting keyvalue to $setwhat on key $setonkey. Now:$entry2\n";
+                                                        `perl -p -i -e "s/$entry2/$setonkey:$setwhat/g" $managementdir/specifications/$spec`;
+                                                        print "Done.\n";
+                                                }
+                                        }
+                                }
+                        }
+        }
+}
+if($setonwhere) {
+        my @specifications=`ls $managementdir/specifications`;
+        for(@specifications) {
+                chomp;
+                my $spec=$_;
+
+                        open("SPEC","<$managementdir/specifications/$_")
+                                or die $!;
+                        for(<SPEC>) {
+                                chomp;
+                                my $entry =$_;
+
+                                if($entry =~/$setonwhere/) {
+        
+                                        open("SPECEDIT","<$managementdir/specifications/$spec")
+                                                or die $!;
+
+                                        for(<SPECEDIT>) {
+                                                chomp;
+                                                my $entry2 =$_;
+
+                                                if($entry2 =~/$setonkey/) {
+                                                        print "Found specification $spec(where:$setonwhere) setting keyvalue to $setwhat on key $setonkey. Now:$entry2\n";
+                                                        `perl -p -i -e "s/$entry2/$setonkey:$setwhat/g" $managementdir/specifications/$spec`;
+                                                        print "Done.\n";
+                                                }
+                                        }
+                                }
+                        }
+        }
+}
+
+
+# Enf of subfunction
+}
+sub filematch_overridesystem_compliance {
+
+
+if(! -f "$managementdir/specifications/$setonhost") {
+        print "ERROR $managementdir/specifications/$setonhost doesnt exist.\n";
+        exit;
+}
+
+my @filetypes;
+my $group=`$managementdir/bin/aemanagement-api.pl -getgroup=$setonhost`;
+chomp $group;
+my $location=`$managementdir/bin/aemanagement-api.pl -getlocation=$setonhost`;
+chomp $location;
+my $patchlevel=`$managementdir/bin/aemanagement-api.pl -getpatchlevel=$setonhost`;
+chomp $patchlevel;
+my $distribution=`$managementdir/bin/aemanagement-api.pl -getdistribution=$setonhost`;
+chomp $distribution;
+my $archtype=`$managementdir/bin/aemanagement-api.pl -getarchtype=$setonhost`;
+chomp $archtype;
+our $dirname;
+our $filename;
+our @filestocheck;
+our $splittedfilename;
+our $current;
+
+push(@filetypes, "DEFAULT");
+push(@filetypes, $group);
+push(@filetypes, $location);
+push(@filetypes, $archtype);
+push(@filetypes, "$group--$location");
+push(@filetypes, "$group--$archtype");
+push(@filetypes, "$location--$archtype");
+push(@filetypes, "$group--$location--$archtype");
+push(@filetypes, "$setonhost");
+
+print "Compliance of the Andutteye Filematch Override system for $setonhost\n";
+print "--------------------------------------\n";
+for(@filetypes) {
+        my $filetype=$_;
+        chdir("$managementdir/files") or die $!;
+        chdir("$distribution") or die $!;
+
+        print "-- Searching for:*--[$filetype]\n";
+        @filestocheck=`find . -type f -name "*--$filetype" -print`;
+        for(@filestocheck) {
+                chomp;
+                $current=$_;
+                $dirname=dirname($current);
+                $filename=basename($current);
+                my @tmpfilename=split("--",$filename);
+                $splittedfilename=$tmpfilename[0];
+                print "## Found a file:$current\n";
+
+
+                my @logclient=`ls $managementdir/log-client`;
+                for(@logclient) {
+                        chomp;
+                        my $logname = $_;
+
+                        if($_ =~/$setonhost/) {
+                                for(@logclient) {
+                                        chomp;
+                                        open("LOG","<$managementdir/log-client/$logname")
+                                        or die $!;
+                                        for(<LOG>) {
+                                                chomp;
+                                                my $entry =$_;
+                                                if($entry =~/$dirname\/$splittedfilename/) {
+                                                        print "\tLast compliance correction found in:$managementdir/log-client/$logname\n";
+							last;
+                                                }
+                                        }
+                                }
+                        }
+                }
+        }
+        for(my $patch=0;$patchlevel >= $patch;$patch++) {
+                print "-- Searching for:*--[$filetype--$patch] [Patchlevel:$patch]\n";
+                @filestocheck=`find . -type f -name "*--$filetype--$patch" -print`;
+                for(@filestocheck) {
+                        chomp;
+                        $current=$_;
+                        $dirname=dirname($current);
+                        $filename=basename($current);
+                        my @tmpfilename=split("--",$filename);
+                        $splittedfilename=$tmpfilename[0];
+                        print "## Found a file:$current\n";
+                }
+
+        }
+
+}
+
+# End of subfunction
+}
+sub execute_command {
+
+if(!defined($asuser)) {
+        $asuser=`id -nu`;
+        chomp $asuser;
+}
+
+print "Executing remote commands and actions\n";
+print "--------------------------------------\n";
+
+if($setonhost) {
+        my @specifications=`ls $managementdir/specifications`;
+        for(@specifications) {
+                chomp;
+                if($_ =~/$setonhost/) {
+                        my $spec=$_;
+                        print "Found specification $spec executing command ($executewhat as $asuser)\n";
+                        print "--------------------------------------\n";
+                        my $ecode=system("ssh -l $asuser $spec \"$executewhat\"");
+                        print "--------------------------------------\n";
+
+                        if($ecode == 0) {
+                                print "Command executed ok on $spec.\n";
+                                print "--------------------------------------\n";
+                        } else {
+                                print "Command execution failed on $spec. ERRORCODE:$ecode\n";
+                                print "--------------------------------------\n";
+                        }
+                }
+        }
+}
+if($setongroup) {
+        my @specifications=`ls $managementdir/specifications`;
+        for(@specifications) {
+                chomp;
+                my $spec=$_;
+                        open("SPEC","<$managementdir/specifications/$_")
+                                or die $!;
+                        for(<SPEC>) {
+                                chomp;
+                                my $entry =$_;
+                                if($entry =~/$setongroup/) {
+                                        print "Found specification $spec(group:$setongroup) executing command ($executewhat as $asuser)\n";
+                                        print "--------------------------------------\n";
+                                        my $ecode=system("ssh -l $asuser $spec \"$executewhat\"");
+                                        print "--------------------------------------\n";
+
+                                        if($ecode == 0) {
+                                                print "Command executed ok on $spec.\n";
+                                                print "--------------------------------------\n";
+                                        } else {
+                                                print "Command execution failed on $spec. ERRORCODE:$ecode\n";
+                                                print "--------------------------------------\n";
+                                        }
+                                }
+                        }
+        }
+}
+if($setonwhere) {
+        my @specifications=`ls $managementdir/specifications`;
+        for(@specifications) {
+                chomp;
+                my $spec=$_;
+                        open("SPEC","<$managementdir/specifications/$_")
+                                or die $!;
+                        for(<SPEC>) {
+                                chomp;
+                                my $entry =$_;
+
+                                if($entry =~/$setonwhere/) {
+                                        print "Found specification $spec(where:$setonwhere) executing command ($executewhat as $asuser)\n";
+                                        print "--------------------------------------\n";
+                                        my $ecode=system("ssh -l $asuser $spec \"$executewhat\"");
+                                        print "--------------------------------------\n";
+
+                                        if($ecode == 0) {
+                                                print "Command executed ok on $spec.\n";
+                                                print "--------------------------------------\n";
+                                        } else {
+                                                print "Command execution failed on $spec. ERRORCODE:$ecode\n";
+                                                print "--------------------------------------\n";
+                                        }
+				last;
+                                }
+                        }
+        }
+}
+
+# Enf of subfunction
+}
+
+sub program_info {
+print "\n";
+print "$version\n";
+print "\n";
+print "$0 search=spiderman\n";
+print "$0 search=allow-configupdate\n";
+print "$0 search=ntp.conf\n";
+print "$0 set=no onkey=allow-configupdate ongroup=webportal\n";
+print "$0 set=no onkey=allow-configupdate onwhere=development\n";
+print "$0 execute=\"ls /var/tmp\" onwhere=development\n";
+print "$0 compliance=spiderman\n";
+print "\n";
+print "search=[criteria]\t\t\t\t\t:Search the Andutteye repository after specific information.\n";
+print "set=[key] <onhost|ongroup|onwhere>\t\t\t:Set keys on specifications in the Andutteye repository.\n";
+print "compliance=[system]\t\t\t\t\t:See compliance of the Andutteye Filematch Override system for specific system.\n";
+print "execute=\"[command]\" <onhost|ongroup|onwhere|asuser>\t:Execute a remote command or script on Andutteye groups of systems.\n";
+print "\n";
+}
+
+
+if(!defined($ENV{ANDUTTEYEMANAGEMENT_REPOSITORY})) {
+        print "** ERROR Andutteye management repository location parameter isnt set. Check documentation for more info.\n";
+        exit 1;
+} else {
+        require("$ENV{ANDUTTEYEMANAGEMENT_REPOSITORY}/config/aemanagement-config.conf");
+}
+for(@ARGV) {
+        if(/^search=/) {
+                my @tmp=split("=",$_);
+                $action="show";
+                $searchwhat="$tmp[1]";
+        }
+        if(/^set=/) {
+                my @tmp=split("=",$_);
+                $action="set";
+                $setwhat="$tmp[1]";
+        }
+        if(/^compliance=/) {
+                my @tmp=split("=",$_);
+                $action="compliance";
+                $setonhost="$tmp[1]";
+        }
+        if(/^execute=/) {
+                my @tmp=split("=",$_);
+                $action="execute";
+                $executewhat="$tmp[1]";
+        }
+        if(/^onhost=/) {
+                my @tmp=split("=",$_);
+                $setonhost="$tmp[1]";
+        }
+        if(/^onkey=/) {
+                my @tmp=split("=",$_);
+                $setonkey="$tmp[1]";
+        }
+        if(/^ongroup=/) {
+                my @tmp=split("=",$_);
+                $setongroup="$tmp[1]";
+        }
+        if(/^onwhere=/) {
+                my @tmp=split("=",$_);
+                $setonwhere="$tmp[1]";
+        }
+        if(/^asuser=/) {
+                my @tmp=split("=",$_);
+                $asuser="$tmp[1]";
+        }
+
+}
+if(!$action) {
+        program_info();
+} else {
+        if($action eq "show") {
+                search_ae_information();
+        }
+        if($action eq "set") {
+                set_ae_keys();
+        }
+        if($action eq "compliance") {
+                filematch_overridesystem_compliance();
+        }
+        if($action eq "execute") {
+                execute_command();
+        }
+}

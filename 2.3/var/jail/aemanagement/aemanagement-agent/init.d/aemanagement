@@ -1,0 +1,62 @@
+#!/bin/bash
+#
+# Copyright (C) 2004-2010 Andreas Utterberg Thundera AB.
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# version 2 as published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# For the complete GPL v2 license, visit http://www.fsf.org/licenses
+#
+# Init file for Andutteye Management agent.
+#
+# chkconfig: 3 97 97 
+# description: Anduteye management agent.
+#
+# processname: aemanagement.pl
+#
+# $Id: aemanagement,v 1.3 2006/10/15 16:48:21 andutt Exp $
+#
+ANDUTTEYEMANAGEMENT_AGENT=/opt/aemanagement/aemanagement.pl
+
+start()
+{
+echo -n "Syncing against the aemanagementrepository:"
+	
+	if [ ! -f "$ANDUTTEYEMANAGEMENT_AGENT" ]
+		then
+		echo "ERROR $ANDUTTEYEMANAGEMENT_AGENT doesnt excist or isnt a file"
+		exit 1
+	fi
+        if [ -x "$ANDUTTEYEMANAGEMENT_AGENT" ]
+                        then
+			$ANDUTTEYEMANAGEMENT_AGENT > /dev/null 2&>1
+			if [ $? = 0 ]
+			    then
+			    echo " [ OK ]"
+			else
+			    echo " [ FAILED ]"
+			    exit 1
+			fi
+	else
+			echo "ERROR $ANDUTTEYEMANAGEMENT_AGENT is not executeble"
+			exit 1
+	fi
+}
+case "$1" in
+start)
+start
+;;
+restart)
+start
+;;
+*)
+echo "Usage: $0 {start|restart}"
+exit 1
+;;
+esac

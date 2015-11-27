@@ -1,0 +1,106 @@
+#######################################################################################
+#
+# Andutteye Management Software (c) Andreas Utterberg (andutt) Thundera All rights reserved
+#
+# $Id: README,v 1.6 2006/10/15 16:48:21 andutt Exp $
+#
+#######################################################################################
+#
+# Support, help and tips can be retrived at http://www.andutteye.com or by Andutteye
+# Softwares commersiall resellers. Enjoy the use of this software, and please get feedback
+# on other features you need or things you think should be designed differently.
+#
+#######################################################################################
+#
+# Fast implementation howto, for more information read the complete AndutteyeManagement 
+# documentation at the official Andutteye website.
+#
+#######################################################################################
+#
+# THINGS TO DO ON AEMANAGEMENT REPOSITORY SIDE.
+#
+# 1: Popuplate a rpm package repository under packages/<distributionname>/0. Put all package on your distributions cd:s
+#    or other media there.
+#
+# 2: Execute bin/aemanagement-api.pl -genrpmindex=/var/jail/aemanagement/packages<distributionname>/0 to generate
+#    the andutteyemanagement register file. Set correct linux permissions chown aemanagement:aemanagement *, chmod 440 *
+#    to the files under the 0 directory.
+#
+# 3: Create a hostspecification named after the host that shall connect to the repository. Set the distribution
+#    that you just populated: distribution:<distributionname>. Change the other parameters after your needs.
+#
+# 4: Create a ~aemanagement/.ssh directory and create a authorized_keys2 file. Make sure that the direcotyr .ssh have 
+#    permissions 700 and the authirozed_keys2 file has 600 also make sure that the .ssh directory and file are
+#    owned by aemanagement, otherwhise ssh vill complain. Paste in the publickey that your connected agents shall
+#    use and then before the key paste in this line.
+# 
+#   no-pty,no-X11-forwarding,no-port-forwarding,command="bin/aemanagement-sshwrapper.pl"
+#
+#   This will force every incoming request to be parsed by the ssh-wrapper program. 
+# 
+#   Also create a filed called environment under the .ssh directory with your path to the andutteye management
+#   reposptiry in it. Like this:ANDUTTEYEMANAGEMENT_REPOSITORY=/var/jail/aemanagement this is used by the wrapper
+#   to include its parameters.
+#
+# 5: Make sure that the ssh option:PermitUserEnvironment is set to yes in your /etc/ssh/sshd_config to permit the 
+#    enviroment file. Restart sshd if you change it now.
+#
+# 6: If you want to change the location on the andutteyemanagement repository, just move the directory aemanagement/*
+#    and change ANDUTTEYEMANAGEMENT_REPOSITORY parameter in ~aemanamagement/.ssh/environments and in 
+#    /etc/profile.d/aemanagement.pl and in  config/aemanagement-config.conf
+#
+# 7: Review the config/aemanagement-config.conf and change your mail parameter and enable or disable andutteye surveillance
+#    reporting. If enabled all andutteyemanagement anomolies will be reported to andutteye surveillance.
+#
+# 8: Popuplate your files/ directory with the direct paths and files that you want to administrate centraly. The best
+#    match of files will be used. First DEFAULT tagged files and the best match is the file tagged with the hostname. 
+#    For example:/etc/nsswitch.conf--DEFAULT will be the first match for all aemanagement agents and /etc/nsswitch--andutteye
+#    will be the best match for hostname andutteye. Matching is done in order:DEFAULT, GROUP, WHERE, GROUP-WHERE, GROUP-PATCHLEVEL
+#    WHERE-PATCHLEVEL, GROUP-WHERE-PATCHLEVEL, HOSTNAME, HOSTNAME-PATCHLEVEL.
+#
+#######################################################################################
+#
+# THINGS TO TO ON AEMANAGEMENT AGENTS SIDE.
+#
+# 1: If you are installing and configuring this for company use you shall build a rpmpackage with the files included
+#    mentioned below. For easy include of new systems, and also to include in your kickstart file or other automatic
+#    installations program for automatic connectivity against the repository. If you are planning to use it on a few
+#    nodes the manual steps are below.
+#
+# 2: Install the program that are located under aemanagement-agent/ under /opt/aemanagement on the connected node.
+#    create a ssh key pair as root like, ssh-keygen -t rsa -b 3048 -f aemanagement. Set a blank password.
+#
+# 3: Review the parameters in the top of /opt/aemanagement/aemanagement.pl that they match that you have done.
+# 
+# 4: Register the /etc/init.d/aemanagement program with chkconfig --level 35 aemanamagent on to enable oneshot
+#    mode of aemanagement agent every time the server boots.
+#
+# 5: Make sure you /etc/cron.hourly/aemanagement are present and have the correct permissions and being executed
+#    every hour on scheduled as you want.
+#
+# 6: Done aemanagement agent will make sure that your connected nodes are as configured as it is in the aemanagement
+#    repository.
+#
+#
+#######################################################################################
+#
+# ADVANCED FEATURES
+#
+#   Andutteye Management is just a part of Andutteye Software Suite and are fully integrateble with Andutteye Software Suite
+#   webinterface and monitoring solutions. For a more enterprise use it can be better to administrate every aes module thru
+#   the webinterface to decrease administration and to be able on a higher level grant users to just specific objects of
+#   the management and monitoring capabillities.
+#
+#   But its upt to you as a administrator to make that chooise.
+#
+#######################################################################################
+#
+# Still doesnt work?
+#
+# For more information read the documentation at http://www.andutteye.com. You can also retrive help and support there.
+# also read the license file included in this software for completed licenseform.
+#
+# I hope you will like the use of Andutteye Management. (andutt)
+# 
+#
+#######################################################################################

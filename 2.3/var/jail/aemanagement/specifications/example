@@ -1,0 +1,15 @@
+packagetype:rpm
+distribution:redhat-es3
+patchlevel:1
+group:WEBSERVER
+location:PROD
+archtype:i386
+description:Andutteye development server
+status:active
+exclude:kernel,various
+packages:+squid--0--0
+bundles:redhat-es3-example,andutteye-surveillance-example
+allow-rpmupdate:yes
+allow-configupdate:yes
+allow-syslog:yes
+email:andutt@andutteye.com
