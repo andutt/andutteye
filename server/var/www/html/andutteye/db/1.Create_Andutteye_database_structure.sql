@@ -445,6 +445,21 @@ CREATE TABLE andutteye_managementobject_status (
   created_by            VARCHAR(100) DEFAULT NULL,
                         PRIMARY KEY  (seqnr)
 );
+CREATE TABLE andutteye_ontrac (
+  seqnr                 INT(11) NOT NULL auto_increment,
+  ontrac                VARCHAR(255) DEFAULT NULL,
+  ontrac_description    VARCHAR(255) DEFAULT NULL,
+  ontrac_command        VARCHAR(255) DEFAULT NULL,
+  ontrac_domain         VARCHAR(255) DEFAULT NULL,
+  ontrac_group          VARCHAR(255) DEFAULT NULL,
+  ontrac_system         VARCHAR(255) DEFAULT NULL,
+  ontrac_valid          VARCHAR(255) DEFAULT NULL,
+  ontrac_date           VARCHAR(100) DEFAULT NULL,
+  ontrac_time           VARCHAR(100) DEFAULT NULL,
+  ontrac_done           VARCHAR(100) DEFAULT NULL,
+  ontrac_enforcer       VARCHAR(100) DEFAULT NULL,
+                        PRIMARY KEY  (seqnr)
+);
 insert into andutteye_users(andutteye_username,andutteye_password,is_admin) values ('admin','d18ee3149a4b14914e5d07bd565fa6f87d7c7ab6','1');
 insert into andutteye_core_configuration(parametername,parametervalue) values ('Management_top_directory_location','/var/cache/andutteye/management-repo');
 insert into andutteye_core_configuration(parametername,parametervalue) values ('Management_pxe_directory_location','/var/cache/andutteye/pxe-profiles');

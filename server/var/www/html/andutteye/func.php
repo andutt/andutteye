@@ -5,6 +5,7 @@
 // $Id$
 //
 ob_start();
+date_default_timezone_set('Europe/Moscow');
 
 function page_header() {
 
@@ -191,6 +192,10 @@ echo '
 					<li>
 					   <a href="index.php?main=create_front">
                                            <img src="themes/' . $authNamespace->andutteye_theme . '/front_1.png" alt="" title="" /> Front admin</a>
+					</li>
+					<li>
+					   <a href="index.php?main=create_ontrac">
+                                           <img src="themes/' . $authNamespace->andutteye_theme . '/install_system_1.png" alt="" title="" /> Ontrac admin</a>
 					</li>
 				</ul>
 			</li>
@@ -663,7 +668,7 @@ echo '
 </div>
 ';
 
-	// End of subfunction
+// End of subfunction
 }
 
 function create_group($param1,$param2,$param3,$param4,$param5,$param6,$param7,$param8,$param9,$param10) {
@@ -910,6 +915,126 @@ echo '
 
 // End of subfunction
 }
+function create_ontrac($param1,$param2,$param3,$param4,$param5,$param6,$param7,$param8,$param9,$param10) {
+
+verify_if_user_is_logged_in();
+verify_if_user_have_admin_prevs();
+
+require 'db.php';
+require_once 'Zend/Session/Namespace.php';
+$authNamespace = new Zend_Session_Namespace('Zend_Auth');
+
+if($param1) {
+        $date = date("20y-m-d");
+        $time = date("H:m:s");
+	$result = split("#",$param2);
+
+        $sql   = $db->query("select seqnr from andutteye_ontrac where ontrac ='$param1'");
+        $exists = $sql->fetchAll();
+        $exists = count($exists);
+
+        if($param1 != "" && $param2 != "" && $exists == 0) {
+                $data = array(
+                        'ontrac'     		=> "$param1",
+                        'ontrac_domain'     	=> "$param4",
+                        'ontrac_description'    => "$param2",
+                        'ontrac_command'    	=> "$param5",
+                        'ontrac_valid' 		=> "$param3"
+                );
+                $db->insert('andutteye_ontrac', $data);
+	}
+}
+
+echo '<div id="content">
+      		<div class="content">
+			<fieldset class="GroupField">
+				<legend><img src="themes/' . $authNamespace->andutteye_theme . '/system_b.png" alt="" title="" /><span class="BigTitle"><span class="ColoredTxt">Create</span> New Ontrac</span></legend>
+						<form method="get" action="index.php">
+							<input type="hidden" name="main" value="create_ontrac">
+
+								<label for="systemname">Ontrac:</label>
+								<label><input type="text" name="param1" maxlength="255" size="35" value="" size="70"></label>
+								<br />
+								<label for="systemkey"> Ontrac description (keep it short, displayed in description)</label>
+								<label><input type="text" name="param2" maxlength="30" size="35" value="" size="70"></label>
+								<br />
+								<label for="systemkey"> Ontrac valid date (Which date is valid, date format YYYY-MM-DD)</label>
+								<label><input type="text" name="param3" maxlength="30" size="35" value="" size="70"></label>
+								<br />
+								<label for="systemkey"> Ontrac command (Specify command or program/script)</label>
+								<label><input type="text" name="param5" maxlength="255" size="35" value="" size="70"></label>
+								<br />
+								<label for="joindomain"> Join system to current domain:</label>
+
+								<label>
+									<select name="param4" style="WIDTH: 260px">
+								';
+
+                                        $sql    = $db->query("select domain_name from andutteye_domains order by domain_name asc");
+
+                                        while ($row = $sql->fetch()) {
+                                                $domain_name = $row['domain_name'];
+                                                $group_name = $row['group_name'];
+						echo '
+						<option value="' . $domain_name . '"> Domain ' . $domain_name . '
+						';
+                                        }
+
+					echo '
+									</select>
+								</label>
+							<br />
+							<input class="button" type="submit" value="Submit">
+						</form>
+					    </fieldset>					
+					</div>
+<br />
+
+<div class="content">
+	<fieldset class="GroupField">
+		<legend><span class="BigTitle"><span class="ColoredTxt">Change</span> Current ontrac</span></legend>
+		
+			<table>
+				<th>Ontrac</th>
+				<th>Valid on</th>
+				<th>Remove</th>
+				</tr>';
+
+			$sql = $db->query("select * from andutteye_ontrac order by seqnr asc");
+                        while ($row = $sql->fetch()) {
+                                $seqnr = $row['seqnr'];
+                                $ontrac = $row['ontrac'];
+                                $ontrac_domain = $row['ontrac_domain'];
+                                $ontrac_command = $row['ontrac_command'];
+                                $ontrac_group = $row['ontrac_group'];
+                                $ontrac_valid = $row['ontrac_valid'];
+                                $ontrac_description = $row['ontrac_description'];
+
+				echo '
+				<td>
+				<img src="themes/' . $authNamespace->andutteye_theme . '/install_system_1.png" alt="" title="" />
+				<a href="index.php?main=create_system&param1=' .$system_name. '&param2=modify" class="Tips2" title="Ontrac:' . $ontrac . ' Description:' . $ontrac_description . ' Domain:' . $ontrac_domain . ' Command:' . $ontrac_command . '">' . $ontrac . '</a>
+				</td>
+				<td>
+					$ontrac_valid</a>
+				
+				</td>
+				<td>
+				<img src="themes/' . $authNamespace->andutteye_theme . '/delete_1.png" alt="" title="" />
+				<a href="index.php?main=remove_ontrac&param1=' . $seqnr . '" onclick="return confirm(\'Remove ontrac ' . $ontrac . '? \')">Remove</a>
+				</td>
+				</tr>
+				';
+                        }
+
+echo '
+</table>
+</fieldset>
+</div>
+';
+
+// End of subfunction
+}
 
 function domain_overview($param1) {
 
@@ -939,6 +1064,10 @@ $nrs = count($nrs);
 $sql   = $db->query("select seqnr from andutteye_uploads where domain_name = '$param1'");
 $nrd = $sql->fetchAll();
 $nrd = count($nrd);
+
+$sql   = $db->query("select seqnr from andutteye_ontrac where ontrac_domain = '$param1'");
+$ontrac = $sql->fetchAll();
+$ontrac = count($ontrac);
 
 echo '<div class="DivSpacer"></div>';
 echo '<div id="content">
@@ -1199,6 +1328,68 @@ echo '<h3 class="toggler">
                 }
 
 echo '</table></div>';
+
+$date = date("20y-m-d");
+
+echo '<h3 class="toggler">
+      	<img src="themes/' . $authNamespace->andutteye_theme . '/sys_doc.png" alt="" title="" />
+		<span class="InfoTitle"> ONTRAC (<span class="ColoredTxt">' . $ontrac . '</span>)</span></h3>
+        		<div class="element">
+		        	<table>
+                                	<th>Ontrac</th>
+                                        <th>Description</th>
+                                        <th>Valid on</th>
+                                        <th>Domain</th>
+                                        <th>Submitted by</th>
+                                        <th>Date</th>
+                                        <th>Time</th>
+                                        <th>Enforced</th>
+                                        <th>Enforce</th>
+                                        </tr>';
+
+		$sql    = $db->query("select * from andutteye_ontrac where ontrac_domain = '$param1' order by seqnr asc");
+                while ($row = $sql->fetch()) {
+                        $seqnr			= $row['seqnr'];
+                        $ontrac			= $row['ontrac'];
+                        $ontrac_description	= $row['ontrac_description'];
+                        $ontrac_domain		= $row['ontrac_domain'];
+                        $ontrac_group		= $row['ontrac_group'];
+                        $ontrac_system		= $row['ontrac_system'];
+                        $ontrac_valid		= $row['ontrac_valid'];
+                        $ontrac_date		= $row['ontrac_date'];
+                        $ontrac_time		= $row['ontrac_time'];
+                        $ontrac_enforcer	= $row['ontrac_enforcer'];
+                        $ontrac_done		= $row['ontrac_done'];
+                        
+			echo '<form method="post" action="index.php">
+                                <input type="hidden" name="main" value="enforce_ontrac">
+                                <input type="hidden" name="param1" value="'.$param1.'">
+                                <input type="hidden" name="param2" value="'.$seqnr.'">';
+
+			echo '<td><img src="themes/' . $authNamespace->andutteye_theme . '/install_system_1.png" alt="" title="" />';
+			echo " $ontrac</td>";
+			echo "<td>$ontrac_description</td>";
+			echo "<td>$ontrac_valid</td>";
+			echo "<td>$ontrac_domain</td>";
+			echo "<td>$ontrac_enforcer</td>";
+			echo "<td>$ontrac_date</td>";
+			echo "<td>$ontrac_time</td>";
+
+
+			if($ontrac_done == "") {
+				echo '<td><img src="themes/' . $authNamespace->andutteye_theme . '/stopped.png" alt="" title="" /></td>';
+			} else {
+				echo '<td><img src="themes/' . $authNamespace->andutteye_theme . '/started.png" alt="" title="" /></td>';
+			}
+			if("$date" == "$ontrac_valid") {
+				echo '<td><input class="button" type="submit" value="Submit"></td></tr>';
+
+			} else {
+				echo '<td><img src="themes/' . $authNamespace->andutteye_theme . '/stopped.png" alt="" title="" /></td></tr>';
+			}
+                }
+
+echo '</table></form></div>';
 
 echo '<h3 class="toggler">
           <img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" />
@@ -9377,6 +9568,24 @@ $sql = $db->query("select package_update from andutteye_specifications where sys
 $res = $sql->fetchObject();
 
 return($res->package_update);
+
+// End of subfunction
+}
+
+function enforce_ontrac($param1,$param2) {
+
+require_once 'Zend/Session/Namespace.php';
+require 'db.php';
+verify_if_user_is_logged_in();
+
+$date = date("20y-m-d");
+$time = date("H:m:s");
+$authNamespace = new Zend_Session_Namespace('Zend_Auth');
+
+$sql = "update andutteye_ontrac set ontrac_date='$date', ontrac_time='$time', ontrac_enforcer='$authNamespace->andutteye_username' where seqnr = '$param2'";
+$db->query($sql);
+header("Location:index.php?main=domain_overview&param1=$param1");
+exit;
 
 // End of subfunction
 }
