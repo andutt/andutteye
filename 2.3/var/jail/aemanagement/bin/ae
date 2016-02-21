@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 ##
-## Copyright (C) 2004-2018 Andreas Utterberg Thundera AB.
+## Copyright (C) 2004-2010 Andreas Utterberg Thundera AB.
 ##
 ## This program is free software; you can redistribute it and/or
 ## modify it under the terms of the GNU General Public License
@@ -13,9 +13,9 @@
 ##
 ## For the complete GPL v2 license, visit http://www.fsf.org/licenses
 ##
-## Description:Andutteye management utility. A part of andutteye management.
+## Description:Andutteye management API layer. A part of andutteye management.
 ## 
-## $Id$
+## $Id: aemanagement-api.pl,v 1.17 2006/10/15 16:48:21 andutt Exp $
 ##
 ## The version parameter tells current version of the program
 #
@@ -37,6 +37,7 @@ our $time=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
 use File::Basename;
 use strict;
 use warnings;
+
 
 
 sub search_ae_information {
@@ -207,6 +208,40 @@ if($setonwhere) {
 
 # Enf of subfunction
 }
+sub check_heartbeat {
+
+my $match;
+
+if(! -f "$managementdir/log-server/aemanagement-sshwrapper.log") {
+        print "ERROR $managementdir/log-server/aemanagement-sshwrapper.log doesnt exist.\n";
+        exit;
+}
+open("SERVERLOG","<$managementdir/log-server/aemanagement-sshwrapper.log")
+	or die $!;
+
+for(<SERVERLOG>) {
+	chomp;
+        my $entry =$_;
+        if($entry =~/$setonhost/) {
+		$match = "$entry";
+	}
+}
+
+if(!defined($match)) {
+	print "No heartbeat information found for system $setonhost\n";
+	print "--------------------------------------\n";
+} else {
+	print "Last heartbeat information found for $setonhost was:\n";
+	print "--------------------------------------\n";
+	print "$match\n";
+}
+
+close("SERVERLOG")
+	or die $!;
+
+
+# End of subfunction
+}
 sub filematch_overridesystem_compliance {
 
 
@@ -231,6 +266,7 @@ our $filename;
 our @filestocheck;
 our $splittedfilename;
 our $current;
+our $lastcompliance;
 
 push(@filetypes, "DEFAULT");
 push(@filetypes, $group);
@@ -265,6 +301,7 @@ for(@filetypes) {
                 for(@logclient) {
                         chomp;
                         my $logname = $_;
+			$lastcompliance="None";
 
                         if($_ =~/$setonhost/) {
                                 for(@logclient) {
@@ -275,11 +312,14 @@ for(@filetypes) {
                                                 chomp;
                                                 my $entry =$_;
                                                 if($entry =~/$dirname\/$splittedfilename/) {
-                                                        print "\tLast compliance correction found in:$managementdir/log-client/$logname\n";
+							$lastcompliance="$managementdir/log-client/$logname";
 							last;
                                                 }
                                         }
                                 }
+				if("$lastcompliance" ne "None") {
+                                	print "\tLast compliance correction found in:$lastcompliance\n";
+				}
                         }
                 }
         }
@@ -318,6 +358,7 @@ if($setonhost) {
                 chomp;
                 if($_ =~/$setonhost/) {
                         my $spec=$_;
+			$spec = $spec."a";
                         print "Found specification $spec executing command ($executewhat as $asuser)\n";
                         print "--------------------------------------\n";
                         my $ecode=system("ssh -l $asuser $spec \"$executewhat\"");
@@ -344,6 +385,7 @@ if($setongroup) {
                                 chomp;
                                 my $entry =$_;
                                 if($entry =~/$setongroup/) {
+					$spec = $spec."a";
                                         print "Found specification $spec(group:$setongroup) executing command ($executewhat as $asuser)\n";
                                         print "--------------------------------------\n";
                                         my $ecode=system("ssh -l $asuser $spec \"$executewhat\"");
@@ -356,6 +398,7 @@ if($setongroup) {
                                                 print "Command execution failed on $spec. ERRORCODE:$ecode\n";
                                                 print "--------------------------------------\n";
                                         }
+				  last;
                                 }
                         }
         }
@@ -372,6 +415,7 @@ if($setonwhere) {
                                 my $entry =$_;
 
                                 if($entry =~/$setonwhere/) {
+					$spec = $spec."a";
                                         print "Found specification $spec(where:$setonwhere) executing command ($executewhat as $asuser)\n";
                                         print "--------------------------------------\n";
                                         my $ecode=system("ssh -l $asuser $spec \"$executewhat\"");
@@ -404,11 +448,13 @@ print "$0 set=no onkey=allow-configupdate ongroup=webportal\n";
 print "$0 set=no onkey=allow-configupdate onwhere=development\n";
 print "$0 execute=\"ls /var/tmp\" onwhere=development\n";
 print "$0 compliance=spiderman\n";
+print "$0 heartbeat=spiderman\n";
 print "\n";
 print "search=[criteria]\t\t\t\t\t:Search the Andutteye repository after specific information.\n";
 print "set=[key] <onhost|ongroup|onwhere>\t\t\t:Set keys on specifications in the Andutteye repository.\n";
 print "compliance=[system]\t\t\t\t\t:See compliance of the Andutteye Filematch Override system for specific system.\n";
 print "execute=\"[command]\" <onhost|ongroup|onwhere|asuser>\t:Execute a remote command or script on Andutteye groups of systems.\n";
+print "heartbeat=[system]\t\t\t\t\t:Check connectivity of Andutteye agents and last access.\n";
 print "\n";
 }
 
@@ -439,6 +485,11 @@ for(@ARGV) {
                 my @tmp=split("=",$_);
                 $action="execute";
                 $executewhat="$tmp[1]";
+        }
+        if(/^heartbeat=/) {
+                my @tmp=split("=",$_);
+                $action="heartbeat";
+                $setonhost="$tmp[1]";
         }
         if(/^onhost=/) {
                 my @tmp=split("=",$_);
@@ -476,5 +527,8 @@ if(!$action) {
         }
         if($action eq "execute") {
                 execute_command();
+        }
+        if($action eq "heartbeat") {
+                check_heartbeat();
         }
 }

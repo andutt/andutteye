@@ -5,7 +5,7 @@
 // $Id$
 //
 ob_start();
-date_default_timezone_set('Europe/Moscow');
+date_default_timezone_set('Europe/Stockholm');
 
 function page_header() {
 
@@ -27,17 +27,14 @@ echo '
         	<meta name="description" content="Andutteye is a powerful opensource systemmanagement ecosystem." xml:lang="en" />
         	<meta name="keywords" content="Monitoring, managment, syslog, changevents" />
         	<link rel="stylesheet" href="themes/' . $authNamespace->andutteye_theme . '/theme.css" type="text/css" media="screen" />
+        	<link rel="stylesheet" href="themes/' . $authNamespace->andutteye_theme . '/menu-style.css" type="text/css" media="screen" />
 
-        	<script type="text/javascript" src="js/mootools-dropdownmenu.js"></script>
-        	<script type="text/javascript" src="js/dropdownmenu.js"></script>
-        	<script type="text/javascript" src="js/mootools.v1.2.js"></script>
-        	<script type="text/javascript" src="js/tip.js"></script>
-        	<script type="text/javascript" src="js/accordion.js"></script>
+		<script type="text/javascript" src="js/mootools-dropdownmenu.js"></script>
+                <script type="text/javascript" src="js/mootools.v1.2.js"></script>
+                <script type="text/javascript" src="js/tip.js"></script>
+                <script type="text/javascript" src="js/accordion.js"></script>
 
-        	</style>
-        	<script type="text/javascript">
-                	new UvumiDropdown("dropdown-demo");
-        	</script>
+                </style>
 	</head>
 ';
 
@@ -64,147 +61,309 @@ echo '
 ';
 // end Search Box
 
-echo '<div id="MainMenu">
-		<ul id="dropdown-demo" class="dropdown">
-			<li>
-				<a href="index.php?main=enviroment_overview">Home</a>
-			</li>
-			<li>
-				<a>Domains</a>
-				<ul>';
+echo '<div id="MainMenu">';
 
-				$sql = $db->query("select domain_name,domain_description from andutteye_domains order by domain_name asc");
-                                while ($row = $sql->fetch()) {
-                                        $domain_name = $row['domain_name'];
-                                        $domain_description = $row['domain_description'];
+echo "
+<div id='cssmenu'>
+<ul>
+   <li><a href='index.php?main=enviroment_overview'><span>Home</span></a></li>";
+
+echo "
+   <li class='has-sub'><a href='#'><span>Domains</span></a>
+   <ul>";
+
+    $sql = $db->query("select domain_name,domain_description from andutteye_domains order by domain_name asc");
+    while ($row = $sql->fetch()) {
+    	$domain_name = $row['domain_name'];
+        $domain_description = $row['domain_description'];
+
+	if(verify_role_object_permission($domain_name,'domain',1,'0','0')) {
+		echo "
+         	<li class='has-sub'><a href='index.php?main=domain_overview&param1=$domain_name'><span><img src='themes/$authNamespace->andutteye_theme/domains_1.png' alt='' title='' /> $domain_name</span></a>
+         	";
+	}
+
+	 // Create subgroups of this domain
+	echo "<ul>";
+
+	 $subsql = $db->query("select group_name,group_description from andutteye_groups where domain_name = '$domain_name' order by group_name asc");
+         while ($row = $subsql->fetch()) {
+         	$group_name = $row['group_name'];
+                $group_description = $row['group_description'];
+
+		echo "
+               	<li class='last'><a href='index.php?main=group_overview&param1=$domain_name&param2=$group_name'><span><img src='themes/$authNamespace->andutteye_theme/groups_2.png' alt='' title='' /> $group_name</span></a></li>
+       		";
+
+	// End of while subgroups
+	}
+
+	// End of subgroups menuitem
+	echo "</ul></li>";
+
+  // End of while domain.
+  }
 
 
-                                        if(verify_role_object_permission($domain_name,'domain',1,'0','0')) {
-						echo '<li>
-						<a href="index.php?main=domain_overview&param1=' . $domain_name . '"/>
-						<img src="themes/' . $authNamespace->andutteye_theme . '/domains_1.png" alt="" title="" /> ' . $domain_name . '</a>';
-						echo '<ul>';
-				
-					$subsql = $db->query("select group_name,group_description from andutteye_groups where domain_name = '$domain_name' order by group_name asc");
-                                		while ($row = $subsql->fetch()) {
-                                        		$group_name = $row['group_name'];
-                                        		$group_description = $row['group_description'];
+echo "
+   </ul>
+   </li>";
 
-                                        		if(verify_role_object_permission($group_name,'group',1,'0','0')) {
-                                                		echo '<li><a href="index.php?main=group_overview&param1=' .$domain_name. '&param2=' . $group_name . '"/>
-								<img src="themes/' . $authNamespace->andutteye_theme . '/groups_2.png" alt="" title="" /> ' . $group_name . '</a>';
-								echo '<ul>';
-					
-								$ssubsql = $db->query("select system_name from andutteye_systems where domain_name = '$domain_name' and group_name = '$group_name' order by system_name asc");
-                                				while ($row = $ssubsql->fetch()) {
-                                        				$system_name = $row['system_name'];
+// End of domain menuitem
 
-                                        				if(verify_role_object_permission($system_name,'system',1,'0','0')) {
-                                                				echo '<li><a href="index.php?main=system_overview&param1='.$system_name.'&param2='.$domain_name.'&param3='.$group_name.'"/>
-										<img src="themes/' . $authNamespace->andutteye_theme . '/systems_2.png" alt="" title="" /> ' . $system_name . '</a>';
-										echo '
-										<ul>
+echo "
+   <li class='has-sub'><a href='#'><span>Groups</span></a>
+   <ul>";
 
-                                                                                        <li><a href="index.php?main=monitoring_front&param1=' . $system_name . '"><img src="themes/' . $authNamespace->andutteye_theme . '/monitoring_1.png" alt="" title="" /> Monitoring</a></li>';
 
-                                						 if(verify_role_object_permission($system_name,'system',2,'0','0')) {
+    $subsql = $db->query("select domain_name,group_name,group_description from andutteye_groups order by domain_name,group_name asc");
+    	while ($row = $subsql->fetch()) {
+        	$domain_name = $row['domain_name'];
+        	$group_name = $row['group_name'];
+                $group_description = $row['group_description'];
 
-                                        						echo '
-                                                        					<li><a href="index.php?main=system_specification&param1=' .$system_name. '"><img src="themes/' . $authNamespace->andutteye_theme . '/package_1.png" alt="" title="" /> Packages</a></li>
-                                                        					<li><a href="index.php?main=system_files&param1=' .$system_name. '"><img src="themes/' . $authNamespace->andutteye_theme . '/file_1.png" alt="" title="" /> Files</a></li>
-                                                        					<li><a href="index.php?main=system_configuration&param1='.$system_name.'"><img src="themes/' . $authNamespace->andutteye_theme . '/configuration_1.png" alt="" title="" /> Configuration</a></li>';
-                                						}
 
-                                        						  echo '<li><a href="index.php?main=show_statistics&param1='.$system_name.'"><img src="themes/' . $authNamespace->andutteye_theme . '/statistics_1.png" alt="" title="" /> Statistics</a></li>
-                                                        				        <li><a href="index.php?main=show_software_profile&param1='.$system_name.'"><img src="themes/' . $authNamespace->andutteye_theme . '/software_inventory_1.png" alt="" title="" /> Inventory</a></li>
-                                                        					<li><a href="index.php?main=show_system_snapshot&param1='.$system_name.'"><img src="themes/' . $authNamespace->andutteye_theme . '/snapshots_1.png" alt="" title="" /> Snapshots</a></li>
-                                                        					<li><a href="index.php?main=change_events_database"><img src="themes/' . $authNamespace->andutteye_theme . '/db_1.png" alt="" title="" /> Eventdb</a></li>
-                                                        					<li><img src="themes/' . $authNamespace->andutteye_theme . '/db_1.png" alt="" title="" /> Syslogdb</li>
-                                                        					<li><a href="index.php?main=show_server_transactions&param1='.$system_name.'"><img src="themes/' . $authNamespace->andutteye_theme . '/logs_1.png" alt="" title="" /> Logs</a></li>
+	if(verify_role_object_permission($group_name,'group',1,'0','0')) {
+		echo "
+         	<li class='has-sub'><a href='index.php?main=group_overview&param1=$domain_name&param2=$group_name'><span><img src='themes/$authNamespace->andutteye_theme/groups_2.png' alt='' title='' /> ($domain_name) $group_name</span></a>
+         	";
+	}
 
-										</ul>';
+	 // Create subgroups of this domain
+	echo "<ul>";
 
-						 		     		echo '</li>';
-									}
-								}
-					    			echo '</ul>';
+	 $ssubsql = $db->query("select system_name from andutteye_systems where domain_name = '$domain_name' and group_name = '$group_name' order by system_name asc");
+         while ($row1 = $ssubsql->fetch()) {
+         	$system_name = $row1['system_name'];
 
-						 echo '</li>';
-							}
-						}
-					    echo '</ul>';
+		if(verify_role_object_permission($system_name,'system',1,'0','0')) {
+			echo "
+               		<li class='last'><a href='index.php?main=system_overview&param1=$system_name&param2=$domain_name&param3=$group_name'><span><img src='themes/$authNamespace->andutteye_theme/systems_2.png' alt='' title='' /> $system_name</span></a></li>
+       			";
+		}
+
+	// End of while subgroups
+	}
+
+	// End of subgroups menuitem
+	echo "</ul></li>";
+
+  // End of while domain.
+  }
+
+
+echo "
+   </ul>
+   </li>";
+
+// End of groups menuitem
+
+echo "
+   <li class='has-sub'><a href='#'><span>Systems</span></a>
+   <ul>";
+
+
+    $subsql = $db->query("select system_name,domain_name,group_name from andutteye_systems order by domain_name,group_name,system_name asc");
+        while ($row = $subsql->fetch()) {
+                $system_name = $row['system_name'];
+                $domain_name = $row['domain_name'];
+                $group_name = $row['group_name'];
+
+
+	if(verify_role_object_permission($system_name,'system',1,'0','0')) {
+        	echo "
+         	<li class='has-sub'><a href='index.php?main=system_overview&param1=$system_name&param2=$domain_name&param3=$group_name'><span><img src='themes/$authNamespace->andutteye_theme/systems_2.png' alt='' title='' /> ($domain_name)($group_name) $system_name</span></a>
+         	";
+	}
+
+         // Create subgroups of this domain
+        echo "<ul>";
+
+        echo '<li><a href="index.php?main=monitoring_front&param1=' .$system_name. '"><img src="themes/' . $authNamespace->andutteye_theme . '/monitoring_1.png" alt="" title="" /> Monitoring</a></li>';
+
+       if(verify_role_object_permission($system_name,'system',2,'0','0')) {
+           echo '
+                <li><a href="index.php?main=system_specification&param1=' .$system_name. '"><img src="themes/' . $authNamespace->andutteye_theme . '/package_1.png" alt="" title="" /> Packages</a></li>
+                <li><a href="index.php?main=system_files&param1=' .$system_name. '"><img src="themes/' . $authNamespace->andutteye_theme . '/file_1.png" alt="" title="" /> Files</a></li>
+                <li><a href="index.php?main=system_configuration&param1='.$system_name.'"><img src="themes/' . $authNamespace->andutteye_theme . '/configuration_1.png" alt="" title="" /> Configuration</a></li>';
+        }
+
+        echo '<li><a href="index.php?main=show_statistics&param1='.$system_name.'"><img src="themes/' . $authNamespace->andutteye_theme . '/statistics_1.png" alt="" title="" /> Statistics</a></li>
+              <li><a href="index.php?main=show_software_profile&param1='.$system_name.'"><img src="themes/' . $authNamespace->andutteye_theme . '/software_inventory_1.png" alt="" title="" /> Inventory</a></li>
+              <li><a href="index.php?main=show_system_snapshot&param1='.$system_name.'"><img src="themes/' . $authNamespace->andutteye_theme . '/snapshots_1.png" alt="" title="" /> Snapshots</a></li>
+              <li><a href="index.php?main=change_events_database"><img src="themes/' . $authNamespace->andutteye_theme . '/db_1.png" alt="" title="" /> Eventdb</a></li>
+              <li><a href="index.php?main=show_server_transactions&param1='.$system_name.'"><img src="themes/' . $authNamespace->andutteye_theme . '/logs_1.png" alt="" title="" /> Logs</a></li>';
+
+        // End of subgroups menuitem
+        echo "</ul></li>";
+
+  // End of while domain.
+  }
+
+
+echo "
+   </ul>
+   </li>";
+
+// End of systems menuitem
+
+
+echo "
+   <li class='has-sub'><a href='#'><span>Actions</span></a>
+	<ul>
+               <li><a href='index.php?main=user_settings'><span><img src='themes/$authNamespace->andutteye_theme/settings.png'/>Settings</span></a></li>
+               <li><a href='index.php?main=upload_documentation'><span><img src='themes/$authNamespace->andutteye_theme/upload_1.png'/> Upload</span></a></li>
+               <li><a href='index.php?main=link_documentation'><span><img src='themes/$authNamespace->andutteye_theme/link_1.png'/> Link</span></a></li>
+               <li class='last'><a href='index.php?main=change_events_database'><span><img src='themes/$authNamespace->andutteye_theme/changeevent_1.png'/> Changeevents</span></a></li>
+	</ul>
+    </li>
+   <li class='has-sub'><a href='#'><span>Admin</span></a>
+	<ul>
+               <li><a href='index.php?main=create_domain'><span><img src='themes/$authNamespace->andutteye_theme/domains_1.png'/> Domain admin</span></a></li>
+               <li><a href='index.php?main=create_group'><span><img src='themes/$authNamespace->andutteye_theme/groups_2.png'/> Group admin</span></a></li>
+               <li><a href='index.php?main=create_system'><span><img src='themes/$authNamespace->andutteye_theme/systems_2.png'/> System admin</span></a></li>
+               <li><a href='index.php?main=create_role'><span><img src='themes/$authNamespace->andutteye_theme/role_1.png'/> Role admin</span></a></li>
+               <li><a href='index.php?main=create_user'><span><img src='themes/$authNamespace->andutteye_theme/user_1.png'/> User admin</span></a></li>
+               <li><a href='index.php?main=fileadmin'><span><img src='themes/$authNamespace->andutteye_theme/file_1.png'/> File admin</span></a></li>
+               <li><a href='#'><span><img src='themes/$authNamespace->andutteye_theme/package_1.png'/> Package admin</span></a></li>
+               <li><a href='index.php?main=create_front'><span><img src='themes/$authNamespace->andutteye_theme/front_1.png'/> Front admin</span></a></li>
+               <li class='last'><a href='index.php?main=create_ontrac'><span><img src='themes/$authNamespace->andutteye_theme/install_system_1.png'/> Ontrac admin</span></a></li>
+	</ul>
+    </li>
+   <li class='last'><a href='logout.php'><span>Logout</span></a></li>
+</ul>
+</div>
+</div>
+
+
+<br>
+<br>
+";
+
+}
+function create_ontrac($param1,$param2,$param3,$param4,$param5,$param6,$param7,$param8,$param9,$param10) {
+
+verify_if_user_is_logged_in();
+verify_if_user_have_admin_prevs();
+
+require 'db.php';
+require_once 'Zend/Session/Namespace.php';
+$authNamespace = new Zend_Session_Namespace('Zend_Auth');
+
+if($param1) {
+        $date = date("20y-m-d");
+        $time = date("H:m:s");
+	$result = split("#",$param2);
+
+        $sql   = $db->query("select seqnr from andutteye_ontrac where ontrac ='$param1'");
+        $exists = $sql->fetchAll();
+        $exists = count($exists);
+
+        if($param1 != "" && $param2 != "" && $exists == 0) {
+                $data = array(
+                        'ontrac'     		=> "$param1",
+                        'ontrac_domain'     	=> "$param4",
+                        'ontrac_description'    => "$param2",
+                        'ontrac_command'    	=> "$param5",
+                        'ontrac_valid' 		=> "$param3"
+                );
+                $db->insert('andutteye_ontrac', $data);
+	}
+}
+
+echo '<div id="content">
+      		<div class="content">
+			<fieldset class="GroupField">
+				<legend><img src="themes/' . $authNamespace->andutteye_theme . '/system_b.png" alt="" title="" /><span class="BigTitle"><span class="ColoredTxt">Create</span> New Ontrac</span></legend>
+						<form method="get" action="index.php">
+							<input type="hidden" name="main" value="create_ontrac">
+
+								<label for="systemname">Ontrac:</label>
+								<label><input type="text" name="param1" maxlength="255" size="35" value="" size="70"></label>
+								<br />
+								<label for="systemkey"> Ontrac description (keep it short, displayed in description)</label>
+								<label><input type="text" name="param2" maxlength="30" size="35" value="" size="70"></label>
+								<br />
+								<label for="systemkey"> Ontrac valid date (Which date is valid, date format YYYY-MM-DD)</label>
+								<label><input type="text" name="param3" maxlength="30" size="35" value="" size="70"></label>
+								<br />
+								<label for="systemkey"> Ontrac command (Specify command or program/script)</label>
+								<label><input type="text" name="param5" maxlength="255" size="35" value="" size="70"></label>
+								<br />
+								<label for="joindomain"> Join system to current domain:</label>
+
+								<label>
+									<select name="param4" style="WIDTH: 260px">
+								';
+
+                                        $sql    = $db->query("select domain_name from andutteye_domains order by domain_name asc");
+
+                                        while ($row = $sql->fetch()) {
+                                                $domain_name = $row['domain_name'];
+                                                $group_name = $row['group_name'];
+						echo '
+						<option value="' . $domain_name . '"> Domain ' . $domain_name . '
+						';
                                         }
-				 echo '</li>';
-                                }
 
+					echo '
+									</select>
+								</label>
+							<br />
+							<input class="button" type="submit" value="Submit">
+						</form>
+					    </fieldset>					
+					</div>
+<br />
 
-// End of domain menu items.
-echo '</ul>';
+<div class="content">
+	<fieldset class="GroupField">
+		<legend><span class="BigTitle"><span class="ColoredTxt">Change</span> Current ontrac</span></legend>
+		
+			<table>
+				<th>Ontrac</th>
+				<th>Domain</th>
+				<th>Valid on</th>
+				<th>Remove</th>
+				</tr>';
+
+			$sql = $db->query("select * from andutteye_ontrac order by seqnr asc");
+                        while ($row = $sql->fetch()) {
+                                $seqnr = $row['seqnr'];
+                                $ontrac = $row['ontrac'];
+                                $ontrac_domain = $row['ontrac_domain'];
+                                $ontrac_command = $row['ontrac_command'];
+                                $ontrac_group = $row['ontrac_group'];
+                                $ontrac_valid = $row['ontrac_valid'];
+                                $ontrac_description = $row['ontrac_description'];
+
+				echo '
+				<td>
+				<img src="themes/' . $authNamespace->andutteye_theme . '/install_system_1.png" alt="" title="" />
+				<a href="index.php?main=create_ontrac&param1=' .$system_name. '&param2=modify" class="Tips2" title="Ontrac:' . $ontrac . ' Description:' . $ontrac_description . ' Domain:' . $ontrac_domain . ' Command:' . $ontrac_command . '">' . $ontrac . '</a>
+				</td>
+				<td>
+				<img src="themes/' . $authNamespace->andutteye_theme . '/domains_1.png" alt="" title="" />
+					'.$ontrac_domain.'</a>
+				</td>
+				<td>
+					'.$ontrac_valid.'</a>
+				</td>
+				<td>
+				<img src="themes/' . $authNamespace->andutteye_theme . '/delete_1.png" alt="" title="" />
+				<a href="index.php?main=remove_ontrac&param1=' . $seqnr . '" onclick="return confirm(\'Remove ontrac ' . $ontrac . '? \')">Remove</a>
+				</td>
+				</tr>
+				';
+                        }
+
 echo '
-			<li>
-				<a href="#sync">Actions</a>
-				<ul>
-					<li><a href="index.php?main=user_settings"> 
-					   <img src="themes/' . $authNamespace->andutteye_theme . '/settings.png" alt="" title="" /> 
-					Settings</a></li>
-                			<li><a href="index.php?main=upload_documentation"> 
-					   <img src="themes/' . $authNamespace->andutteye_theme . '/upload_1.png" alt="" title="" /> 
-					Upload</a></li>
-                			<li><a href="index.php?main=link_documentation"> 
-					   <img src="themes/' . $authNamespace->andutteye_theme . '/link_1.png" alt="" title="" /> 
-					Link</a></li>
-                			<li><a href="index.php?main=change_events_database"> 
-					   <img src="themes/' . $authNamespace->andutteye_theme . '/changeevent_1.png" alt="" title="" /> 
-					Changeeventsdb</a></li>
-				</ul>
-			</li>
-			<li>
-				<a href="#users">Admin</a>
-				<ul>
-					<li>
-				           <a href="index.php?main=create_domain">
-					   <img src="themes/' . $authNamespace->andutteye_theme . '/domains_1.png" alt="" title="" /> Domain admin</a>
-					</li>
-					<li>
-					   <a href="index.php?main=create_group">
-					   <img src="themes/' . $authNamespace->andutteye_theme . '/groups_2.png" alt="" title="" /> Group admin</a>
-					</li>
-					<li>
-					   <a href="index.php?main=create_system">
-                                           <img src="themes/' . $authNamespace->andutteye_theme . '/systems_2.png" alt="" title="" /> System admin</a>
-					</li>
-					<li>
-					   <a href="index.php?main=create_role">
-                                           <img src="themes/' . $authNamespace->andutteye_theme . '/role_1.png" alt="" title="" /> Role admin</a>
-					</li>
-					<li>
-					   <a href="index.php?main=create_user">
-					   <img src="themes/' . $authNamespace->andutteye_theme . '/user_1.png" alt="" title="" /> User admin</a>
-					</li>
-					<li>
-					   <a href="index.php?main=fileadmin">
-					   <img src="themes/' . $authNamespace->andutteye_theme . '/file_1.png" alt="" title="" /> File admin</a>
-					</li>
-					<li>
-					   <a href="">
-					   <img src="themes/' . $authNamespace->andutteye_theme . '/package_1.png" alt="" title="" /> Package admin</a>
-					</li>
-					<li>
-					   <a href="index.php?main=create_front">
-                                           <img src="themes/' . $authNamespace->andutteye_theme . '/front_1.png" alt="" title="" /> Front admin</a>
-					</li>
-					<li>
-					   <a href="index.php?main=create_ontrac">
-                                           <img src="themes/' . $authNamespace->andutteye_theme . '/install_system_1.png" alt="" title="" /> Ontrac admin</a>
-					</li>
-				</ul>
-			</li>
-			<li>
-				<a href="logout.php">Logout</a>
-			</li>
-		</ul>
-	</div>';
+</table>
+</fieldset>
+</div>
+';
 
+// End of subfunction
 }
 
 function verify_if_user_have_admin_prevs() {
@@ -668,7 +827,7 @@ echo '
 </div>
 ';
 
-// End of subfunction
+	// End of subfunction
 }
 
 function create_group($param1,$param2,$param3,$param4,$param5,$param6,$param7,$param8,$param9,$param10) {
@@ -915,126 +1074,6 @@ echo '
 
 // End of subfunction
 }
-function create_ontrac($param1,$param2,$param3,$param4,$param5,$param6,$param7,$param8,$param9,$param10) {
-
-verify_if_user_is_logged_in();
-verify_if_user_have_admin_prevs();
-
-require 'db.php';
-require_once 'Zend/Session/Namespace.php';
-$authNamespace = new Zend_Session_Namespace('Zend_Auth');
-
-if($param1) {
-        $date = date("20y-m-d");
-        $time = date("H:m:s");
-	$result = split("#",$param2);
-
-        $sql   = $db->query("select seqnr from andutteye_ontrac where ontrac ='$param1'");
-        $exists = $sql->fetchAll();
-        $exists = count($exists);
-
-        if($param1 != "" && $param2 != "" && $exists == 0) {
-                $data = array(
-                        'ontrac'     		=> "$param1",
-                        'ontrac_domain'     	=> "$param4",
-                        'ontrac_description'    => "$param2",
-                        'ontrac_command'    	=> "$param5",
-                        'ontrac_valid' 		=> "$param3"
-                );
-                $db->insert('andutteye_ontrac', $data);
-	}
-}
-
-echo '<div id="content">
-      		<div class="content">
-			<fieldset class="GroupField">
-				<legend><img src="themes/' . $authNamespace->andutteye_theme . '/system_b.png" alt="" title="" /><span class="BigTitle"><span class="ColoredTxt">Create</span> New Ontrac</span></legend>
-						<form method="get" action="index.php">
-							<input type="hidden" name="main" value="create_ontrac">
-
-								<label for="systemname">Ontrac:</label>
-								<label><input type="text" name="param1" maxlength="255" size="35" value="" size="70"></label>
-								<br />
-								<label for="systemkey"> Ontrac description (keep it short, displayed in description)</label>
-								<label><input type="text" name="param2" maxlength="30" size="35" value="" size="70"></label>
-								<br />
-								<label for="systemkey"> Ontrac valid date (Which date is valid, date format YYYY-MM-DD)</label>
-								<label><input type="text" name="param3" maxlength="30" size="35" value="" size="70"></label>
-								<br />
-								<label for="systemkey"> Ontrac command (Specify command or program/script)</label>
-								<label><input type="text" name="param5" maxlength="255" size="35" value="" size="70"></label>
-								<br />
-								<label for="joindomain"> Join system to current domain:</label>
-
-								<label>
-									<select name="param4" style="WIDTH: 260px">
-								';
-
-                                        $sql    = $db->query("select domain_name from andutteye_domains order by domain_name asc");
-
-                                        while ($row = $sql->fetch()) {
-                                                $domain_name = $row['domain_name'];
-                                                $group_name = $row['group_name'];
-						echo '
-						<option value="' . $domain_name . '"> Domain ' . $domain_name . '
-						';
-                                        }
-
-					echo '
-									</select>
-								</label>
-							<br />
-							<input class="button" type="submit" value="Submit">
-						</form>
-					    </fieldset>					
-					</div>
-<br />
-
-<div class="content">
-	<fieldset class="GroupField">
-		<legend><span class="BigTitle"><span class="ColoredTxt">Change</span> Current ontrac</span></legend>
-		
-			<table>
-				<th>Ontrac</th>
-				<th>Valid on</th>
-				<th>Remove</th>
-				</tr>';
-
-			$sql = $db->query("select * from andutteye_ontrac order by seqnr asc");
-                        while ($row = $sql->fetch()) {
-                                $seqnr = $row['seqnr'];
-                                $ontrac = $row['ontrac'];
-                                $ontrac_domain = $row['ontrac_domain'];
-                                $ontrac_command = $row['ontrac_command'];
-                                $ontrac_group = $row['ontrac_group'];
-                                $ontrac_valid = $row['ontrac_valid'];
-                                $ontrac_description = $row['ontrac_description'];
-
-				echo '
-				<td>
-				<img src="themes/' . $authNamespace->andutteye_theme . '/install_system_1.png" alt="" title="" />
-				<a href="index.php?main=create_system&param1=' .$system_name. '&param2=modify" class="Tips2" title="Ontrac:' . $ontrac . ' Description:' . $ontrac_description . ' Domain:' . $ontrac_domain . ' Command:' . $ontrac_command . '">' . $ontrac . '</a>
-				</td>
-				<td>
-					$ontrac_valid</a>
-				
-				</td>
-				<td>
-				<img src="themes/' . $authNamespace->andutteye_theme . '/delete_1.png" alt="" title="" />
-				<a href="index.php?main=remove_ontrac&param1=' . $seqnr . '" onclick="return confirm(\'Remove ontrac ' . $ontrac . '? \')">Remove</a>
-				</td>
-				</tr>
-				';
-                        }
-
-echo '
-</table>
-</fieldset>
-</div>
-';
-
-// End of subfunction
-}
 
 function domain_overview($param1) {
 
@@ -1068,6 +1107,7 @@ $nrd = count($nrd);
 $sql   = $db->query("select seqnr from andutteye_ontrac where ontrac_domain = '$param1'");
 $ontrac = $sql->fetchAll();
 $ontrac = count($ontrac);
+
 
 echo '<div class="DivSpacer"></div>';
 echo '<div id="content">
@@ -1330,21 +1370,19 @@ echo '<h3 class="toggler">
 echo '</table></div>';
 
 $date = date("20y-m-d");
-
 echo '<h3 class="toggler">
-      	<img src="themes/' . $authNamespace->andutteye_theme . '/sys_doc.png" alt="" title="" />
+      	<img src="themes/' . $authNamespace->andutteye_theme . '/group_doc.png" alt="" title="" />
 		<span class="InfoTitle"> ONTRAC (<span class="ColoredTxt">' . $ontrac . '</span>)</span></h3>
         		<div class="element">
 		        	<table>
                                 	<th>Ontrac</th>
-                                        <th>Description</th>
-                                        <th>Valid on</th>
                                         <th>Domain</th>
-                                        <th>Submitted by</th>
+                                        <th>Valid on</th>
+                                        <th>By user</th>
                                         <th>Date</th>
                                         <th>Time</th>
                                         <th>Enforced</th>
-                                        <th>Enforce</th>
+                                        <th>Submit</th>
                                         </tr>';
 
 		$sql    = $db->query("select * from andutteye_ontrac where ontrac_domain = '$param1' order by seqnr asc");
@@ -1361,35 +1399,52 @@ echo '<h3 class="toggler">
                         $ontrac_enforcer	= $row['ontrac_enforcer'];
                         $ontrac_done		= $row['ontrac_done'];
                         
-			echo '<form method="post" action="index.php">
-                                <input type="hidden" name="main" value="enforce_ontrac">
-                                <input type="hidden" name="param1" value="'.$param1.'">
-                                <input type="hidden" name="param2" value="'.$seqnr.'">';
+			echo "<form method='post' action='index.php'>
+                                <input type='hidden' name='main' value='enforce_ontrac'>
+                                <input type='hidden' name='param1' value='$param1'>
+                                <input type='hidden' name='param2' value='$seqnr'>";
 
 			echo '<td><img src="themes/' . $authNamespace->andutteye_theme . '/install_system_1.png" alt="" title="" />';
-			echo " $ontrac</td>";
-			echo "<td>$ontrac_description</td>";
+			echo " $ontrac ($ontrac_description)</td>";
+			echo '<td><img src="themes/' . $authNamespace->andutteye_theme . '/domains_1.png" alt="" title="" />';
+			echo " $ontrac_domain</td>";
 			echo "<td>$ontrac_valid</td>";
-			echo "<td>$ontrac_domain</td>";
-			echo "<td>$ontrac_enforcer</td>";
+			echo '<td><img src="themes/' . $authNamespace->andutteye_theme . '/user_1.png" alt="" title="" />';
+			echo " $ontrac_enforcer</td>";
 			echo "<td>$ontrac_date</td>";
 			echo "<td>$ontrac_time</td>";
 
 
 			if($ontrac_done == "") {
-				echo '<td><img src="themes/' . $authNamespace->andutteye_theme . '/stopped.png" alt="" title="" /></td>';
+				echo '<td></td>';
 			} else {
-				echo '<td><img src="themes/' . $authNamespace->andutteye_theme . '/started.png" alt="" title="" /></td>';
+
+				if($ontrac_done == "Yes") {
+					echo '<td><img src="themes/' . $authNamespace->andutteye_theme . '/started.png" alt="" title="" /></td>';
+				} else {
+					echo '<td><img src="themes/' . $authNamespace->andutteye_theme . '/stopped.png" alt="" title="" /></td>';
+				}
 			}
 			if("$date" == "$ontrac_valid") {
-				echo '<td><input class="button" type="submit" value="Submit"></td></tr>';
+				
+				if(!$ontrac_done) {
+
+					if($ontrac_date) {
+						echo '<td></td></tr>';
+					} else {
+						echo '<td><input class="button" type="submit" value="Submit"></form></td></tr>';
+					}
+				} else {
+					echo '<td></td></tr>';
+				}
 
 			} else {
-				echo '<td><img src="themes/' . $authNamespace->andutteye_theme . '/stopped.png" alt="" title="" /></td></tr>';
+				echo '<td></td></tr>';
 			}
                 }
 
-echo '</table></form></div>';
+echo '</table></div>';
+
 
 echo '<h3 class="toggler">
           <img src="themes/' . $authNamespace->andutteye_theme . '/category.png" alt="" title="" />
@@ -9588,6 +9643,28 @@ header("Location:index.php?main=domain_overview&param1=$param1");
 exit;
 
 // End of subfunction
+}
+function remove_ontrac($param1) {
+require 'db.php';
+require_once 'Zend/Auth/Adapter/DbTable.php';
+require_once 'Zend/Session/Namespace.php';
+$authNamespace = new Zend_Session_Namespace('Zend_Auth');
+
+verify_if_user_is_logged_in();
+
+if($param1) {
+        $sql = $db->query("select * from andutteye_ontrac where seqnr = '$param1'");
+        $res = $sql->fetchObject();
+
+        //Validate som permissions.
+
+        $sql = "delete from andutteye_ontrac where seqnr = '$param1'";
+        $db->query($sql);
+}
+
+header("Location:index.php?main=create_ontrac");
+
+//End of subfunction
 }
 
 ?>

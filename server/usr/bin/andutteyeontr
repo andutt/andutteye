@@ -1,0 +1,143 @@
+#!/usr/bin/perl
+#
+#    Copyright Andreas Utterberg Thundera (c) All rights Reserved 2015
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+our $version = "Andutteye Ontrac program Version:1.1 Lastfixlevel:2015-02-08";
+our $Use_database_type;
+our $Use_database_name;
+our $Use_database_user;
+our $Use_database_password;
+our $config;
+our $sql;
+our $dbh;
+our $sth;
+our $seqnr;
+our $ontrac;
+our $ontrac_description;
+our $ontrac_command;
+our $ontrac_valid;
+our $ontrac_enforcer;
+our $ontrac_done;
+our @ARGV;
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+my $date=sprintf("20%02d-%02d-%02d",$year%100,$mon+1,$mday);
+my $time=sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+
+use strict;
+use warnings;
+use DBI;
+
+sub parse_and_load_configuration {
+my @tmp;
+my $params="0";
+
+      open("conf","<$config")
+                or die "ERROR Failed to open configuration file for reading config:$config error:$!\n";
+        for(<conf>) {
+                chomp;
+                if(/^#/) {
+                        next;
+                }
+                if(/^$/) {
+                        next;
+                }
+                if(/^Use_database_type/) {
+                        @tmp=split("=","$_");
+                        $Use_database_type="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_database_name/) {
+                        @tmp=split("=","$_");
+                        $Use_database_name="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_database_user/) {
+                        @tmp=split("=","$_");
+                        $Use_database_user="$tmp[1]";
+                        $params++;
+                }
+                if(/^Use_database_password/) {
+                        @tmp=split("=","$_");
+                        $Use_database_password="$tmp[1]";
+                        $params++;
+                }
+	}
+
+# End of subfunction
+}
+# Parse of commandline arguments.
+for(@ARGV) {
+        if ( $_ =~/-config/ ) {
+                my @tmp=split("=","$_");
+                $config="$tmp[1]";
+        }
+}
+if(!defined($ARGV[0])) {
+        program_info();
+
+}
+sub execute {
+
+print "[$date $time] Checking for ontrac:s\n";
+
+$dbh = DBI->connect("dbi:$Use_database_type:$Use_database_name", $Use_database_user, $Use_database_password) or die ("ERROR Couldnt open database:$Use_database_name errormessage:$!");
+$sql="select seqnr,ontrac,ontrac_description,ontrac_command,ontrac_valid,ontrac_enforcer,ontrac_done from andutteye_ontrac where ontrac_done is NULL and ontrac_valid = '$date' and ontrac_enforcer is not NULL";
+$sth = $dbh->prepare("$sql");
+$sth->execute or die "Failed :$!\n";
+
+$sth->bind_columns(undef, \$seqnr, \$ontrac, \$ontrac_description, \$ontrac_command, \$ontrac_valid, \$ontrac_enforcer, \$ontrac_done);
+while($sth->fetch()) {
+	print "[$date $time] Found a ontrac id $seqnr :$ontrac ($ontrac_description)\n";
+	
+	my $ecode=system("$ontrac_command");
+	if("$ecode" == 0) {
+		print "[$date $time] OK $ontrac_command ended with exitcode $ecode\n";
+
+		        print "[$date $time] Setting $ontrac_command to done.\n";
+			$dbh = DBI->connect("dbi:$Use_database_type:$Use_database_name", $Use_database_user, $Use_database_password) or die ("ERROR Couldnt open database:$Use_database_name errormessage:$!");
+        		$sql="update andutteye_ontrac set ontrac_done = 'Yes' where seqnr = '$seqnr'";
+        		$sth = $dbh->prepare("$sql");
+        		$sth->execute;
+		        undef $sth;
+
+
+	} else {
+		print "[$date $time] OK $ontrac_command ended with exitcode $ecode\n";
+
+		        print "[$date $time] Setting $ontrac_command to Error.\n";
+			$dbh = DBI->connect("dbi:$Use_database_type:$Use_database_name", $Use_database_user, $Use_database_password) or die ("ERROR Couldnt open database:$Use_database_name errormessage:$!");
+        		$sql="update andutteye_ontrac set ontrac_done = 'Error' where seqnr = '$seqnr'";
+        		$sth = $dbh->prepare("$sql");
+        		$sth->execute;
+		        undef $sth;
+	}
+}
+
+# End of subfunction
+}
+sub program_info {
+print "\n";
+print "$version\n";
+print "\n";
+print "Example $0 -config=/etc/andutteye/andutteyedsrv.conf\n";
+print "\n";
+print "-config         :Specifies server configuration to use.\n";
+print "\n";
+exit 1;
+}
+parse_and_load_configuration();
+execute();
