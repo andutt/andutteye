@@ -458,6 +458,20 @@ CREATE TABLE andutteye_ontrac (
   ontrac_time           VARCHAR(100) DEFAULT NULL,
   ontrac_done           VARCHAR(100) DEFAULT NULL,
   ontrac_enforcer       VARCHAR(100) DEFAULT NULL,
+  ontrac_progress       VARCHAR(100) DEFAULT NULL,
+                        PRIMARY KEY  (seqnr)
+);
+CREATE TABLE andutteye_ontracprogress (
+  seqnr                 INT(11) NOT NULL auto_increment,
+  ontracid		VARCHAR(255) DEFAULT NULL,
+  domain		VARCHAR(255) DEFAULT NULL,
+  system_name		VARCHAR(255) DEFAULT NULL,
+  aestep		VARCHAR(255) DEFAULT NULL,
+  status		VARCHAR(255) DEFAULT NULL,
+  system_log		BLOB DEFAULT NULL,
+  created_date          VARCHAR(100) DEFAULT NULL,
+  created_time          VARCHAR(100) DEFAULT NULL,
+  created_by            VARCHAR(100) DEFAULT NULL,
                         PRIMARY KEY  (seqnr)
 );
 insert into andutteye_users(andutteye_username,andutteye_password,is_admin) values ('admin','d18ee3149a4b14914e5d07bd565fa6f87d7c7ab6','1');

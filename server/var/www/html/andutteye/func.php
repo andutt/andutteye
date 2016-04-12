@@ -290,7 +290,7 @@ echo '<div id="content">
 								<label for="systemkey"> Ontrac command (Specify command or program/script)</label>
 								<label><input type="text" name="param5" maxlength="255" size="35" value="" size="70"></label>
 								<br />
-								<label for="joindomain"> Join system to current domain:</label>
+								<label for="joindomain"> Join ontrac to current domain:</label>
 
 								<label>
 									<select name="param4" style="WIDTH: 260px">
@@ -1420,7 +1420,7 @@ echo '<h3 class="toggler">
 			} else {
 
 				if($ontrac_done == "Yes") {
-					echo '<td><img src="themes/' . $authNamespace->andutteye_theme . '/started.png" alt="" title="" /></td>';
+					echo '<td><img src="themes/' . $authNamespace->andutteye_theme . '/started.png" alt="" title="" /><a href="index.php?main=ontrac_progresstracking&param1=' . $seqnr . '"><img src="themes/' . $authNamespace->andutteye_theme . '/monitoring_1.png" alt="" title="" /></a>';
 				} else {
 					echo '<td><img src="themes/' . $authNamespace->andutteye_theme . '/stopped.png" alt="" title="" /></td>';
 				}
@@ -1435,7 +1435,7 @@ echo '<h3 class="toggler">
 						echo '<td><input class="button" type="submit" value="Submit"></form></td></tr>';
 					}
 				} else {
-					echo '<td></td></tr>';
+					echo "<td></td></tr>";
 				}
 
 			} else {
@@ -9665,6 +9665,105 @@ if($param1) {
 header("Location:index.php?main=create_ontrac");
 
 //End of subfunction
+}
+
+function ontrac_progresstracking($param1) {
+
+verify_if_user_is_logged_in();
+require 'db.php';
+require_once 'Zend/Session/Namespace.php';
+$authNamespace = new Zend_Session_Namespace('Zend_Auth');
+
+echo '<div id="content">
+	<div class="section content">
+		<h2 class="BigTitle"><span class="ColoredTxt">Ontrac</span> progress tracking for Ontrac ' . $param1 . '</h2>
+
+	<fieldset class="GroupField">
+		<h2 class="BigTitle"><span class="ColoredTxt">Status</span> view</h2>
+		<table>
+			<th>Domain</th>
+			<th>System</th>
+			<th>Status</th>
+			<th>Date</th>
+			<th>Status</th>
+		</tr>
+';
+
+$sql    = $db->query("select * from andutteye_ontracprogress where ontracid = '$param1' order by seqnr asc");
+                while ($row = $sql->fetch()) {
+                        $seqnr       = $row['seqnr'];
+                        $aestep       = $row['aestep'];
+                        $system_name = $row['system_name'];
+                        $ontracid   = $row['ontracid'];
+                        $domain   = $row['domain'];
+                        $status      = $row['status'];
+                        $created_date = $row['created_date'];
+                        $created_time      = $row['created_time'];
+
+			$subsql = $db->query("select * from andutteye_bundles where aepackage = '$aepackage' and aearch = '$aearchtype'");
+                        $res    = $subsql->fetchAll();
+
+
+			echo "<td><img src='themes/$authNamespace->andutteye_theme/domains_1.png' alt='' title='' /> $domain</td>";
+			echo "<td><img src='themes/$authNamespace->andutteye_theme/systems_2.png' alt='' title='' /> $system_name</td>";
+
+			if($aestep == "1") {
+				echo "<td><img src='themes/$authNamespace->andutteye_theme/configuration_1.png' alt='' title='' /> $status</td>";
+			}
+			if($aestep == "2") {
+				echo "<td><img src='themes/$authNamespace->andutteye_theme/upload_1.png' alt='' title='' /> $status</td>";
+			}
+			if($aestep == "3") {
+				echo "<td><img src='themes/$authNamespace->andutteye_theme/back.png' alt='' title='' /> $status</td>";
+			}
+			if($aestep == "4") {
+				echo "<td><img src='themes/$authNamespace->andutteye_theme/started.png' alt='' title='' /> $status <a href='index.php?main=view_ontractrackerlog&param1=$seqnr'><img src='themes/$authNamespace->andutteye_theme/monitoring_1.png' alt='' title='' /></a></td>";
+			}
+			echo '<td>' . $created_date . '</td>';
+			echo '<td>' . $created_time . '</td>';
+			echo '</tr>';
+		}
+
+echo '
+</table>
+</fieldset>
+
+		</div>
+	</div>
+';
+
+// End of subfunction
+}
+
+function view_ontractrackerlog($param1) {
+require 'db.php';
+require_once 'Zend/Session/Namespace.php';
+$authNamespace = new Zend_Session_Namespace('Zend_Auth');
+
+verify_if_user_is_logged_in();
+
+
+$sql = $db->query("select * from andutteye_ontracprogress where seqnr = '$param1'");
+$res = $sql->fetchObject();
+
+echo "
+<h2 class='BigTitle'><span class='ColoredTxt'>Ontrac</span> systemlog for $res->system_name on ontrac $res->ontracid</h2>";
+
+echo "
+<fieldset class='GroupField'>
+	<legend>System log $res->created_date $res->created_time</legend>";
+		
+	echo '<label><textarea cols="150" rows="40" name="none">' . $res->system_log . '</textarea></label>';
+				
+echo '</fieldset>';
+
+echo '
+<label>
+	<img src="themes/' . $authNamespace->andutteye_theme . '/back.png" alt="" title="" />
+	<a href="index.php?main=ontrac_progresstracking&param1=' . $res->ontracid . '">&nbsp;Back to ontrac ' . $res->ontracid . ' progress tracking.</a>
+</label><br><br>';
+
+// End of subfunction
 }
 
 ?>
