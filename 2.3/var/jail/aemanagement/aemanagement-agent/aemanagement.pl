@@ -28,14 +28,14 @@ our $managementhost="localhost";
 our $managementport="22";
 
 # The managementaccount parameter is telling which user to connect as to repository.
-our $managementaccount="aemanagement";
+our $managementaccount="ae";
 
 # The managementkey parameter is specifying which ssh-key to use when initiate a connect.
-our $managementkey="/root/.ssh/aemanagement";
+our $managementkey="/root/.ssh/id_rsa";
 
 # The enable_rpm_package_validation specifies if the agent shal validate the rpm database against the central
 # rpm package repository. Valid chooises are (yes or no).
-our $enable_rpm_package_validation="yes";
+our $enable_rpm_package_validation="no";
 
 # The enable_file_validation specifies if the agent shall validate local file(s) against the central
 # file repository. Valid chooises are (yes or no).
@@ -344,7 +344,7 @@ print "-- Trying to retrive filesettings for target:$filetocheck\n";
 my $filesettings=`$sshcommand -i $managementkey -l $managementaccount $managementhost "getfilesettings $filetocheck"`;
 chomp $filesettings;
 
-print "-- Filesettings recived:$filesettings\n";
+print "-- Filesettings received:$filesettings\n";
 
 my @filesettings=split(":", $filesettings);
 $fileprestep=$filesettings[1];
@@ -440,18 +440,18 @@ sub fix_permissions {
 #
 my $file=$_[0];
 
-print "-- Setting correct permissions on:$_ [owner=$owner group=$group permission:$filepermission]\n";
-my $settingecode=system("chown $owner:$group $_;chmod $filepermission $_");
+print "-- Setting correct permissions on:$file [owner=$owner group=$group permission:$filepermission]\n";
+my $settingecode=system("chown $owner:$group $file;chmod $filepermission $file");
 
 if($settingecode == 0 ) {
 	print "-- Filesettings updated [OK]\n";
 } else {
-	print "** ERROR failed to modify filepermissions on the new file:$_\n";
-	log_progress("** ERROR failed to modify filepermissions on the new filei:$_");
+	print "** ERROR failed to modify filepermissions on the new file:$file\n";
+	log_progress("** ERROR failed to modify filepermissions on the new file:$file");
 	save_runlog();
 	send_email();
 	notify_andutteye_surveillance("Andutteyemanagement-agent-error",
-	"**-ERROR-failed-to-modify-filepermissions-on-the-new-file:$_",
+	"**-ERROR-failed-to-modify-filepermissions-on-the-new-file:$file",
 	"WARNING");
 	exit 1;
 }
@@ -463,14 +463,25 @@ sub execute_prestep {
 #
 #
 my $fileprestep=$_[0];
+
+if (! -f "$fileprestep") {
+	print "** ERROR Specified prestep:$fileprestep doesnt exist.\n";
+	log_progress("** ERROR Specified prestep:$fileprestep doesnt exist");
+	tellsyslog("Specified prestep:$fileprestep doesnt exist");
+	save_runlog();
+	send_email();
+	notify_andutteye_surveillance("Andutteyemanagement-agent-error",
+	"**-ERROR-Prestep-doesnt-exist",
+	"WARNING");
+}
 print "-- Executing prestep:$fileprestep\n";
 log_progress("-- Executing prestep:$fileprestep");
 tellsyslog("Executing prestep:$fileprestep");
 my $preexitcode=system("$fileprestep >> $savedir/$thishost/$thishost-$date.log");
 
 	if ($preexitcode == 0 ) {
-		print "-- Prestep ended sucessfully\n";
-		log_progress("-- Prestep ended sucessfully");
+		print "-- Prestep ended successfully\n";
+		log_progress("-- Prestep ended successfully");
 		tellsyslog("Executed prestep:$fileprestep ok");
 	} else {
 		print "** ERROR Prestep ended with exitcode:$preexitcode\n";
@@ -497,8 +508,8 @@ print "-- Executing poststep:$filepoststep\n";
 log_progress("-- Executing poststep:$filepoststep");
 my $postexitcode=system("$filepoststep >> $savedir/$thishost/$thishost-$date.log");
 	if ($postexitcode == 0 ) {
-		print "-- Poststep ended sucessfully\n";
-		log_progress("-- Poststep ended sucessfully");
+		print "-- Poststep ended successfully\n";
+		log_progress("-- Poststep ended successfully");
 		tellsyslog("Executed poststep:$filepoststep ended with exitcode:$postexitcode");
 	} else {
 		print "** ERROR Poststep ended with exitcode:$postexitcode\n";
@@ -663,122 +674,159 @@ sub compare_files {
 my $tmpdirname;
 my $tmpfilename;
 my $difflist;
+my $imp_order;
 
-chdir("$savedir/$thishost/files") or die "Failed to jump to directory:$savedir/$thishost/files error:$!\n";
-my @newfiles=`find . -type f | grep -v .gz | cut -c2-10000`;
-for(@newfiles) {
-	chomp;
-	$tmpdirname=dirname($_);
-	$tmpfilename=basename($_);
-	print "-- Verifying file:$_ [dir=$tmpdirname file=$tmpfilename]\n";
+if( !-f "$savedir/$thishost/files/$thishost.fileindex") {
+	print "## ERROR Fileindex $savedir/$thishost/files/$thishost.fileindex not found.\n";
+	exit;
+}
+	open("FILEINDEX","<$savedir/$thishost/files/$thishost.fileindex")
+		or die "## ERROR Failed to open $savedir/$thishost/files/$thishost.fileindex for reading.\n";
 
-	if( ! -f "$_" ) {
-		print "## Warning file:$_ doesnt exist on the system, installing a new file\n";
-		log_progress("** Warning file:$_ doesnt exist on the system, installing a new file");
-		tellsyslog("Warning file:$_ doesnt exist on the system, installing a new file");
-		if ( ! -d "/$tmpdirname" ) {
-			print "## Warning directory that the file recides on dont exist, creating it\n";
-			log_progress("** Warning directory that the file recides on dont exist, creating it");
-			tellsyslog("Warning directory that the file recides on dont exist, creating it");
-			print "-- Creating:$tmpdirname\n";
-			`mkdir -p $tmpdirname`;
-		}
-		if("$allow_config_installation" eq "yes" ) {
-			# Trying to retrive filesettings for the specific file.
-			retrive_file_settings("$_");
-			
-			# If fileprestep are set we are trying to execute the prestep.	
-			if($fileprestep ne "None") {
-				execute_prestep("$fileprestep");
-			}
-			# Now we move the original file to place.
-			print "-- Moving new file on place:$savedir/$thishost/files/$_ -> $_\n";
-			my $moveexitcode=system("mv -f $savedir/$thishost/files/$_ $_");
-			if ($moveexitcode == 0 ) {
-				print "-- New file sucessfully installed\n";
-			} else {
-				print "** ERROR new fileinsallation failed with exitcode:$moveexitcode\n";
-				log_progress("** ERROR new fileinsallation failed with exitcode:$moveexitcode");
-				save_runlog();
-				send_email();
-				notify_andutteye_surveillance("Andutteyemanagement-agent-error",
-				"**-ERROR-new-fileinsallation-failed-with-exitcode:$moveexitcode",
-				"CRITICAL");
-				exit $moveexitcode;
-			}
-			fix_permissions("$_");
-			# If poststep are set we execute postprogram.
-			if($filepoststep ne "None") {
-				execute_poststep("$filepoststep");
-			}
-		} else {
-			print "-- Config permission are set to:$allow_config_installation will only print differences\n";
-			log_progress("-- Config permission are set to:$allow_config_installation will only print differences");
-		}
-	} else {
-		$difflist=`diff $savedir/$thishost/files/$_ $_`;
-		chomp $difflist;
-		
-		if ($difflist eq "") {
-			# Everything is fine, we will not do anything.
-			print "-- Files are identical [OK]\n";
-		} else {
-			# If we find differences we begin our work.
-			print "## Files differs [NOTOK]\n";
-			log_progress("-- Found differences in file $_");
-			tellsyslog("Found differences in file $_");
-			log_progress("$difflist");
-
-		   if("$allow_config_installation" eq "yes" ) {
-			# Copying original file as backup to a backupdirectory.
-			my $copyfile_ecode=system("cp -f /$_ $filesavedir/$tmpfilename-$date");
-			if($copyfile_ecode == 0 ) {
-				print "-- Original file saved as:$filesavedir/$tmpfilename-$date\n";
-			} else {
-				print "** Failed to safecopy original file, exitcode:$copyfile_ecode\n";
-				log_progress("** ERROR Failed to safecopy original file, exitcode:$copyfile_ecode");
-				save_runlog();
-				send_email();
-				notify_andutteye_surveillance("Andutteyemanagement-agent-error",
-				"** ERROR-Failed-to-safecopy-original-file-exitcode:$copyfile_ecode",
-				"CRITICAL");
-				exit $copyfile_ecode;
-			}
-			# Trying to retrive filesettings for the specific file.
-			retrive_file_settings("$_");
-			
-			# If fileprestep are set we are trying to execute the prestep.	
-			if($fileprestep ne "None") {
-				execute_prestep("$fileprestep");
-			}
-			# Now we move the original file to place.
-			print "-- Moving new file on place:$savedir/$thishost/files/$_ -> $_\n";
-			my $moveexitcode=system("mv -f $savedir/$thishost/files/$_ $_");
-			if ($moveexitcode == 0 ) {
-				print "-- New file sucessfully installed\n";
-				log_progress("-- New file sucessfully installed");
-			} else {
-				print "** ERROR new fileinsallation failed with exitcode:$moveexitcode\n";
-				log_progress("** ERROR new fileinsallation failed with exitcode:$moveexitcode");
-				save_runlog();
-				send_email();
-				notify_andutteye_surveillance("Andutteyemanagement-agent-error",
-				"**-ERROR-new-fileinsallation-failed-with-exitcode:$moveexitcode",
-				"CRITICAL");
-				exit $moveexitcode;
-			}
-			fix_permissions("$_");
-			# If poststep are set we execute postprogram.
-			if($filepoststep ne "None") {
-				execute_poststep("$filepoststep");
-			}
-		   } else {
-		      print "-- Config permission are set to:$allow_config_installation will only print differences\n";
-		      log_progress("-- Config permission are set to:$allow_config_installation will only print differences");
-	           }
-		}
-	}
+for(1..20) {
+	$imp_order="$_";
 	
+	open("FILEINDEX","<$savedir/$thishost/files/$thishost.fileindex")
+		or die "## ERROR Failed to open $savedir/$thishost/files/$thishost.fileindex for reading.\n";
+
+	for(<FILEINDEX>) {
+		chomp;
+
+		my @tmp=split(":","$_");
+		my $findex_imp_order="$tmp[0]";
+		my $findex_object="$tmp[1]";
+		$tmpdirname=dirname($findex_object);
+		$tmpfilename=basename($findex_object);
+
+		if($findex_imp_order eq "") {
+			print "## ERROR No implementation order is defined for:$findex_object. Aborting!\n";
+			exit;
+		}
+
+		if("$imp_order" == "$findex_imp_order") {	
+		     print "-- [$imp_order] Checking $findex_object ($tmpdirname|$tmpfilename)\n";
+		
+			if (! -f "$findex_object") {
+				print "## Information file:$findex_object doesnt exist on the system, installing a new file\n";
+	
+				log_progress("** Warning file:$findex_object doesnt exist on the system, installing a new file");
+                		tellsyslog("Warning file:$findex_object doesnt exist on the system, installing a new file");
+
+                		if ( ! -d "/$tmpdirname" ) {
+                        		print "## Warning directory that the file recides on dont exist, creating it\n";
+                        		log_progress("** Warning directory that the file recides on dont exist, creating it");
+                        		tellsyslog("Warning directory that the file recides on dont exist, creating it");
+                        		print "-- Creating:$tmpdirname\n";
+                        		`mkdir -p $tmpdirname`;
+                        		retrive_file_settings("$tmpdirname");
+                        		fix_permissions("$tmpdirname");
+                		}
+
+                		if("$allow_config_installation" eq "yes" ) {
+                        		# Trying to retrive filesettings for the specific file.
+                        		retrive_file_settings("$findex_object");
+
+                        		# If fileprestep are set we are trying to execute the prestep.
+                        		if($fileprestep ne "None") {
+                                		execute_prestep("$fileprestep");
+                        		}
+
+                        		# Now we move the original file to place.
+                        		print "-- Moving new file on place:$savedir/$thishost/files/$findex_object -> $tmpdirname/$tmpfilename\n";
+                        		my $moveexitcode=system("mv -f $savedir/$thishost/files/$findex_object $tmpdirname");
+                        		if ($moveexitcode == 0 ) {
+                                		print "-- New file successfully installed\n";
+                        		} else {
+                                		print "** ERROR new fileinstallation failed with exitcode:$moveexitcode\n";
+                                		log_progress("** ERROR new fileinsallation failed with exitcode:$moveexitcode");
+                                		save_runlog();
+                                		send_email();
+                                		notify_andutteye_surveillance("Andutteyemanagement-agent-error",
+                                		"**-ERROR-new-fileinsallation-failed-with-exitcode:$moveexitcode",
+                                		"CRITICAL");
+                                		exit $moveexitcode;
+                        		}
+                        		fix_permissions("$findex_object");
+                        		# If poststep are set we execute postprogram.
+                        		if($filepoststep ne "None") {
+                                		execute_poststep("$filepoststep");
+                        		}
+               	 		} else {
+                        		print "-- Config permission are set to:$allow_config_installation will only print differences\n";
+                        		log_progress("-- Config permission are set to:$allow_config_installation will only print differences");
+                		}
+
+			} else {
+				$difflist=`diff $savedir/$thishost/files/$findex_object $findex_object`;
+				chomp $difflist;
+		
+				if ($difflist eq "") {
+					# Everything is fine, we will not do anything.
+					print "-- Files are identical [OK]\n";
+				} else {
+					# If we find differences we begin our work.
+					print "## Files differs [NOTOK]\n";
+
+                        		log_progress("-- Found differences in file $findex_object");
+                        		tellsyslog("Found differences in file $findex_object");
+                        		log_progress("$difflist");
+
+                   			if("$allow_config_installation" eq "yes" ) {
+                        			# Copying original file as backup to a backupdirectory.
+                        			my $copyfile_ecode=system("cp -f /$findex_object $filesavedir/$tmpfilename-$date");
+                        
+						if($copyfile_ecode == 0 ) {
+                                			print "-- Original file saved as:$filesavedir/$tmpfilename-$date\n";
+                        			} else {
+                                			print "** Failed to safecopy original file, exitcode:$copyfile_ecode\n";
+                                			log_progress("** ERROR Failed to safecopy original file, exitcode:$copyfile_ecode");
+                                			save_runlog();
+                                			send_email();
+                                			notify_andutteye_surveillance("Andutteyemanagement-agent-error",
+                                			"** ERROR-Failed-to-safecopy-original-file-exitcode:$copyfile_ecode",
+                                			"CRITICAL");
+                                			exit $copyfile_ecode;
+                        			}
+                        			# Trying to retrive filesettings for the specific file.
+                        			retrive_file_settings("$findex_object");
+
+                        			# If fileprestep are set we are trying to execute the prestep.
+                        			if($fileprestep ne "None") {
+                                			execute_prestep("$fileprestep");
+                        			}
+                        			# Now we move the original file to place.
+                        			print "-- Moving new file on place:$savedir/$thishost/files/$findex_object -> $tmpdirname/$tmpfilename\n";
+                        			my $moveexitcode=system("mv -f $savedir/$thishost/files/$findex_object $tmpdirname");
+                        			if ($moveexitcode == 0 ) {
+                                			print "-- New file successfully installed\n";
+                                			log_progress("-- New file successfully installed");
+                        			} else {
+							 print "** ERROR new fileinstallation failed with exitcode:$moveexitcode\n";
+                                			log_progress("** ERROR new fileinstallation failed with exitcode:$moveexitcode");
+                                			save_runlog();
+                                			send_email();
+                                			notify_andutteye_surveillance("Andutteyemanagement-agent-error",
+                                			"**-ERROR-new-fileinsallation-failed-with-exitcode:$moveexitcode",
+                                			"CRITICAL");
+                                			exit $moveexitcode;
+                        			}
+                        			fix_permissions("$findex_object");
+                        			# If poststep are set we execute postprogram.
+                        			if($filepoststep ne "None") {
+                                			execute_poststep("$filepoststep");
+                        			}
+                   			} else {
+                      				print "-- Config permission are set to:$allow_config_installation will only print differences\n";
+                      				log_progress("-- Config permission are set to:$allow_config_installation will only print differences");
+                   			}
+
+				}
+			}
+		}
+
+    	}
+	close("FILEINDEX")
+		or die "## ERROR Failed to close $savedir/$thishost/files/$thishost.fileindex after reading.\n";
 }
 
 # End of subfunction
@@ -1138,7 +1186,7 @@ if (!defined($aesurveillance_program)) {
         exit 1;
 }
 if($aesurveillance_method eq "server" ) {
-  print "-- Will send alarm thru Andutteye management server\n";
+  print "-- Will send alarm by Andutteye management server\n";
   print "-- Debug:$smsg,$lmsg,$severity\n";
   my $ecode=system("$sshcommand -i $managementkey -l $managementaccount $managementhost \"reporttoae $smsg,$lmsg,$severity $thishost\"");
   
