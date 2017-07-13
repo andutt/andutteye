@@ -1,6 +1,6 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl 
 #
-# Copyright (C) 2004-2010 Andreas Utterberg Thundera AB.
+# Copyright (C) 2004-2017 Andreas Utterberg Thundera AB.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -172,6 +172,25 @@ for(@filetypes) {
 	        if($debug > 3) {
 			print "## Copying file to bundle dir as:$savedir/$hostname/$dirname/$splittedfilename\n";
 		}
+
+		
+		my $fixed_object=`echo "$dirname/$splittedfilename" | cut -c2-`;
+		chomp $fixed_object;
+		my $tmpfsettings=`$managementdir/bin/aemanagement-api.pl -getfilesettings=$fixed_object`;
+		chomp $tmpfsettings;
+		my @fsettings=split(":",$tmpfsettings);
+		my $object="$fsettings[0]";
+		my $pre="$fsettings[1]";
+		my $perms="$fsettings[2]";
+		my $post="$fsettings[3]";
+		my $iorder="$fsettings[4]";
+
+		if($debug > 3) {
+			print "Object:$object Pre:$pre Perms:$perms Post:$post Iorder:$iorder\n";
+			print "Writing index [$fixed_object] -> $savedir/$hostname/$hostname.fileindex\n";
+		}
+		`echo "$iorder:$fixed_object" >> $savedir/$hostname/$hostname.fileindex`;
+
 		`cp $_  "$savedir/$hostname/$dirname/$splittedfilename"`;
 		$count++;
 	}
@@ -230,6 +249,24 @@ for(my $patch=0;$patchlevel >= $patch;$patch++) {
 	        if($debug > 3) {
 			print "-- Copying file to bundle dir as:$savedir/$hostname/$dirname/$splittedfilename\n";
 		}
+
+
+		my $fixed_object=`echo "$dirname/$splittedfilename" | cut -c2-`;
+		my $tmpfsettings=`$managementdir/bin/aemanagement-api.pl -getfilesettings=$fixed_object`;
+		chomp $tmpfsettings;
+		my @fsettings=split(":",$tmpfsettings);
+		my $object="$fsettings[0]";
+		my $pre="$fsettings[1]";
+		my $perms="$fsettings[2]";
+		my $post="$fsettings[3]";
+		my $iorder="$fsettings[4]";
+
+		if($debug > 3) {
+			print "Object:$object Pre:$pre Perms:$perms Post:$post Iorder:$iorder\n";
+			print "Writing index [$fixed_object] -> $savedir/$hostname/$hostname.fileindex\n";
+		}
+		`echo "$iorder:$fixed_object" >> $savedir/$hostname/$hostname.fileindex`;
+
 		`cp $_  "$savedir/$hostname/$dirname/$splittedfilename"`;
 		$count++;
 	}
